@@ -18,7 +18,7 @@ Edit only this file, then run the script.
 Arabic only, right-to-left, 24-hour clock, Tajawal font. Light design by day; dark mode (`.night`) is an Islamic design: navy/purple, geometric pattern, mosque drawing, next prayer in a glowing circle, prayer times as one strip. Features: prayer times + iqamah countdown, Imsak,
 Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, verses on screen; Al-Kahf button on Friday), occasion countdowns
 (own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
-3 min), «هل تعلم؟» (every 3 min, 260+ items incl. «تصحيح خطأ شائع»), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
+3 min), «هل تعلم؟» (every 3 min, 350 items incl. «تصحيح خطأ شائع» and Shafi'i fiqh), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
 over other apps, open on boot, screensaver, phone notifications and home-screen widgets.
 User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
 
@@ -45,6 +45,8 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
    `app/build.gradle.kts` (version = build number, automatic).
 4. **Arabic text** is correct Modern Standard Arabic, masculine when addressing him, with correct number agreement
    (`daysText`, `minutesWord`, `countWord` in `app.js`). Religious content: authentic, with its source.
+   **Fiqh follows the Shafi'i school** (the owner's choice): state the Shafi'i ruling plainly, without «عند الشافعية»;
+   references: Matn Abi Shuja', an-Nawawi's Minhaj. «تصحيح خطأ شائع» must not contradict the Shafi'i school.
 5. **Both TV and phone** share the code: check a change in both (`.tv` / `.phone`, landscape and portrait).
    On TV everything must be reachable with the remote (elements with class `f` are focusable).
 6. **Small, focused changes.** Change only the files the request needs. Never delete features.
