@@ -15,7 +15,7 @@ window.FAMILY = {
     // kind 'father' = the writer's father; 'spouseMother' = the spouse's mother. acc / gen: the name after ارحم / لـ
     departed: [
       { id: 'abuosama', name: 'أبو أسامة', acc: 'أبا أسامة', gen: 'أبي أسامة', kind: 'father' },
-      { id: 'ummmohammad', name: 'أم محمد', full: 'هيفاء', kind: 'spouseMother' }
+      { id: 'ummmohammad', name: 'أم محمد', kind: 'spouseMother' }
     ],
     anniversary: { m: 6, d: 11 } // null: none
   },

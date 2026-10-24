@@ -304,7 +304,7 @@
     lastFact = n;
     function put() {
       $('fact-t').textContent = f.t;
-      $('fact-x').textContent = f.x;
+      $('fact-x').textContent = f.x.replace(/\(([^()]+) (\d+)\)/g, '($1\u00A0$2)');
       $('fact-s').textContent = f.s;
       box.classList.remove('fade');
     }
@@ -456,7 +456,7 @@
   function famMessage(n) {
     var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
     var type = m.to === 'all' ? 'رسالة إلى العائلة' : who.kind === 'departed' ?
-      (who.dep.kind === 'father' ? 'دعاء لوالدي رحمه الله' : 'دعاء ل' + who.name + (who.dep.full ? ' (' + who.dep.full + ')' : '') + ' رحمها الله') :
+      (who.dep.kind === 'father' ? 'دعاء لوالدي رحمه الله' : 'دعاء ل' + who.name + ' رحمها الله') :
       'رسالة إلى ' + who.name;
     return { type: type, text: m.text, src: '— ' + sign(who), fam: true };
   }
@@ -576,7 +576,7 @@
     if (!box || seasons.length < 2) return;
     box.classList.add('fade');
     setTimeout(function () { seasonI++; box.innerHTML = evInner(seasons[seasonI % seasons.length]); box.classList.remove('fade'); }, 400);
-  }, 6000);
+  }, 10000);
   var evDraft = (function () { var r = P.ymd(Date.now()), x = P.addDays(r.y, r.m, r.d, 30); return { y: x.y, m: x.m, d: x.d }; })();
 
   // ---------- full-screen countdowns: adhan → iqamah, and in Ramadan the last 15 minutes before Maghrib ----------

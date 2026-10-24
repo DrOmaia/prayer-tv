@@ -18,9 +18,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* 1920×1080 stage, scaled to the screen */
 #stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); }
-.day { --now-tint: #F1E8D6; --pc-bg: #FBFAF8; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.72); --card2: rgba(255,255,255,.85); --tile: #FFFFFF; --line: #E4DDD1; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
-  background-color: #F5F3EF;
-  background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.95), rgba(255,255,255,0) 70%), radial-gradient(ellipse 700px 500px at 90% 95%, rgba(255,255,255,.8), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(140,128,115,.10) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(140,128,115,.06) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(150,138,124,.08) 66.5%, rgba(0,0,0,0) 67.3%), linear-gradient(96deg, rgba(0,0,0,0) 14%, rgba(150,138,124,.06) 14.6%, rgba(0,0,0,0) 15.8%), linear-gradient(170deg, rgba(0,0,0,0) 82%, rgba(140,128,115,.07) 82.4%, rgba(0,0,0,0) 83.2%); }
+.day { --now-tint: #E9DFCB; --pc-bg: #F1EDE6; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.42); --card2: rgba(255,255,255,.5); --tile: #FFFFFF; --line: #DBD3C5; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
+  background-color: #E7E2D9;
+  background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%), radial-gradient(ellipse 700px 500px at 90% 95%, rgba(255,255,255,.25), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(140,128,115,.10) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(140,128,115,.06) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(150,138,124,.08) 66.5%, rgba(0,0,0,0) 67.3%), linear-gradient(96deg, rgba(0,0,0,0) 14%, rgba(150,138,124,.06) 14.6%, rgba(0,0,0,0) 15.8%), linear-gradient(170deg, rgba(0,0,0,0) 82%, rgba(140,128,115,.07) 82.4%, rgba(0,0,0,0) 83.2%); }
 .night { --now-tint: #2D2A24; --pc-bg: #212327; --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
   background-color: #16181B;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.05), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(255,255,255,.05) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(255,255,255,.03) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(255,255,255,.04) 66.5%, rgba(0,0,0,0) 67.3%); }
@@ -54,12 +54,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .h-date { font-size: 24px; color: var(--muted); font-weight: 500; }
 /* weather: Riyadh above Irbid, one small line each */
 .wx-stack { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-.weather { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); text-align: right; font-size: 20px; }
+.weather { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 12px; border-radius: 16px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); text-align: right; font-size: 20px; }
 .w-icon .wi .ic { width: 30px; height: 30px; stroke-width: 1.7; }
-.w-city { width: 62px; font-size: 20px; }
-.w-temp { font-size: 28px; font-weight: 700; line-height: 1; direction: ltr; min-width: 52px; }
-.w-hl { display: flex; align-items: center; gap: 12px; font-size: 18px; color: var(--muted); white-space: nowrap; }
-.w-hl .ws .ic { width: 16px; height: 16px; }
+.w-city { font-size: 19px; }
+.w-temp { font-size: 26px; font-weight: 700; line-height: 1; direction: ltr; }
+.w-hl { display: flex; align-items: center; gap: 7px; font-size: 16px; color: var(--muted); white-space: nowrap; }
+.w-hl .ws { gap: 2px; }
+.w-hl .ws .ic { width: 14px; height: 14px; }
 /* gently coloured weather icons */
 .wi { display: inline-flex; }
 .wi-sun { color: #E9A23B; } .wi-moon { color: #8C9BC0; } .wi-cloud, .wi-fog { color: #98A2AD; }
@@ -141,7 +142,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .pc.next-p { border: 3px solid var(--gold); background: var(--card2); }
 
 /* occasion countdowns in the top bar */
-.events { display: flex; gap: 10px; flex: 1; justify-content: flex-start; min-width: 0; }
+/* occasions: only the cards that fit stay on the line (the rest wrap out of sight) */
+.events { display: flex; flex-wrap: wrap; gap: 10px; flex: 1; justify-content: flex-start; min-width: 0; height: 110px; overflow: hidden; }
 .ev { height: 110px; padding: 0 18px; flex-shrink: 0; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); display: flex; align-items: center; gap: 14px; min-width: 0; }
 #ev-season { min-width: 230px; border-color: var(--gold); transition: opacity .4s ease; }
 #ev-season.fade { opacity: 0; }
