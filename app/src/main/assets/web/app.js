@@ -24,7 +24,8 @@
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
       autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv),
       ishaMin: Object.assign({ normal: 90, ramadan: 120 }, s.ishaMin),
-      famMsgs: s.famMsgs || [] // own family messages: {to, text}
+      famMsgs: s.famMsgs || [], // own family messages: {to, text}
+      family: s.family || null // null: the default family (family.js)
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -269,8 +270,32 @@
 
   // ---------- every 3 minutes: a reminder (verse, hadith, wisdom, note) then a family message, in turn ----------
   var CYCLE = ['aya', 'hadith', 'aya', 'hikma', 'hadith', 'faida'], lastQ = '';
-  var FAM_ORDER = ['hassan', 'salma', 'abdulmalik', 'rund', 'all'];
-  function member(id) { return FAMILY.members.filter(function (x) { return x.id === id; })[0] || FAMILY.all; }
+  // the family set in the settings (the default family until changed)
+  function fam() { return S.family || FAMILY.DEFAULT; }
+  function famOrder() {
+    var ms = fam().members;
+    return ms.filter(function (x) { return x.kind === 'son' || x.kind === 'daughter'; })
+      .concat(ms.filter(function (x) { return x.kind === 'wife' || x.kind === 'husband'; }))
+      .map(function (x) { return x.id; }).concat(['all']);
+  }
+  function member(id) {
+    return fam().members.filter(function (x) { return x.id === id; })[0] || { id: 'all', name: 'العائلة', kind: 'all' };
+  }
+  function sign(x) {
+    if (x.kind === 'wife') return 'زوجك';
+    if (x.kind === 'husband') return 'زوجتك';
+    return fam().parent === 'mother' ? 'ماما' : 'بابا';
+  }
+  // which message set suits this person: sons under 13 get the children's set
+  function msgKind(x) {
+    if (x.kind !== 'son') return x.kind;
+    return x.y && P.ymd(Date.now()).y - x.y < 13 ? 'sonChild' : 'sonTeen';
+  }
+  function fill(t, x) {
+    var names = fam().members.map(function (m) { return m.name; });
+    var list = names.length > 1 ? names.slice(0, -1).join('، ') + ' و' + names[names.length - 1] : names.join('');
+    return t.replace(/\{name\}/g, x ? x.name : '').replace(/\{names\}/g, list);
+  }
   function reminder(n) {
     var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
     var before = CYCLE.slice(0, n % CYCLE.length).filter(function (x) { return x === kind; }).length;
@@ -280,24 +305,29 @@
   }
   // family messages, one for each person in turn (own messages added to that person's list)
   function famPool() {
-    var lists = {}, pool = [], max = 0;
-    FAM_ORDER.forEach(function (id) {
-      lists[id] = FAMILY.messages[id].concat(S.famMsgs.filter(function (m) { return m.to === id; }).map(function (m) { return m.text; }));
+    var lists = {}, pool = [], max = 0, order = famOrder();
+    order.forEach(function (id) {
+      var x = member(id), base = FAMILY.messages[id === 'all' ? 'all' : msgKind(x)] || [];
+      lists[id] = base.map(function (t) { return fill(t, x); })
+        .concat(S.famMsgs.filter(function (m) { return m.to === id; }).map(function (m) { return m.text; }));
       max = Math.max(max, lists[id].length);
     });
-    for (var i = 0; i < max; i++) FAM_ORDER.forEach(function (id) { if (lists[id][i]) pool.push({ to: id, text: lists[id][i] }); });
+    for (var i = 0; i < max; i++) order.forEach(function (id) { if (lists[id][i]) pool.push({ to: id, text: lists[id][i] }); });
     return pool;
   }
   function famMessage(n) {
     var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
-    return { type: m.to === 'all' ? 'رسالة إلى العائلة' : 'رسالة إلى ' + who.name, text: m.text, src: '— ' + who.sign, fam: true };
+    return { type: m.to === 'all' ? 'رسالة إلى العائلة' : 'رسالة إلى ' + who.name, text: m.text, src: '— ' + sign(who), fam: true };
   }
+  function spouse() { return fam().members.filter(function (x) { return x.kind === 'wife' || x.kind === 'husband'; })[0]; }
   // birthday or wedding anniversary today: its greeting stays all day
   function special(r) {
-    var b = FAMILY.members.filter(function (x) { return x.birthday.m === r.m && x.birthday.d === r.d; })[0];
-    if (b) return { id: 'b-' + b.id, type: 'يوم ميلاد ' + b.name, text: FAMILY.birthdayText[b.id], src: '— ' + b.sign, fam: true };
-    var a = FAMILY.anniversary;
-    if (a.m === r.m && a.d === r.d) return { id: 'anniv', type: a.name, text: a.text, src: '— زوجك', fam: true };
+    var b = fam().members.filter(function (x) { return x.m === r.m && x.d === r.d; })[0];
+    if (b) return { id: 'b-' + b.id, type: 'يوم ميلاد ' + b.name, text: fill(FAMILY.birthday[msgKind(b)], b), src: '— ' + sign(b), fam: true };
+    var a = fam().anniversary, sp = spouse();
+    if (a && sp && a.m === r.m && a.d === r.d) {
+      return { id: 'anniv', type: 'ذكرى زواجنا', text: fill(FAMILY.anniversary[fam().parent === 'mother' ? 'mother' : 'father'], sp), src: '— ' + sign(sp), fam: true };
+    }
     return null;
   }
   function showReminder(t) {
@@ -360,8 +390,8 @@
       });
     }
     // birthdays and the wedding anniversary, every year
-    FAMILY.members.map(function (x) { return { auto: 'b-' + x.id, name: 'ميلاد ' + x.name, m: x.birthday.m, d: x.birthday.d }; })
-      .concat([{ auto: 'anniv', name: FAMILY.anniversary.name, m: FAMILY.anniversary.m, d: FAMILY.anniversary.d }])
+    fam().members.map(function (x) { return { auto: 'b-' + x.id, name: 'ميلاد ' + x.name, m: x.m, d: x.d }; })
+      .concat(fam().anniversary ? [{ auto: 'anniv', name: 'ذكرى الزواج', m: fam().anniversary.m, d: fam().anniversary.d }] : [])
       .forEach(function (x) {
         var y = r.y;
         if (daysTo({ y: y, m: x.m, d: x.d }, r) < 0) y++;
@@ -571,10 +601,29 @@
         '<span class="sbtn al muted" style="border:none;background:none">دقيقة</span></div>';
     }).join('');
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
-      return '<div class="srow"><span class="sname">' + (m.to === 'all' ? 'العائلة' : member(m.to).name) + ': <span class="muted">' + esc(m.text) + '</span></span>' +
+      return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
     }).join('');
-    $('fam-to').textContent = 'إلى: ' + (famTo === 'all' ? 'العائلة' : member(famTo).name);
+    var F = fam();
+    function steps(pre, o, fields) {
+      return fields.map(function (f) {
+        return '<span>' + f[1] + ' <button class="sbtn f" data-k="' + pre + '-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + o[f[0]] +
+          '</b><button class="sbtn f" data-k="' + pre + '-' + f[0] + 'p" aria-label="زائد">+</button></span>';
+      }).join('');
+    }
+    $('set-family').innerHTML =
+      '<div class="srow"><span class="sname">كاتب الرسائل</span><button class="sbtn al f on" data-k="fpar">' + (F.parent === 'mother' ? 'الأم' : 'الأب') + '</button></div>' +
+      F.members.map(function (x, i) {
+        return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FAMILY.KINDS[x.kind] + ' · ' + x.d + '/' + x.m + (x.y ? '/' + x.y : '') + '</span></span>' +
+          '<button class="sbtn al f" data-k="fmx-' + i + '">حذف</button></div>';
+      }).join('') +
+      '<div class="srow"><span class="sname">ذكرى الزواج</span>' +
+      (F.anniversary ? '<span class="ev-date">' + steps('fan', F.anniversary, [['d', 'اليوم'], ['m', 'الشهر']]) + '</span>' : '') +
+      '<button class="sbtn f' + (F.anniversary ? ' on' : '') + '" data-k="fan-on">' + (F.anniversary ? 'تظهر' : 'لا') + '</button></div>';
+    $('fm-kind').textContent = 'الصلة: ' + FAMILY.KINDS[fmDraft.kind];
+    $('fm-date').innerHTML = steps('fmd', fmDraft, [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']]);
+    if (famOrder().indexOf(famTo) < 0) famTo = famOrder()[0];
+    $('fam-to').textContent = 'إلى: ' + member(famTo).name;
     $('set-events').innerHTML = autoEvents(r).map(function (e) {
       var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + n + ' ' + daysWord(n) + '</span></span>' +
@@ -606,6 +655,27 @@
     else if (a === 'overlay') { if (A) A.openOverlaySettings(); return; }
     else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
     else if (a === 'fx') S.famMsgs.splice(+v, 1);
+    else if (a === 'fpar' || a === 'fmx' || a === 'fan') {
+      // the first change copies the default family into the settings
+      if (!S.family) S.family = JSON.parse(JSON.stringify(FAMILY.DEFAULT));
+      var F = S.family;
+      if (a === 'fpar') F.parent = F.parent === 'mother' ? 'father' : 'mother';
+      if (a === 'fmx') {
+        var gone = F.members.splice(+v, 1)[0];
+        S.famMsgs = S.famMsgs.filter(function (m) { return m.to !== gone.id; });
+      }
+      if (a === 'fan' && v === 'on') F.anniversary = F.anniversary ? null : { m: 1, d: 1 };
+      else if (a === 'fan') {
+        if (v[0] === 'd') F.anniversary.d = (F.anniversary.d + 30 + (v[1] === 'p' ? 1 : -1)) % 31 + 1;
+        if (v[0] === 'm') F.anniversary.m = (F.anniversary.m + 11 + (v[1] === 'p' ? 1 : -1)) % 12 + 1;
+      }
+      autoCache.key = ''; lastQ = '';
+    } else if (a === 'fmd') {
+      var st = v[1] === 'p' ? 1 : -1;
+      if (v[0] === 'd') fmDraft.d = (fmDraft.d + 30 + st) % 31 + 1;
+      if (v[0] === 'm') fmDraft.m = (fmDraft.m + 11 + st) % 12 + 1;
+      if (v[0] === 'y') fmDraft.y = Math.max(1930, Math.min(P.ymd(Date.now()).y, fmDraft.y + st));
+    }
     else if (a === 'im' || a === 'ip') {
       S.ishaMin[v] = Math.max(60, Math.min(180, S.ishaMin[v] + (a === 'ip' ? 1 : -1)));
       P.setIsha(S.ishaMin);
@@ -621,7 +691,7 @@
       if (evDraft.d > dim) evDraft.d = f === 'd' ? 1 : dim;
     }
     save();
-    if (a === 'eva' || a === 'evx') renderEvents(P.ymd(Date.now()));
+    if (a === 'eva' || a === 'evx' || a === 'fmx' || a === 'fan') renderEvents(P.ymd(Date.now()));
     if (a === 'm' || a === 'p' || a === 'a' || a === 'im' || a === 'ip') { sendSchedule(); lastDay = ''; }
     setRender();
     if (!document.activeElement || document.activeElement === document.body) {
@@ -629,7 +699,20 @@
     }
   }
 
-  var famTo = 'hassan';
+  var famTo = '';
+  var KIND_ORDER = ['son', 'daughter', 'wife', 'husband'];
+  var fmDraft = { kind: 'son', y: 2015, m: 1, d: 1 };
+  function addMember() {
+    var name = $('fm-name').value.trim();
+    if (!name) { $('fm-name').focus(); return; }
+    if (!S.family) S.family = JSON.parse(JSON.stringify(FAMILY.DEFAULT));
+    S.family.members.push({ id: 'm' + Date.now(), name: name, kind: fmDraft.kind, y: fmDraft.y, m: fmDraft.m, d: fmDraft.d });
+    save();
+    $('fm-name').value = '';
+    autoCache.key = ''; lastQ = '';
+    renderEvents(P.ymd(Date.now()));
+    setRender();
+  }
   function addFamMsg() {
     var text = $('fam-text').value.trim();
     if (!text) { $('fam-text').focus(); return; }
@@ -751,8 +834,10 @@
       case 'k-next-btn': if (kahf.i < 110) kPlay(kahf.i + 1); break;
       case 'set-add': appsMode = 'pick'; go('apps'); break;
       case 'ev-add': addEvent(); break;
-      case 'fam-to': famTo = FAM_ORDER[(FAM_ORDER.indexOf(famTo) + 1) % FAM_ORDER.length]; setRender(); $('fam-to').focus(); break;
+      case 'fam-to': famTo = famOrder()[(famOrder().indexOf(famTo) + 1) % famOrder().length]; setRender(); $('fam-to').focus(); break;
       case 'fam-add': addFamMsg(); break;
+      case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
+      case 'fm-add': addMember(); break;
     }
   });
 
