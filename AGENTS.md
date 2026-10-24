@@ -13,12 +13,12 @@ Edit only this file, then run the script.
   If you notice another problem, mention it in one line at the end; do not fix it unasked.
 
 ## 2. What the app is
-"شاشة مواقيت الصلاة": a prayer-times screen for his **TCL Google TV** and **Android phones**, Riyadh,
-Umm al-Qura. Installed from the short link **dromaia.github.io/tv** (redirects to the latest GitHub release APK).
+"شاشة مواقيت الصلاة": a prayer-times screen for his **TCL Google TV** and **Android phones**; city automatic or searched
+(`S.loc`, default Riyadh), method by country (`METHODS` in `prayer.js`, Saudi Arabia = Umm al-Qura). Installed from the short link **dromaia.github.io/tv** (redirects to the latest GitHub release APK).
 Arabic only, right-to-left, 24-hour clock, Tajawal font. Light design by day; dark mode (`.night`) is an Islamic design: navy/purple, geometric pattern, mosque drawing, next prayer in a glowing circle, prayer times as one strip. Features: prayer times + iqamah countdown, Imsak,
 Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, verses on screen; Al-Kahf button on Friday), occasion countdowns
 (own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
-3 min), «هل تعلم؟» (every 10 min), weather Riyadh + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
+3 min), «هل تعلم؟» (every 10 min), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
 over other apps, open on boot, screensaver, phone notifications and home-screen widgets.
 User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
 
@@ -27,7 +27,7 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
 | --- | --- |
 | `app/src/main/assets/web/index.html` | Page shell: home, calendar, weather, Kahf, settings screens; tab bar; iqamah overlay. |
 | `app/src/main/assets/web/app.js` | All UI logic: settings `S` (localStorage key `prayertv-settings`), render, D-pad navigation, events, family, weather, calendar, Kahf, settings screen, alerts list sent to Android. |
-| `app/src/main/assets/web/prayer.js` | Prayer-time maths (Fajr 18.5°, Isha +90 / +120 in Ramadan), iqamah minutes, time formatting. |
+| `app/src/main/assets/web/prayer.js` | Prayer-time maths for any city (`setLocation`: lat/lon, IANA time zone, method by country), iqamah minutes, time formatting in the city's time zone. |
 | `app/src/main/assets/web/style.css` | All styles. Day / night themes (`.day` / `.night` CSS variables), `.tv` / `.phone` / `.portrait` / `.dream`. Design is a 1920×1080 stage scaled to any screen. |
 | `reminders.js`, `facts.js`, `family.js`, `quran.js`, `mushaf.js` | Content: reminders, «هل تعلم؟», default family (members, `departed` for prayers of mercy) + message templates, daily verses, the whole Qur'an text (`QURAN[n-1] = [name, verses]`, used by the Qur'an player). Religious text must have a correct source. |
 | `app/src/main/res/raw/` | Alert sounds: `chime.wav` (soft tone), `adhan.mp3` / `adhan_short.mp3` (Masjid an-Nabawi, from the open Al-Azan project). |

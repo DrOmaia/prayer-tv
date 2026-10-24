@@ -4,12 +4,17 @@
   var A = window.Android || null; // the Android app; absent when the page is opened in a browser
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage');
-  var TZO = { timeZone: 'Asia/Riyadh' };
-  var fGFull = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, TZO));
-  var fHFull = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO));
-  var fHDay = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO));
-  var fHMY = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
-  var fGMY = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
+  // dates in the chosen city's time zone (made again when the city changes)
+  var fGFull, fHFull, fHDay, fHMY, fGMY, fHMD;
+  function makeFormats() {
+    var TZO = { timeZone: P.zone() };
+    fGFull = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, TZO));
+    fHFull = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO));
+    fHDay = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO));
+    fHMY = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
+    fGMY = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
+    fHMD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'numeric', day: 'numeric' }, TZO));
+  }
 
   // ---------- settings (kept on the TV) ----------
   var KEY = 'prayertv-settings';
@@ -33,10 +38,17 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
+      // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
+      loc: s.loc || { mode: 'city', name: 'الرياض', country: 'السعودية', lat: 24.7136, lon: 46.6753, tz: 'Asia/Riyadh', cc: 'SA' },
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
       // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
       theme: s.theme || 'auto', // 'auto' (dark at night) · 'light' · 'dark'
-      sound: Object.assign({ normal: 'tone', fajr: 'none' }, s.sound)
+      // each prayer its own sound (older settings had one for all and one for Fajr)
+      sound: (function (o) {
+        o = o || {}; var n = o.normal || 'tone';
+        return { fajr: o.fajr || 'none', dhuhr: o.dhuhr || n, asr: o.asr || n, maghrib: o.maghrib || n, isha: o.isha || n };
+      })(s.sound)
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -55,6 +67,8 @@
     F.v2 = true;
     save();
   })();
+  P.setLocation(S.loc);
+  makeFormats();
   P.setIsha(S.ishaMin);
   P.setIqamah(S.iqMin);
 
@@ -121,7 +135,8 @@
   }
 
   // ---------- weather (Open-Meteo, every 30 minutes): now, today, next hours, next days ----------
-  var CITIES = [{ name: 'الرياض', lat: 24.7136, lon: 46.6753 }, { name: 'إربد', lat: 32.5556, lon: 35.85 }];
+  // the first city follows the prayer-times city; Irbid stays
+  var CITIES = [{ name: S.loc.name, lat: S.loc.lat, lon: S.loc.lon }, { name: 'إربد', lat: 32.5556, lon: 35.85 }];
   var DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   function svg(body) { return '<svg viewBox="0 0 24 24" class="ic">' + body + '</svg>'; }
   var CLOUD = '<path d="M6.5 19h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 11.5 3.75 3.75 0 0 0 6.5 19z"/>';
@@ -236,7 +251,7 @@
     for (var i = 0; i < 60; i++) {
       var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
       FIVE.forEach(function (k) {
-        if (S.alerts[k] && T.at[k] > t) ev.push({ at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T), snd: k === 'fajr' ? S.sound.fajr : S.sound.normal });
+        if (S.alerts[k] && T.at[k] > t) ev.push({ at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T), snd: S.sound[k] });
       });
     }
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
@@ -252,7 +267,7 @@
       days.push({ names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }) });
     }
     var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
-    try { A.widgetData(JSON.stringify({ days: days, events: events })); } catch (e) {}
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone() })); } catch (e) {}
   }
 
   // banner inside the app (the Android side plays the chime)
@@ -362,8 +377,8 @@
       c.querySelector('.pc-bar').style.width = k === seq[ci + 1][0] ? (p * 100).toFixed(2) + '%' : '0';
       setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
       setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
-      // in Ramadan the Imsak card shows the time left to iftar while fasting
-      setAll(c, '.pc-iq', k === 'imsak' ? (today.ramadan && t < today.at.maghrib ? 'متبقٍّ للإفطار ' + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
+      // every day until Maghrib the Imsak card shows the time left to Maghrib (the end of the fast)
+      setAll(c, '.pc-iq', k === 'imsak' ? (t < today.at.maghrib ? (today.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
 
@@ -518,7 +533,6 @@
 
   // ---------- occasion countdowns (days left): own dates + Ramadan and the two Eids (Umm al-Qura) ----------
   var AUTO = [{ id: 'ramadan', name: 'دخول رمضان', m: 9, d: 1 }, { id: 'fitr', name: 'عيد الفطر', m: 10, d: 1 }, { id: 'adha', name: 'عيد الأضحى', m: 12, d: 10 }];
-  var fHMD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'Asia/Riyadh', month: 'numeric', day: 'numeric' });
   var autoCache = { key: '', list: [] };
   function autoEvents(r) {
     var key = r.y + '-' + r.m + '-' + r.d;
@@ -557,25 +571,41 @@
     S.events = S.events.filter(function (e) { return daysTo(e, r) >= 0; }); // past dates disappear
     if (S.events.length !== before) save();
     sendWidget();
-    // Ramadan, Eid al-Fitr and Eid al-Adha share the first card, in turn; then the other occasions
-    var all = allEvents(r);
-    seasons = all.filter(function (e) { return SEASON[e.auto]; });
-    $('events').innerHTML = (seasons.length ? '<div id="ev-season" class="ev">' + evInner(seasons[seasonI % seasons.length]) + '</div>' : '') +
-      all.filter(function (e) { return !SEASON[e.auto]; }).slice(0, seasons.length ? 4 : 5).map(function (e) {
-        return '<div class="ev">' + evInner(e) + '</div>';
-      }).join('');
+    // occasions with the same card letter (أ ب ج) share one card and take turns; card أ comes first, then the nearest
+    var all = allEvents(r), groups = {}, cards = [];
+    all.forEach(function (e) {
+      var g = cardOf(e);
+      if (!g) cards.push({ g: '', list: [e] });
+      else if (groups[g]) groups[g].list.push(e);
+      else cards.push(groups[g] = { g: g, list: [e] });
+    });
+    cards.sort(function (x, y) { return (x.g === 'a' ? -1 : 0) - (y.g === 'a' ? -1 : 0) || x.list[0].left - y.list[0].left; });
+    evCards = cards;
+    $('events').innerHTML = cards.slice(0, 6).map(function (c, n) {
+      return '<div class="ev' + (c.list.length > 1 ? ' ev-turn' : '') + '" id="evc-' + n + '">' + evInner(c.list[(evTurn[c.g] || 0) % c.list.length]) + '</div>';
+    }).join('');
   }
-  var SEASON = { ramadan: 1, fitr: 1, adha: 1 }, seasons = [], seasonI = 0;
+  // the card of an occasion: chosen in the settings, or by default Ramadan and the Eids أ, birthdays and the anniversary ب
+  var SEASON = { ramadan: 1, fitr: 1, adha: 1 }, CARD_LETTERS = ['', 'a', 'b', 'c'], CARD_NAMES = { '': 'منفردة', a: 'أ', b: 'ب', c: 'ج' };
+  var evCards = [], evTurn = {};
+  function evKey(e) { return e.auto || 'o:' + e.name + ':' + e.y + '-' + e.m + '-' + e.d; }
+  function cardOf(e) {
+    var k = evKey(e);
+    if (S.evCard[k] != null) return S.evCard[k];
+    return SEASON[e.auto] ? 'a' : e.auto && (e.auto.indexOf('b-') === 0 || e.auto === 'anniv') ? 'b' : '';
+  }
   function evInner(e) {
     var big = e.left <= 2 ? daysText(e.left) : e.left;
     return '<span class="ev-n">' + big + '</span><div class="ev-t"><b>' + esc(e.name) +
       '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? 'أيام' : 'يومًا') + ' · ') + dmy(e) + '</span></div>';
   }
   setInterval(function () {
-    var box = $('ev-season');
-    if (!box || seasons.length < 2) return;
-    box.classList.add('fade');
-    setTimeout(function () { seasonI++; box.innerHTML = evInner(seasons[seasonI % seasons.length]); box.classList.remove('fade'); }, 400);
+    evCards.slice(0, 6).forEach(function (c, n) {
+      var box = $('evc-' + n);
+      if (!box || c.list.length < 2) return;
+      box.classList.add('fade');
+      setTimeout(function () { evTurn[c.g] = (evTurn[c.g] || 0) + 1; box.innerHTML = evInner(c.list[evTurn[c.g] % c.list.length]); box.classList.remove('fade'); }, 400);
+    });
   }, 10000);
   var evDraft = (function () { var r = P.ymd(Date.now()), x = P.addDays(r.y, r.m, r.d, 30); return { y: x.y, m: x.m, d: x.d }; })();
 
@@ -750,7 +780,17 @@
   function setRender() {
     var keep = document.activeElement && document.activeElement.dataset.k;
     var r = P.ymd(Date.now()), T = P.dayTimes(r.y, r.m, r.d, S.offsets);
-    $('set-sound').innerHTML = [['normal', 'صوت التنبيه'], ['fajr', 'صوت تنبيه الفجر']].map(function (x) {
+    $('set-loc').innerHTML =
+      '<div class="srow"><span class="sname">' + esc(S.loc.name) + (S.loc.country ? ' <span class="muted">· ' + esc(S.loc.country) + '</span>' : '') +
+        '<br><span class="muted set-note">طريقة الحساب: ' + P.method().name + '</span></span>' +
+        '<button class="sbtn al f' + (S.loc.mode === 'auto' ? ' on' : '') + '" data-k="loc-auto">' + (S.loc.mode === 'auto' ? 'تلقائي' : 'تحديد تلقائي') + '</button></div>' +
+      '<div class="srow"><input id="loc-q" class="inp f" placeholder="ابحث عن مدينة، مثل: جدة أو عمّان" value="' + esc(locQ) + '"><button id="loc-find" class="sbtn f">بحث</button></div>' +
+      (locMsg ? '<div class="muted set-note">' + locMsg + '</div>' : '') +
+      locResults.map(function (g, i) {
+        return '<div class="srow"><span class="sname">' + esc(g.name) + ' <span class="muted">· ' + esc([g.admin1, g.country].filter(Boolean).join('، ')) + '</span></span>' +
+          '<button class="sbtn al f" data-k="loc-' + i + '">اختيار</button></div>';
+      }).join('');
+    $('set-sound').innerHTML = '<div class="muted set-note">صوت التنبيه لكل صلاة</div>' + FIVE.map(function (k) { return [k, P.name(k)]; }).map(function (x) {
       return '<div class="srow snd-row"><span class="sname">' + x[1] + '</span><span class="snd-opts">' + SOUNDS.map(function (o) {
         return '<button class="sbtn f' + (S.sound[x[0]] === o[0] ? ' on' : '') + '" data-k="snd-' + x[0] + '-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
@@ -788,7 +828,8 @@
       '<div class="srow"><span class="sname">الإشعارات</span>' + (A.notifOk() ? '<span class="sbtn al on">مسموحة</span>' : '<button class="sbtn al f" data-k="notif">السماح</button>') + '</div>' +
       '<div class="srow"><span class="sname">التنبيه في الوقت بالضبط</span>' + (A.exactOk() ? '<span class="sbtn al on">يعمل</span>' : '<span class="sbtn al">قد يتأخر قليلًا</span>') + '</div>' +
       '<div class="srow"><span class="sname">استثناء من توفير البطارية (مهم في سامسونج)</span>' + (A.batteryOk() ? '<span class="sbtn al on">مستثنى</span>' : '<button class="sbtn al f" data-k="battery">استثناء</button>') + '</div>';
-    $('set-isha').innerHTML = [['normal', 'العشاء بعد المغرب'], ['ramadan', 'العشاء بعد المغرب في رمضان']].map(function (x) {
+    // the Isha interval is a setting only where Isha is a time after Maghrib (Umm al-Qura)
+    $('set-isha').innerHTML = !(P.method().ishaMin && !P.method().fixed) ? '' : [['normal', 'العشاء بعد المغرب'], ['ramadan', 'العشاء بعد المغرب في رمضان']].map(function (x) {
       return '<div class="srow"><span class="sname">' + x[1] + '</span>' +
         '<button class="sbtn f" data-k="im-' + x[0] + '" aria-label="ناقص دقيقة">−</button>' +
         '<span class="soff">' + S.ishaMin[x[0]] + '</span>' +
@@ -832,14 +873,15 @@
     $('fm-date').innerHTML = steps('fmd', fmDraft, [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']]);
     if (famOrder().indexOf(famTo) < 0) famTo = famOrder()[0];
     $('fam-to').textContent = 'إلى: ' + member(famTo).name;
-    $('set-events').innerHTML = autoEvents(r).map(function (e) {
+    function cardBtn(k, e) { var g = cardOf(e); return '<button class="sbtn f' + (g ? ' on' : '') + '" data-k="' + k + '">البطاقة: ' + CARD_NAMES[g] + '</button>'; }
+    $('set-events').innerHTML = autoEvents(r).map(function (e, i) {
       var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
-        '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? 'يظهر' : 'مخفي') + '</button></div>';
+        cardBtn('evca-' + i, e) + '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? 'يظهر' : 'مخفي') + '</button></div>';
     }).join('') + S.events.map(function (e, i) {
       var n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + esc(e.name) + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
-        '<button class="sbtn al f" data-k="evx-' + i + '">حذف</button></div>';
+        cardBtn('evco-' + i, e) + '<button class="sbtn al f" data-k="evx-' + i + '">حذف</button></div>';
     }).join('');
     $('ev-date').innerHTML = [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']].map(function (f) {
       return '<span>' + f[1] + ' <button class="sbtn f" data-k="evd-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + evDraft[f[0]] +
@@ -851,9 +893,68 @@
       if (el) el.focus();
     }
   }
+  // ---------- the city: automatic (from the internet connection) or chosen by search (Open-Meteo geocoding) ----------
+  var locResults = [], locMsg = '', locQ = '';
+  function showCity() {
+    $('w0-city').textContent = S.loc.name;
+    $('w0-btn').setAttribute('aria-label', 'الطقس في ' + S.loc.name);
+    $('set-sub').textContent = S.loc.name + ' · ' + P.method().name;
+  }
+  function applyLoc(loc) {
+    var moved = Math.abs(loc.lat - S.loc.lat) + Math.abs(loc.lon - S.loc.lon) > 0.05 || loc.tz !== S.loc.tz;
+    S.loc = loc; save();
+    P.setLocation(loc); makeFormats();
+    CITIES[0] = { name: loc.name, lat: loc.lat, lon: loc.lon };
+    showCity();
+    if (moved) {
+      try { localStorage.removeItem('prayertv-w0'); } catch (e) {}
+      WX[0] = null; loadWeather();
+      autoCache.key = ''; lastDay = ''; tick();
+    }
+    if (screen === 'settings') setRender();
+  }
+  function geo(q) {
+    return fetch('https://geocoding-api.open-meteo.com/v1/search?count=8&language=ar&format=json&name=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); }).then(function (j) { return j.results || []; });
+  }
+  function fromGeo(g, mode) {
+    return { mode: mode, name: g.name, country: g.country || '', lat: g.latitude, lon: g.longitude, tz: g.timezone, cc: (g.country_code || '').toUpperCase() };
+  }
+  function locSearch() {
+    var q = ($('loc-q').value || '').trim();
+    if (!q) { $('loc-q').focus(); return; }
+    locQ = q;
+    locMsg = 'جارٍ البحث…'; setRender();
+    geo(q).then(function (list) {
+      locResults = list.filter(function (g) { return g.timezone; });
+      locMsg = locResults.length ? '' : 'لم أجد مدينة بهذا الاسم';
+      setRender();
+      var f = document.querySelector('[data-k="loc-0"]'); if (f) f.focus();
+    }).catch(function () { locMsg = 'تعذّر البحث، تأكد من اتصال الإنترنت'; setRender(); });
+  }
+  // automatic: the city of the internet connection, its Arabic name from the geocoding service
+  function locateAuto() {
+    fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) { return r.json(); }).then(function (j) {
+      var lat = +j.latitude, lon = +j.longitude;
+      if (!j.timezone || isNaN(lat)) throw 0;
+      var base = { mode: 'auto', name: j.city || j.region || j.country, country: j.country || '', lat: lat, lon: lon, tz: j.timezone, cc: (j.country_code || '').toUpperCase() };
+      return geo(j.city || '').then(function (list) {
+        var near = list.filter(function (g) { return Math.abs(g.latitude - lat) + Math.abs(g.longitude - lon) < 0.6; })[0];
+        if (near) { base.name = near.name; base.country = near.country || base.country; }
+        return base;
+      }).catch(function () { return base; });
+    }).then(function (loc) { if (S.loc.mode === 'auto') { locMsg = ''; applyLoc(loc); sendSchedule(); } })
+      .catch(function () { locMsg = 'تعذّر تحديد المدينة تلقائيًا، ابحث عنها بالاسم'; if (screen === 'settings') setRender(); });
+  }
+
   var SOUNDS = [['tone', 'نغمة'], ['adhan', 'أذان كامل'], ['short', 'أذان مختصر'], ['none', 'بدون صوت']];
   function setAction(k) {
     var p = k.split('-'), a = p[0], v = p[1];
+    if (a === 'loc') {
+      if (v === 'auto') { S.loc = Object.assign({}, S.loc, { mode: 'auto' }); save(); locMsg = 'جارٍ تحديد المدينة…'; locateAuto(); }
+      else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
+      setRender(); return;
+    }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
     if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
     if (a === 'sndt') { try { A.previewSound(S.sound[v]); } catch (e) {} return; }
@@ -870,7 +971,11 @@
     else if (a === 'notif') { if (A) A.askNotif(); setTimeout(setRender, 1500); return; }
     else if (a === 'battery') { if (A) A.askBattery(); return; }
     else if (a === 'dreamset') { if (A) A.openDreamSettings(); return; }
-    else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
+    else if (a === 'eva') { v = k.slice(4); S.autoEv[v] = S.autoEv[v] === false; }
+    else if (a === 'evca' || a === 'evco') {
+      var ev = a === 'evca' ? autoEvents(P.ymd(Date.now()))[+v] : S.events[+v];
+      if (ev) S.evCard[evKey(ev)] = CARD_LETTERS[(CARD_LETTERS.indexOf(cardOf(ev)) + 1) % CARD_LETTERS.length];
+    }
     else if (a === 'fx') S.famMsgs.splice(+v, 1);
     else if (a === 'fact') { S.showFact = !S.showFact; lastFact = -1; }
     else if (/^q[nr][mp]$/.test(a)) {
@@ -914,7 +1019,7 @@
       if (evDraft.d > dim) evDraft.d = f === 'd' ? 1 : dim;
     }
     save();
-    if (a === 'eva' || a === 'evx' || a === 'fmx' || a === 'fan') renderEvents(P.ymd(Date.now()));
+    if (a === 'eva' || a === 'evx' || a === 'evca' || a === 'evco' || a === 'fmx' || a === 'fan') renderEvents(P.ymd(Date.now()));
     if (a === 'snd' || a === 'm' || a === 'p' || a === 'a' || a === 'im' || a === 'ip' || /^q[nr][mp]$/.test(a)) { sendSchedule(); lastDay = ''; }
     setRender();
     if (!document.activeElement || document.activeElement === document.body) {
@@ -1021,6 +1126,7 @@
     var k = e.key;
     // typing in a text box: keep the keys for the text, only up/down move between items
     var typing = document.activeElement && document.activeElement.tagName === 'INPUT';
+    if (k === 'Enter' && document.activeElement && document.activeElement.id === 'loc-q') { e.preventDefault(); locSearch(); return; }
     if (typing && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'Escape' && k !== 'GoBack') return;
     var dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (dirs[k]) { e.preventDefault(); move(dirs[k]); return; }
@@ -1066,6 +1172,7 @@
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
+      case 'loc-find': locSearch(); break;
       // quick switch: dark ↔ light (the settings also have «تلقائي»)
       case 'theme-btn': S.theme = night ? 'light' : 'dark'; save(); night = null; tick(); break;
       case 'cal-prev': calMonth(-1); break;
@@ -1110,6 +1217,8 @@
   };
 
   if (A && TV) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
+  showCity();
+  if (S.loc.mode === 'auto') locateAuto();
   renderShortcuts();
   tick();
   setTimeout(function () { tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);

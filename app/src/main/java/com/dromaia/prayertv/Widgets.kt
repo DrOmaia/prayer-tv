@@ -39,6 +39,7 @@ object Widgets {
         val am = AppWidgetManager.getInstance(ctx)
         val now = System.currentTimeMillis()
         val d = data(ctx)
+        d?.optString("tz")?.takeIf { it.isNotEmpty() }?.let { TZ = TimeZone.getTimeZone(it) }
         var nextChange = now + 30 * 60_000L
         am.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java)).forEach { id ->
             val (rv, change) = prayerViews(ctx, d, now)
@@ -118,8 +119,8 @@ object Widgets {
         return rv
     }
 
-    // Riyadh time
-    private val TZ: TimeZone = TimeZone.getTimeZone("Asia/Riyadh")
+    // the time zone of the city chosen in the app (Riyadh until the page says otherwise)
+    private var TZ: TimeZone = TimeZone.getTimeZone("Asia/Riyadh")
     private fun hm(t: Long): String {
         val c = Calendar.getInstance(TZ).apply { timeInMillis = t }
         return String.format(Locale.US, "%02d:%02d", c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))

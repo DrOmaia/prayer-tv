@@ -1,7 +1,48 @@
-// Prayer times for Riyadh, Umm al-Qura method: Fajr 18.5°, Isha = Maghrib + 90 min (120 in Ramadan).
+// Prayer times for the chosen city (Riyadh by default), with the method of its country:
+// Saudi Arabia Umm al-Qura (Fajr 18.5°, Isha = Maghrib + 90 min, 120 in Ramadan), Jordan, Egypt… (METHODS below).
 // Times are computed on the device; no internet needed.
 (function () {
-  var LAT = 24.7136, LNG = 46.6753, TZ = 3, HR = 3600000, MIN = 60000;
+  var LAT = 24.7136, LNG = 46.6753, ZONE = 'Asia/Riyadh', HR = 3600000, MIN = 60000;
+  // fajr / isha: angle of the sun below the horizon; ishaMin: Isha a fixed time after Maghrib instead of an angle
+  var METHODS = {
+    umm: { name: 'أم القرى', fajr: 18.5, ishaMin: true },
+    jordan: { name: 'وزارة الأوقاف الأردنية', fajr: 18, isha: 18 },
+    egypt: { name: 'الهيئة المصرية العامة للمساحة', fajr: 19.5, isha: 17.5 },
+    kuwait: { name: 'وزارة الأوقاف الكويتية', fajr: 18, isha: 17.5 },
+    qatar: { name: 'وزارة الأوقاف القطرية', fajr: 18, ishaMin: true, fixed: 90 },
+    uae: { name: 'الهيئة العامة للشؤون الإسلامية (الإمارات)', fajr: 18.2, isha: 18.2 },
+    karachi: { name: 'جامعة العلوم الإسلامية بكراتشي', fajr: 18, isha: 18 },
+    turkey: { name: 'رئاسة الشؤون الدينية التركية', fajr: 18, isha: 17 },
+    morocco: { name: 'وزارة الأوقاف المغربية', fajr: 19, isha: 17 },
+    isna: { name: 'الجمعية الإسلامية لأمريكا الشمالية', fajr: 15, isha: 15 },
+    mwl: { name: 'رابطة العالم الإسلامي', fajr: 18, isha: 17 }
+  };
+  var BY_COUNTRY = { SA: 'umm', YE: 'umm', JO: 'jordan', PS: 'jordan', SY: 'jordan', EG: 'egypt', SD: 'egypt', LY: 'egypt', IQ: 'egypt',
+    LB: 'egypt', KW: 'kuwait', QA: 'qatar', BH: 'qatar', OM: 'qatar', AE: 'uae', PK: 'karachi', IN: 'karachi', BD: 'karachi', AF: 'karachi',
+    TR: 'turkey', MA: 'morocco', DZ: 'mwl', TN: 'mwl', US: 'isna', CA: 'isna' };
+  var METHOD = METHODS.umm;
+  function methodFor(cc) { return BY_COUNTRY[cc] || 'mwl'; }
+  // the city: {lat, lon, tz (IANA name), cc (country code)}
+  function setLocation(loc) {
+    if (!loc) return;
+    LAT = loc.lat; LNG = loc.lon; ZONE = loc.tz || 'Asia/Riyadh';
+    METHOD = METHODS[methodFor(loc.cc)];
+    offCache = {};
+    try { fHMonth = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: ZONE, month: 'numeric' }); } catch (e) {}
+  }
+  // hours between UTC and the city's clock at a moment (summer time included)
+  var offCache = {}, fOff = null, fOffZone = '';
+  function offH(ts) {
+    var key = Math.floor(ts / HR);
+    if (offCache[key] != null) return offCache[key];
+    if (fOffZone !== ZONE) {
+      fOff = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+      fOffZone = ZONE;
+    }
+    var p = {};
+    fOff.formatToParts(new Date(key * HR)).forEach(function (x) { p[x.type] = +x.value; });
+    return (offCache[key] = (Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute) - key * HR) / HR);
+  }
   var ORDER = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
   var NAMES = { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' };
   // Ministry of Islamic Affairs: 10 min between adhan and iqamah, Fajr 20; in Ramadan Fajr and Isha also 10
@@ -43,11 +84,11 @@
     return { decl: deg(Math.asin(Math.sin(rad(e)) * Math.sin(rad(L)))), eqt: eqt };
   }
 
-  // Riyadh calendar day (y, m 1-12, d) at noon, as a moment
-  function noonOf(y, m, d) { return Date.UTC(y, m - 1, d, 9); }
-  // Riyadh calendar date of a moment
+  // the city's calendar day (y, m 1-12, d) at noon, as a moment
+  function noonOf(y, m, d) { var u = Date.UTC(y, m - 1, d, 12); return u - offH(u) * HR; }
+  // the city's calendar date of a moment
   function ymd(ts) {
-    var r = new Date(ts + TZ * HR);
+    var r = new Date(ts + offH(ts) * HR);
     return { y: r.getUTCFullYear(), m: r.getUTCMonth() + 1, d: r.getUTCDate(), wd: r.getUTCDay(), h: r.getUTCHours(), mi: r.getUTCMinutes(), s: r.getUTCSeconds() };
   }
 
@@ -70,15 +111,18 @@
       var dc = sunPos(jd + t).decl;
       return angleTime(-deg(Math.atan(1 / (1 + Math.tan(rad(Math.abs(LAT - dc)))))), t, false);
     }
-    var adj = TZ - LNG / 15;
+    var TZ = offH(noonOf(y, m, d)), adj = TZ - LNG / 15;
     var h = {
-      fajr: angleTime(18.5, 5 / 24, true) + adj,
+      fajr: angleTime(METHOD.fajr, 5 / 24, true) + adj,
       sunrise: angleTime(0.833, 6 / 24, true) + adj,
       dhuhr: noon(12 / 24) + adj,
       asr: asr(13 / 24) + adj,
       maghrib: angleTime(0.833, 18 / 24, false) + adj
     };
-    h.isha = h.maghrib + (ramadan ? ISHA.ramadan : ISHA.normal) / 60;
+    h.isha = METHOD.ishaMin ? h.maghrib + (METHOD.fixed || (ramadan ? ISHA.ramadan : ISHA.normal)) / 60 : angleTime(METHOD.isha, 18 / 24, false) + adj;
+    // far north in summer the sun may not go deep enough: a sensible fallback
+    if (isNaN(h.fajr)) h.fajr = h.sunrise - 1.5;
+    if (isNaN(h.isha)) h.isha = h.maghrib + 1.5;
     var base = Date.UTC(y, m - 1, d) - TZ * HR;
     var friday = new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 5;
     var iq = ramadan ? IQ_RAMADAN : IQ_NORMAL;
@@ -111,7 +155,8 @@
   }
 
   window.Prayer = {
-    ORDER: ORDER, HR: HR, MIN: MIN, TZ: TZ,
+    ORDER: ORDER, HR: HR, MIN: MIN, zone: function () { return ZONE; }, setLocation: setLocation, methodFor: methodFor, METHODS: METHODS,
+    method: function () { return METHOD; },
     dayTimes: dayTimes, setIsha: setIsha, setIqamah: setIqamah, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
     pad: pad, addDays: addDays, isRamadan: isRamadan
   };

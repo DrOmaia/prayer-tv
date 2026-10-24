@@ -13,7 +13,7 @@
   <section id="home" class="screen">
     <header class="top">
       <div class="wx-stack">
-        <button class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><b class="w-city">الرياض</b><span id="w0-temp" class="w-temp">—</span><span id="w0-hl" class="w-hl"></span></button>
+        <button id="w0-btn" class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><b id="w0-city" class="w-city">الرياض</b><span id="w0-temp" class="w-temp">—</span><span id="w0-hl" class="w-hl"></span></button>
         <button class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><b class="w-city">إربد</b><span id="w1-temp" class="w-temp">—</span><span id="w1-hl" class="w-hl"></span></button>
       </div>
       <div id="events" class="events"></div>
@@ -161,7 +161,7 @@
     <header class="top">
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
-        <div><div class="big-title">الإعدادات</div><div class="muted sub-title">الرياض · تقويم أم القرى</div></div>
+        <div><div class="big-title">الإعدادات</div><div id="set-sub" class="muted sub-title">الرياض · أم القرى</div></div>
       </div>
     </header>
     <div class="set-body">
@@ -175,7 +175,9 @@
         <div id="set-general"></div>
         </div>
         <div id="set-phone"></div>
-        <div class="set-h set-first">مواقيت الأذان والتنبيه</div>
+        <div class="set-h set-first">المدينة وطريقة الحساب</div>
+        <div id="set-loc"></div>
+        <div class="set-h set-h2">مواقيت الأذان والتنبيه</div>
         <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
         <div id="set-sound"></div>
         <div id="set-prayers"></div>
@@ -187,7 +189,7 @@
       </div>
       <div class="card set-col">
         <div class="set-h">عدّادات المناسبات</div>
-        <div class="muted set-note">تظهر أقرب 4 في الشاشة الرئيسية، وتختفي بعد مرور تاريخها</div>
+        <div class="muted set-note">تختفي بعد مرور تاريخها. المناسبات بنفس حرف «البطاقة» تتقلب معًا في بطاقة واحدة</div>
         <div id="set-events"></div>
         <div class="ev-add">
           <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
