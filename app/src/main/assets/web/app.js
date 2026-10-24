@@ -33,6 +33,7 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
       // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
       theme: s.theme || 'auto', // 'auto' (dark at night) · 'light' · 'dark'
       sound: Object.assign({ normal: 'tone', fajr: 'none' }, s.sound)
@@ -672,23 +673,28 @@
     calRender();
   }
 
-  // ---------- Surah Al-Kahf (Mishary Alafasy, verse by verse from everyayah.com) ----------
-  var kahf = { i: 0, playing: false };
+  // ---------- the Qur'an: any surah, verse by verse (Mishary Alafasy from everyayah.com), the verses on screen ----------
+  var kahf = { s: 18, i: 0, playing: false };
   var audio = new Audio(), pre = new Audio();
   pre.preload = 'auto';
+  function pad3(n) { return ('00' + n).slice(-3); }
+  function kCount() { return QURAN[kahf.s - 1][1].length; }
+  // the Basmala comes first, except in Al-Fatiha (its first verse) and At-Tawbah
+  function kFirst() { return kahf.s === 1 || kahf.s === 9 ? 1 : 0; }
   function kSrc(i) {
-    return 'https://everyayah.com/data/Alafasy_128kbps/' + (i === 0 ? '001001' : '018' + ('00' + i).slice(-3)) + '.mp3';
+    return 'https://everyayah.com/data/Alafasy_128kbps/' + (i === 0 ? '001001' : pad3(kahf.s) + pad3(i)) + '.mp3';
   }
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
-  function kText(i) { return i === 0 ? BASMALA : (i >= 1 && i <= 110 ? KAHF[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
+  function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
   function kRender() {
-    var i = kahf.i, cur = kText(i);
-    $('k-prev').textContent = i > 0 ? kText(i - 1) : '';
+    var i = kahf.i, cur = kText(i), n = kCount();
+    $('k-title').textContent = 'سورة ' + QURAN[kahf.s - 1][0];
+    $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').textContent = cur;
     $('k-next').textContent = kText(i + 1);
-    $('k-cur').style.fontSize = cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
-    $('k-pos').textContent = i === 0 ? 'البسملة' : 'الآية ' + i + ' من 110';
-    $('k-fill').style.width = (i / 110 * 100) + '%';
+    $('k-cur').style.fontSize = cur.length > 900 ? '28px' : cur.length > 600 ? '34px' : cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
+    $('k-pos').textContent = i === 0 ? 'البسملة' : 'الآية ' + i + ' من ' + n;
+    $('k-fill').style.width = (i / n * 100) + '%';
     $('k-ic-pause').classList.toggle('hidden', !kahf.playing);
     $('k-ic-play').classList.toggle('hidden', kahf.playing);
   }
@@ -698,11 +704,14 @@
     $('k-msg').textContent = '';
     audio.src = kSrc(i);
     audio.play().catch(function () {});
-    if (i < 110) pre.src = kSrc(i + 1);
+    if (i < kCount()) pre.src = kSrc(i + 1);
+    if (i > 0) { S.qLast = { s: kahf.s, i: i }; save(); }
     kRender();
   }
+  function kNext() { if (kahf.i < kCount()) kPlay(kahf.i + 1); }
+  function kPrev() { if (kahf.i > kFirst()) kPlay(kahf.i - 1); }
   audio.addEventListener('ended', function () {
-    if (kahf.i < 110) kPlay(kahf.i + 1);
+    if (kahf.i < kCount()) kPlay(kahf.i + 1);
     else { kahf.playing = false; $('k-msg').textContent = 'انتهت السورة'; kRender(); }
   });
   audio.addEventListener('error', function () {
@@ -715,6 +724,15 @@
     if (kahf.playing) { audio.pause(); kahf.playing = false; kRender(); }
     else if (audio.src && !audio.ended && audio.currentTime > 0) { audio.play().catch(function () {}); kahf.playing = true; kRender(); }
     else kPlay(kahf.i);
+  }
+  // the list of the 114 surahs, and «continue» from the last verse heard
+  function quranRender() {
+    var L = S.qLast;
+    $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
+      'متابعة سورة ' + QURAN[L.s - 1][0] + ' · الآية ' + L.i + '</button>' : '';
+    if (!$('q-list').firstChild) $('q-list').innerHTML = QURAN.map(function (q, k) {
+      return '<button class="sura f" data-go="kahf" data-sura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, 'آية', 'آيتان', 'آيات', 'آية') + '</span></button>';
+    }).join('');
   }
   function kStop() { audio.pause(); kahf.playing = false; }
 
@@ -946,7 +964,8 @@
     Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
-    if (name === 'kahf') { kPlay(0); $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
+    if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
+    if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
     if (name === 'apps') { appsRender(); focusFirst(document.querySelector('#apps-grid .f')); return; }
     if (name === 'settings') setRender();
@@ -1030,7 +1049,11 @@
       show(el.dataset.tab);
       return;
     }
-    if (el.hasAttribute('data-go')) { if (el.dataset.go === 'apps') appsMode = 'launch'; go(el.dataset.go); return; }
+    if (el.hasAttribute('data-go')) {
+      if (el.dataset.go === 'apps') appsMode = 'launch';
+      if (el.dataset.go === 'kahf') { kahf.s = +(el.dataset.sura || 18); kahf.from = +(el.dataset.from || 0); }
+      go(el.dataset.go); return;
+    }
     if (el.hasAttribute('data-back')) { back(); return; }
     if (el.dataset.pkg) {
       if (screen === 'apps' && appsMode === 'pick') {
@@ -1049,8 +1072,8 @@
       case 'cal-next': calMonth(1); break;
       case 'cal-today': calOpen(); break;
       case 'k-play': kToggle(); break;
-      case 'k-prev-btn': if (kahf.i > 0) kPlay(kahf.i - 1); break;
-      case 'k-next-btn': if (kahf.i < 110) kPlay(kahf.i + 1); break;
+      case 'k-prev-btn': kPrev(); break;
+      case 'k-next-btn': kNext(); break;
       case 'set-add': appsMode = 'pick'; go('apps'); break;
       case 'ev-add': addEvent(); break;
       case 'fam-to': famTo = famOrder()[(famOrder().indexOf(famTo) + 1) % famOrder().length]; setRender(); $('fam-to').focus(); break;
@@ -1073,7 +1096,7 @@
     }, { passive: true });
   }
   onSwipe($('cal-grid'), function () { calMonth(1); }, function () { calMonth(-1); });
-  onSwipe(document.querySelector('.kahf-text'), function () { if (kahf.i < 110) kPlay(kahf.i + 1); }, function () { if (kahf.i > 0) kPlay(kahf.i - 1); });
+  onSwipe(document.querySelector('.kahf-text'), kNext, kPrev);
 
   // called by Android
   window.App = {
