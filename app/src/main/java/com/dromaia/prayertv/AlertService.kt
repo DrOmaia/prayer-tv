@@ -1,0 +1,159 @@
+package com.dromaia.prayertv
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.provider.Settings
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+
+// At adhan time: a short soft chime, and a banner on top of any app for 15 seconds
+class AlertService : Service() {
+
+    private var view: View? = null
+    private var player: MediaPlayer? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startAsForeground()
+        val title = intent?.getStringExtra("title") ?: return stopNow()
+        val sub = intent.getStringExtra("sub") ?: ""
+        playChime()
+        if (!MainActivity.visible && (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this))) {
+            showBanner(title, sub)
+        }
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({ stopNow() }, 15000)
+        return START_NOT_STICKY
+    }
+
+    private fun stopNow(): Int {
+        removeBanner()
+        player?.release()
+        player = null
+        stopForeground(true)
+        stopSelf()
+        return START_NOT_STICKY
+    }
+
+    private fun startAsForeground() {
+        val nm = getSystemService(NotificationManager::class.java)
+        val b = if (Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(NotificationChannel("adhan", "تنبيه الأذان", NotificationManager.IMPORTANCE_LOW))
+            Notification.Builder(this, "adhan")
+        } else {
+            @Suppress("DEPRECATION") Notification.Builder(this)
+        }
+        val n = b.setContentTitle(getString(R.string.app_name))
+            .setSmallIcon(R.drawable.ic_moon)
+            .build()
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(7, n)
+        }
+    }
+
+    private fun playChime() {
+        try {
+            player?.release()
+            player = MediaPlayer.create(this, R.raw.chime, AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build(), 0)
+            player?.start()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics).toInt()
+
+    private fun showBanner(title: String, sub: String) {
+        removeBanner()
+        val regular = Typeface.DEFAULT
+        val bold = Typeface.DEFAULT_BOLD
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            setPadding(dp(20f), dp(16f), dp(20f), dp(16f))
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#F5F3EF"))
+                cornerRadius = dp(20f).toFloat()
+                setStroke(dp(2f), Color.parseColor("#87642A"))
+            }
+            elevation = dp(12f).toFloat()
+        }
+        val icon = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#87642A"))
+            }
+            addView(ImageView(this@AlertService).apply { setImageResource(R.drawable.ic_moon) },
+                FrameLayout.LayoutParams(dp(30f), dp(30f), Gravity.CENTER))
+        }
+        card.addView(icon, LinearLayout.LayoutParams(dp(56f), dp(56f)))
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16f), 0, dp(16f), 0)
+            addView(TextView(this@AlertService).apply {
+                text = title; textSize = 24f; typeface = bold; setTextColor(Color.parseColor("#1C1E21"))
+            })
+            if (sub.isNotEmpty()) addView(TextView(this@AlertService).apply {
+                text = sub; textSize = 16f; typeface = regular; setTextColor(Color.parseColor("#5F5A52"))
+            })
+        }
+        card.addView(texts, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        @Suppress("DEPRECATION")
+        val type = if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else WindowManager.LayoutParams.TYPE_PHONE
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = dp(28f)
+        }
+        try {
+            getSystemService(WindowManager::class.java).addView(card, lp)
+            view = card
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun removeBanner() {
+        view?.let { try { getSystemService(WindowManager::class.java).removeView(it) } catch (_: Exception) {} }
+        view = null
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        removeBanner()
+        player?.release()
+        super.onDestroy()
+    }
+}
