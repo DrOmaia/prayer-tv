@@ -90,17 +90,25 @@
     if (idx >= 0) (box.children[idx] || box.lastElementChild).focus();
   }
 
-  // ---------- weather (Open-Meteo, every 30 minutes) ----------
-  var CITIES = [{ lat: 24.7136, lon: 46.6753 }, { lat: 32.5556, lon: 35.85 }];
+  // ---------- weather (Open-Meteo, every 30 minutes): now, today, next hours, next days ----------
+  var CITIES = [{ name: 'الرياض', lat: 24.7136, lon: 46.6753 }, { name: 'إربد', lat: 32.5556, lon: 35.85 }];
+  var DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  function svg(body) { return '<svg viewBox="0 0 24 24" class="ic">' + body + '</svg>'; }
+  var CLOUD = '<path d="M6.5 19h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 11.5 3.75 3.75 0 0 0 6.5 19z"/>';
   var W_ICONS = {
-    sun: '<svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
-    moon: '<svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
-    partly: '<svg viewBox="0 0 24 24" class="ic"><path d="M8 3.5v1.5M3.5 8H2M4.8 4.8l1 1M12.5 6.2A4 4 0 0 0 5 9.5"/><path d="M7.5 20h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.6 13 3.5 3.5 0 0 0 7.5 20z"/></svg>',
-    cloud: '<svg viewBox="0 0 24 24" class="ic"><path d="M6.5 19h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 11.5 3.75 3.75 0 0 0 6.5 19z"/></svg>',
-    fog: '<svg viewBox="0 0 24 24" class="ic"><path d="M4 10h16M3 14h18M6 18h12"/></svg>',
-    rain: '<svg viewBox="0 0 24 24" class="ic"><path d="M6.5 15h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 7.5 3.75 3.75 0 0 0 6.5 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></svg>',
-    snow: '<svg viewBox="0 0 24 24" class="ic"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg>',
-    storm: '<svg viewBox="0 0 24 24" class="ic"><path d="M6.5 14h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 6.5 3.75 3.75 0 0 0 6.5 14z"/><path d="M12.5 15l-2 3.5h3l-2 3.5"/></svg>'
+    sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    moon: svg('<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+    partly: svg('<path class="sun" d="M8 3.5v1.5M3.5 8H2M4.8 4.8l1 1M12.5 6.2A4 4 0 0 0 5 9.5"/><path d="M7.5 20h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.6 13 3.5 3.5 0 0 0 7.5 20z"/>'),
+    cloud: svg(CLOUD),
+    fog: svg('<path d="M4 10h16M3 14h18M6 18h12"/>'),
+    rain: svg('<path d="M6.5 15h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 7.5 3.75 3.75 0 0 0 6.5 15z"/><path class="drop" d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>'),
+    snow: svg('<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>'),
+    storm: svg('<path d="M6.5 14h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 6.5 3.75 3.75 0 0 0 6.5 14z"/><path class="bolt" d="M12.5 15l-2 3.5h3l-2 3.5"/>'),
+    // small icons for the details
+    hum: svg('<path d="M12 3.5s-6 6.5-6 10.5a6 6 0 0 0 12 0c0-4-6-10.5-6-10.5z"/>'),
+    umb: svg('<path d="M3 12a9 9 0 0 1 18 0zM12 12v6a2 2 0 0 0 4 0"/>'),
+    wind: svg('<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>'),
+    feel: svg('<path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/>')
   };
   function weatherInfo(code, day) {
     if (code === 0) return [day ? 'sun' : 'moon', 'صافٍ'];
@@ -114,23 +122,68 @@
     if (code >= 95) return ['storm', 'عاصفة رعدية'];
     return ['cloud', ''];
   }
+  function wIcon(code, day, cls) { var k = weatherInfo(code, day)[0]; return '<span class="wi wi-' + k + ' ' + (cls || '') + '">' + W_ICONS[k] + '</span>'; }
+  function hiLo(w) { return '<span dir="ltr">' + w.hi + '° / ' + w.lo + '°</span>'; }
+  function stat(k, v) { return '<span class="ws ws-' + k + '">' + W_ICONS[k] + '<b>' + v + '</b></span>'; }
+  var WX = [null, null];
   function showWeather(i, w) {
+    WX[i] = w;
     var info = weatherInfo(w.code, w.day);
-    $('w' + i + '-icon').innerHTML = W_ICONS[info[0]];
+    $('w' + i + '-icon').innerHTML = wIcon(w.code, w.day);
     $('w' + i + '-temp').textContent = w.t + '°';
-    $('w' + i + '-desc').textContent = info[1];
+    $('w' + i + '-desc').innerHTML = info[1] + (w.hi != null ? ' · ' + hiLo(w) : '');
+    $('w' + i + '-meta').innerHTML = w.hum != null ?
+      stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + ' كم/س') + stat('feel', w.feels + '°') : '';
+    if (screen === 'weather') weatherRender();
+  }
+  function parseWeather(j) {
+    var c = j.current, h = j.hourly, d = j.daily;
+    var start = Math.max(0, h.time.indexOf(c.time.slice(0, 13) + ':00'));
+    var hours = [];
+    for (var k = start; k < Math.min(h.time.length, start + 7); k++) {
+      hours.push({ h: h.time[k].slice(11, 16), t: Math.round(h.temperature_2m[k]), code: h.weather_code[k], day: h.is_day[k], p: h.precipitation_probability[k] || 0 });
+    }
+    var days = d.time.slice(0, 6).map(function (x, k) {
+      var p = x.split('-');
+      return { name: k === 0 ? 'اليوم' : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], max: Math.round(d.temperature_2m_max[k]),
+        min: Math.round(d.temperature_2m_min[k]), code: d.weather_code[k], p: d.precipitation_probability_max[k] || 0 };
+    });
+    return { t: Math.round(c.temperature_2m), feels: Math.round(c.apparent_temperature), hum: Math.round(c.relative_humidity_2m),
+      wind: Math.round(c.wind_speed_10m), code: c.weather_code, day: c.is_day, rain: hours.length ? hours[0].p : 0,
+      hi: days[0].max, lo: days[0].min, hours: hours, days: days, at: Date.now() };
   }
   function loadWeather() {
     CITIES.forEach(function (c, i) {
-      fetch('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon + '&current=temperature_2m,weather_code,is_day&timezone=auto')
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
+        '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
+        '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=6&timezone=auto')
         .then(function (r) { return r.json(); })
         .then(function (j) {
-          var w = { t: Math.round(j.current.temperature_2m), code: j.current.weather_code, day: j.current.is_day, at: Date.now() };
+          var w = parseWeather(j);
           try { localStorage.setItem('prayertv-w' + i, JSON.stringify(w)); } catch (e) {}
           showWeather(i, w);
         })
         .catch(function () {});
     });
+  }
+  // the weather screen: both cities side by side
+  function weatherRender() {
+    $('wx-body').innerHTML = CITIES.map(function (c, i) {
+      var w = WX[i];
+      if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + c.name + '</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>';
+      var info = weatherInfo(w.code, w.day);
+      return '<div class="card wx-col">' +
+        '<div class="wx-now">' + wIcon(w.code, w.day, 'big') + '<div><div class="wx-city">' + c.name + '</div><div class="wx-temp">' + w.t + '°</div>' +
+        '<div class="muted wx-desc">' + info[1] + ' · المحسوسة ' + w.feels + '° · ' + hiLo(w) + '</div></div></div>' +
+        '<div class="wx-stats">' + stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + ' كم/س') + '</div>' +
+        '<div class="wx-hours">' + w.hours.map(function (x, k) {
+          return '<div class="wx-h"><span class="muted">' + (k === 0 ? 'الآن' : x.h) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
+        }).join('') + '</div>' +
+        '<div class="wx-days">' + w.days.map(function (x) {
+          return '<div class="wx-d"><span class="wx-dn">' + x.name + '</span>' + wIcon(x.code, 1) + '<span class="wx-p">' + x.p + '%</span><b>' + x.max + '°</b><span class="muted">' + x.min + '°</span></div>';
+        }).join('') + '</div></div>';
+    }).join('');
   }
   CITIES.forEach(function (c, i) {
     try {
@@ -182,11 +235,13 @@
   CARDS.forEach(function (k) {
     var c = document.createElement('div');
     c.className = 'pc';
-    c.innerHTML = '<div class="pc-fill"></div><div class="pc-in"><div class="pc-name"></div><div class="pc-time"></div><div class="pc-iq"></div></div>';
+    var inner = '<div class="pc-name"></div><div class="pc-time"></div><div class="pc-iq"></div>';
+    c.innerHTML = '<div class="pc-in">' + inner + '</div><div class="pc-in pc-over" aria-hidden="true">' + inner + '</div>';
     $('prayers').appendChild(c);
     cards[k] = c;
   });
 
+  function setAll(c, sel, text) { Array.prototype.forEach.call(c.querySelectorAll(sel), function (e) { if (e.textContent !== text) e.textContent = text; }); }
   function nextRamadan(t, days, field) {
     for (var i = 0; i < days.length; i++) if (days[i].ramadan && days[i][field] > t) return days[i][field];
     return null;
@@ -239,14 +294,13 @@
       var day = tomorrow && (k === 'fajr' || k === 'imsak') ? tom : today;
       var c = cards[k];
       c.className = 'pc' + (k === nextK ? ' next-p' : '');
-      var fl = c.querySelector('.pc-fill');
-      fl.style.width = ((fill[k] || 0) * 100).toFixed(2) + '%';
-      // the dark part moves right to left: it leaves the current card from its right side and enters the next card on its right side
-      fl.classList.toggle('cur', k === seq[ci][0] && fill[k] < 1);
-      c.querySelector('.pc-name').textContent = k === 'imsak' ? 'الإمساك' : P.name(k, day.friday);
-      c.querySelector('.pc-time').textContent = P.full(k === 'imsak' ? day.imsak : day.at[k]);
-      c.querySelector('.pc-iq').textContent = k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
-        day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : '');
+      // the gold part moves right to left: it leaves the current card from its right side and enters the next card on its right side
+      var hide = (100 - (fill[k] || 0) * 100).toFixed(2) + '%';
+      c.querySelector('.pc-over').style.clipPath = k === seq[ci][0] && fill[k] < 1 ? 'inset(0 ' + hide + ' 0 0)' : 'inset(0 0 0 ' + hide + ')';
+      setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
+      setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
+      setAll(c, '.pc-iq', k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
+        day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
 
     // Ramadan: time left to iftar and to suhoor (imsak)
@@ -741,6 +795,7 @@
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
     if (name === 'kahf') { kPlay(0); $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
+    if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
     if (name === 'apps') { appsRender(); focusFirst(document.querySelector('#apps-grid .f')); return; }
     if (name === 'settings') setRender();
     var lf = lastFocus[name];

@@ -47,22 +47,58 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .badge-gold { font-size: 18px; font-weight: 600; padding: 4px 14px; border-radius: 999px; background: var(--gold); color: var(--on-gold); }
 
 /* top bar */
-.top { display: flex; justify-content: space-between; align-items: center; height: 88px; flex-shrink: 0; }
+.top { display: flex; justify-content: space-between; align-items: center; height: 110px; flex-shrink: 0; gap: 20px; }
 .top-right { display: flex; align-items: center; gap: 16px; }
 .g-date { font-size: 44px; font-weight: 700; line-height: 1.3; }
 .h-date { font-size: 34px; color: var(--muted); font-weight: 500; }
-.weather { display: flex; align-items: center; gap: 16px; height: 88px; padding: 0 28px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); }
-.w-icon .ic { width: 48px; height: 48px; stroke: var(--gold); stroke-width: 1.6; }
-.w-temp { font-size: 54px; font-weight: 600; line-height: 1; direction: ltr; }
-.w-txt { display: flex; flex-direction: column; font-size: 20px; color: var(--muted); }
-.w-txt b { font-size: 24px; color: var(--ink); }
+.weather { display: flex; align-items: center; gap: 12px; height: 110px; padding: 0 18px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); text-align: right; }
+.w-icon .wi .ic { width: 52px; height: 52px; stroke-width: 1.6; }
+.w-main { display: flex; flex-direction: column; gap: 8px; }
+.w-row1 { display: flex; align-items: center; gap: 12px; }
+.w-temp { font-size: 50px; font-weight: 700; line-height: 1; direction: ltr; }
+.w-txt { display: flex; flex-direction: column; font-size: 18px; color: var(--muted); white-space: nowrap; }
+.w-txt b { font-size: 22px; color: var(--ink); }
+.w-meta { display: flex; gap: 10px; font-size: 16px; white-space: nowrap; }
+/* gently coloured weather icons */
+.wi { display: inline-flex; }
+.wi-sun { color: #E9A23B; } .wi-moon { color: #8C9BC0; } .wi-cloud, .wi-fog { color: #98A2AD; }
+.wi-partly { color: #98A2AD; } .wi-partly .sun { stroke: #E9A23B; }
+.wi-rain { color: #98A2AD; } .wi-rain .drop { stroke: #4A8FD6; }
+.wi-storm { color: #8E86B8; } .wi-storm .bolt { stroke: #E9A23B; }
+.wi-snow { color: #7FB3D5; }
+.ws { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.ws .ic { width: 20px; height: 20px; }
+.ws b { font-weight: 600; color: var(--ink); direction: ltr; }
+.ws-hum .ic { color: #3E86C9; } .ws-umb .ic { color: #5B7FD1; } .ws-wind .ic { color: #2A9D8F; } .ws-feel .ic { color: #D9822B; }
+
+/* weather screen */
+.wx-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; flex: 1; min-height: 0; }
+.wx-col { padding: 30px 40px; display: flex; flex-direction: column; gap: 22px; overflow: hidden; }
+.wx-now { display: flex; align-items: center; gap: 28px; }
+.wi.big .ic { width: 120px; height: 120px; stroke-width: 1.3; }
+.wx-city { font-size: 30px; font-weight: 700; }
+.wx-temp { font-size: 96px; font-weight: 700; line-height: 1; direction: ltr; text-align: right; }
+.wx-desc { font-size: 24px; margin-top: 6px; }
+.wx-none { font-size: 24px; margin-top: 20px; }
+.wx-stats { display: flex; gap: 28px; font-size: 24px; }
+.wx-stats .ws .ic { width: 28px; height: 28px; }
+.wx-hours { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.wx-h { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 20px; }
+.wx-h .wi .ic { width: 36px; height: 36px; }
+.wx-h b { font-size: 24px; direction: ltr; }
+.wx-p { color: #3E86C9; font-size: 18px; direction: ltr; }
+.wx-days { display: flex; flex-direction: column; gap: 4px; }
+.wx-d { display: grid; grid-template-columns: 140px 48px 70px 70px 60px; align-items: center; gap: 16px; font-size: 24px; padding: 6px 0; }
+.wx-d .wi .ic { width: 34px; height: 34px; }
+.wx-d b, .wx-d .muted { direction: ltr; }
+.portrait .wx-body { grid-template-columns: minmax(0, 1fr); flex: none; }
 .title-row { display: flex; align-items: center; gap: 20px; }
 .big-title { font-size: 44px; font-weight: 700; line-height: 1.2; }
 .quran.big-title { line-height: 1.5; font-size: 48px; }
 .sub-title { font-size: 24px; }
 
 /* hero: date, Hijri date and clock on the right · next prayer on the left */
-.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; height: 380px; flex-shrink: 0; align-items: stretch; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; height: 360px; flex-shrink: 0; align-items: stretch; }
 .hero-main { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; }
 .clock { font-size: 230px; font-weight: 500; line-height: .95; letter-spacing: -4px; font-variant-numeric: tabular-nums; margin-top: 8px; }
 .has-ramadan .clock { font-size: 180px; }
@@ -79,23 +115,22 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* prayer cards */
 .prayers { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 18px; height: 220px; flex-shrink: 0; }
-.pc { position: relative; isolation: isolate; overflow: hidden; min-width: 0; border-radius: 24px; background: var(--pc-bg); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
-/* the dark part: width = how much of this period is left (current) or has passed (next); grows from the right */
-.pc-fill { position: absolute; top: 0; bottom: 0; right: 0; width: 0; background: var(--now-bg); transition: width 1s linear; }
-.pc-fill.cur { right: auto; left: 0; }
-/* text inverts over the dark part */
-.pc-in { position: relative; height: 100%; box-sizing: border-box; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; mix-blend-mode: difference; }
+.pc { position: relative; overflow: hidden; min-width: 0; border-radius: 24px; background: var(--pc-bg); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
+/* the card text; the gold copy on top shows only over the part of the period (clip-path set by the script) */
+.pc-in { position: absolute; inset: 0; box-sizing: border-box; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); }
+.pc-over { background: linear-gradient(135deg, #A07B3A, #6F521F); color: #fff; clip-path: inset(0 0 0 100%); transition: clip-path 1s linear; }
+.pc-over .pc-iq { opacity: .9; }
 .pc-name { font-size: 38px; font-weight: 700; white-space: nowrap; }
 .pc-time { white-space: nowrap; text-align: right; font-size: 60px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .pc-iq { font-size: 22px; font-weight: 500; opacity: .75; min-height: 30px; white-space: nowrap; }
 .pc.next-p { border: 3px solid var(--gold); }
 
 /* occasion countdowns in the top bar */
-.events { display: flex; gap: 14px; flex: 1; justify-content: center; min-width: 0; }
-.ev { height: 88px; padding: 0 22px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); display: flex; align-items: center; gap: 14px; min-width: 0; }
+.events { display: flex; gap: 12px; flex: 1; justify-content: center; min-width: 0; }
+.ev { height: 110px; padding: 0 18px; flex-shrink: 0; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); display: flex; align-items: center; gap: 14px; min-width: 0; }
 .ev-n { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .ev-t { display: flex; flex-direction: column; min-width: 0; }
-.ev-t b { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.ev-t b { font-size: 22px; white-space: nowrap; }
 .ev-t span { font-size: 18px; color: var(--muted); }
 
 /* bottom: rotating verse / hadith / wisdom · Friday · shortcuts */
