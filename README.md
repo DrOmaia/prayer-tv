@@ -90,6 +90,15 @@ adb shell settings put secure screensaver_enabled 1
 - **إبقاء الشاشة مضاءة:** خيار في الإعدادات (متوقف افتراضيًا حتى تعمل شاشة التوقف).
 - **الخطوط:** Tajawal و Amiri Quran (SIL Open Font License).
 
+## التعديل بأدوات الذكاء الاصطناعي والنسخة الاحتياطية
+
+- تعليمات أي أداة (Claude، ChatGPT/Codex، Gemini، Copilot، Cursor…) في `AGENTS.md`، ونُسخها تُقرأ تلقائيًا.
+  إذا كانت الأداة لا تقرأ المستودع تلقائيًا، قل لها: «اقرأ ملف AGENTS.md في مستودع DrOmaia/prayer-tv أولًا».
+- كل نسخة محفوظة في Releases. العلامة **stable** هي آخر نسخة جرّبتها واعتمدتها.
+- **اعتماد نسخة بعد تجربتها:** قل للأداة «اعتمد»، أو من GitHub: Actions ← Build APK ← Run workflow ← `mark-stable`.
+- **إذا خرب شيء:** قل للأداة «ارجع للنسخة المستقرة»، أو من GitHub: Actions ← Build APK ← Run workflow ←
+  `restore-stable`. تُبنى النسخة المستقرة برقم جديد، فتُثبَّت من نفس الرابط فوق النسخة الخربة وتبقى إعداداتك.
+
 ## البناء
 
 كل دفع إلى `main` يبني ملف APK تلقائيًا (GitHub Actions) وينشره في Releases.

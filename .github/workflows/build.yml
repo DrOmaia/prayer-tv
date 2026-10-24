@@ -3,7 +3,18 @@ name: Build APK
 on:
   push:
     branches: [main]
+  # Actions → Build APK → Run workflow: build again, mark a version as stable, or go back to the stable version
   workflow_dispatch:
+    inputs:
+      action:
+        description: "build | mark-stable (mark a version as tested) | restore-stable (go back to the stable version)"
+        type: choice
+        options: [build, mark-stable, restore-stable]
+        default: build
+      version:
+        description: "For mark-stable: the version number to mark (e.g. 11). Empty = the latest version."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -13,30 +24,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Mark stable
+        if: github.event.inputs.action == 'mark-stable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          TAG="v${VERSION#v}"
+          [ -n "$VERSION" ] || TAG=$(gh release view --json tagName -q .tagName)
+          git fetch --tags -f origin
+          SHA=$(git rev-list -n 1 "$TAG")
+          git tag -f stable "$SHA"
+          git push -f origin refs/tags/stable
+          echo "::notice::$TAG ($SHA) is now the stable version"
+      - name: Restore stable
+        if: github.event.inputs.action == 'restore-stable'
+        run: |
+          git fetch --tags -f origin
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          # only the app itself goes back; these instructions and this workflow stay
+          git rm -r -q app
+          git checkout stable -- app build.gradle.kts settings.gradle.kts gradle.properties
+          git commit -m "Restore the stable version ($(git rev-parse --short stable))"
+          git push origin main
+      - name: Commit to publish
+        id: head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
+        if: github.event.inputs.action != 'mark-stable'
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+        if: github.event.inputs.action != 'mark-stable'
         with:
           gradle-version: "8.9"
       - name: Build
+        if: github.event.inputs.action != 'mark-stable'
         run: gradle :app:assembleRelease --no-daemon
       # Signed with app/release.keystore (kept in the repository so every build updates the installed app in place)
       - name: Sign
+        if: github.event.inputs.action != 'mark-stable'
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BT/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
           "$BT/apksigner" sign --ks app/release.keystore --ks-pass pass:prayertv123 --ks-key-alias prayertv --out prayer-tv.apk aligned.apk
           "$BT/apksigner" verify prayer-tv.apk
       - uses: actions/upload-artifact@v4
+        if: github.event.inputs.action != 'mark-stable'
         with:
           name: prayer-tv
           path: prayer-tv.apk
       - name: Publish release
+        if: github.event.inputs.action != 'mark-stable'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
+          target_commitish: ${{ steps.head.outputs.sha }}
           name: نسخة ${{ github.run_number }}
           files: prayer-tv.apk
           make_latest: true

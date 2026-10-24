@@ -1,0 +1,81 @@
+# Instructions for any AI tool (or person) changing this app
+
+This file is the single source. `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`,
+`.cursor/rules/prayer-tv.mdc` and `.windsurfrules` are copies made by `python3 tools/sync-ai.py`.
+Edit only this file, then run the script.
+
+## 1. Who asks and how to answer
+- The owner is a father in Riyadh. He writes in Arabic (often spoken / Levantine, with typos): read for meaning.
+- Answer in **Arabic, masculine address**, short and clear. No technical jargon unless he asks.
+- If a request is ambiguous, changes how something already works, or has more than one sensible way:
+  **ask first** with 2–4 short multiple-choice questions (put your recommended option first), then build.
+- Do **exactly** what he asked. Do not redesign, rename, reorder or "improve" things he did not mention.
+  If you notice another problem, mention it in one line at the end; do not fix it unasked.
+
+## 2. What the app is
+"شاشة مواقيت الصلاة": a prayer-times screen for his **TCL Google TV** and **Android phones**, Riyadh,
+Umm al-Qura. Installed from the short link **dromaia.github.io/tv** (redirects to the latest GitHub release APK).
+Arabic only, right-to-left, 24-hour clock, Tajawal font. Features: prayer times + iqamah countdown, Imsak,
+Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Friday Surah Al-Kahf player, occasion countdowns
+(own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
+3 min), «هل تعلم؟» (every 10 min), weather Riyadh + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
+over other apps, open on boot, screensaver, phone notifications and home-screen widgets.
+User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
+
+## 3. Files
+| Path | What |
+| --- | --- |
+| `app/src/main/assets/web/index.html` | Page shell: home, calendar, weather, Kahf, settings screens; tab bar; iqamah overlay. |
+| `app/src/main/assets/web/app.js` | All UI logic: settings `S` (localStorage key `prayertv-settings`), render, D-pad navigation, events, family, weather, calendar, Kahf, settings screen, alerts list sent to Android. |
+| `app/src/main/assets/web/prayer.js` | Prayer-time maths (Fajr 18.5°, Isha +90 / +120 in Ramadan), iqamah minutes, time formatting. |
+| `app/src/main/assets/web/style.css` | All styles. Day / night themes (`.day` / `.night` CSS variables), `.tv` / `.phone` / `.portrait` / `.dream`. Design is a 1920×1080 stage scaled to any screen. |
+| `reminders.js`, `facts.js`, `family.js`, `quran.js` | Content: reminders, «هل تعلم؟», default family + message templates, Surah Al-Kahf text. Religious text must have a correct source. |
+| `app/src/main/java/com/dromaia/prayertv/` | Kotlin: `MainActivity` (WebView + JS bridge `Android`), `Schedule` (one exact alarm at a time), `AlertReceiver` / `AlertService` (chime + banner on TV, notification on phone), `BootReceiver`, `Widgets`, `PrayerDream` (screensaver), `Device`. |
+| `app/src/main/AndroidManifest.xml`, `app/src/main/res/` | Permissions, receivers, widgets layouts, icons, chime. |
+| `.github/workflows/build.yml` | Builds, signs and publishes every push to `main` as release `vN`; also "mark stable" and "restore stable" (section 5). |
+| `app/release.keystore` | The signing key. **Never change, delete or replace it**: a different key stops installed apps from updating. |
+
+## 4. Hard rules (do not break the app)
+1. **No new frameworks, libraries, build steps or servers.** Plain HTML/CSS/JS in `assets/web`, plain Kotlin.
+2. **Keep the user's settings.** New settings get a default in the `S` block of `app.js` (`Object.assign` with
+   defaults); never rename or remove a stored key without reading the old one.
+3. **Never touch** `app/release.keystore`, the package name `com.dromaia.prayertv`, or the version lines in
+   `app/build.gradle.kts` (version = build number, automatic).
+4. **Arabic text** is correct Modern Standard Arabic, masculine when addressing him, with correct number agreement
+   (`daysText`, `minutesWord`, `countWord` in `app.js`). Religious content: authentic, with its source.
+5. **Both TV and phone** share the code: check a change in both (`.tv` / `.phone`, landscape and portrait).
+   On TV everything must be reachable with the remote (elements with class `f` are focusable).
+6. **Small, focused changes.** Change only the files the request needs. Never delete features.
+7. **Git safety:** never force-push `main`, never rewrite history, never delete tags or releases (`vN`, `stable`).
+   Work on `main` (it publishes directly, as the owner chose), one clear commit per request.
+
+## 5. Backups and going back (the owner must never lose a working app)
+- Every build is kept forever as a GitHub release `vN` with its APK.
+- The git tag **`stable`** marks the last version the owner tested and approved on the TV.
+- **Mark stable** — when he says a version works ("تمام", "اعتمد", "شغال"): `git tag -f stable && git push -f origin stable`
+  (only the tag moves), or GitHub → Actions → *Build APK* → *Run workflow* → action `mark-stable`.
+- **Restore stable** — when he says something broke ("ارجع للنسخة المستقرة", "رجّعه زي ما كان"):
+  ```bash
+  git fetch --tags origin && git checkout main && git pull
+  git rm -r -q app && git checkout stable -- app build.gradle.kts settings.gradle.kts gradle.properties
+  git commit -m "Restore the stable version" && git push origin main
+  ```
+  or Actions → *Build APK* → *Run workflow* → action `restore-stable`. This makes a **new** commit with the stable
+  app files (history kept; these instructions and the workflow stay as they are) and a new release with a higher number, so it installs over the broken one without
+  losing settings. (Android refuses to install an older build number over a newer one, so never just point him
+  to an old APK.)
+- Before a big change, tell him which version is the current `stable`.
+
+## 6. Checklist for every change
+1. Read the relevant code first; find how the feature works today. Ask if unclear (section 1).
+2. Make the minimal change.
+3. Check: `node --check app/src/main/assets/web/*.js`. Look at the page in a browser if possible:
+   `cd app/src/main/assets/web && python3 -m http.server 8124` → `http://127.0.0.1:8124/index.html`
+   (it runs without the Android bridge; resize for phone / portrait).
+4. Kotlin cannot be built locally without the Android SDK: re-read Kotlin changes carefully (imports, null safety,
+   API level checks for minSdk 24).
+5. Commit with a clear message (what changed for the user), push to `main`.
+6. Wait for GitHub Actions *Build APK* to finish green. If red: read the log, fix, push again. Never leave it red.
+7. Add a line to `CHANGELOG.md` (version number = the build's `vN`) and update `README.md` if behaviour changed.
+8. Tell him in Arabic: what changed, that it is on dromaia.github.io/tv, and to say «اعتمد» after testing so it
+   becomes the stable version.
