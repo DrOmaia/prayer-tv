@@ -399,3 +399,16 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .q-list { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 150px; flex: none; overflow: visible; }
 .portrait .sura b { font-size: 44px; }
 .portrait .sura .muted { font-size: 26px; }
+
+/* seasons: decorations in the strip above the top bar; a badge beside the Hijri date */
+.screen#home { z-index: 0; }
+.deco { position: absolute; left: 0; right: 0; top: 0; height: 64px; z-index: -1; pointer-events: none; display: none; background-repeat: repeat-x; background-position: center top; }
+.s-ramadan .deco { display: block; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='70' viewBox='0 0 180 70'%3E%3Cpath d='M0 4Q90 20 180 4' fill='none' stroke='%23C9A35E' stroke-width='1.5'/%3E%3Cg transform='translate%2890 12%29'%3E%3Cpath d='M0 0v6' stroke='%23C9A35E' stroke-width='1.5'/%3E%3Cpath d='M-7 6h14l-2 5h-10z' fill='%23C9A35E'/%3E%3Cpath d='M-8 11h16l4 9v18l-4 9h-16l-4-9V20z' fill='%23C9A35E' fill-opacity='.25' stroke='%23C9A35E' stroke-width='1.5'/%3E%3Cpath d='M-4 18h8v22h-8z' fill='%23F6D99A' fill-opacity='.8'/%3E%3Cpath d='M-6 47h12l-2 5h-8z' fill='%23C9A35E'/%3E%3C/g%3E%3Cpath d='M36 30a9 9 0 1 1-4-17 7 7 0 1 0 4 17z' fill='%23C9A35E' fill-opacity='.8' transform='translate%28-6 0%29'/%3E%3C/svg%3E"); }
+.s-hajj .deco { display: block; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='50' viewBox='0 0 120 50'%3E%3Cpath d='M0 6h120' stroke='%23C9A35E' stroke-opacity='.6' stroke-width='1'/%3E%3Cpath d='M30 14l3 8 8 3-8 3-3 8-3-8-8-3 8-3z' fill='%23C9A35E' fill-opacity='.8'/%3E%3Cpath d='M90 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23C9A35E' fill-opacity='.6'/%3E%3C/svg%3E"); }
+.s-eid .deco { display: block; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='60' viewBox='0 0 150 60'%3E%3Cpath d='M0 4Q75 18 150 4' fill='none' stroke='%23C9A35E' stroke-width='1.5'/%3E%3Cpath d='M14 8l24 2-13 26z' fill='%23C9A35E'/%3E%3Cpath d='M60 11l26 0-13 28z' fill='%237B5BB5'/%3E%3Cpath d='M110 10l24-2-11 26z' fill='%232A9D8F'/%3E%3Cpath d='M48 46l2 5 5 1-5 2-2 5-2-5-5-2 5-1z' fill='%23E2B969'/%3E%3Cpath d='M98 44l1.5 4 4 1-4 1.5-1.5 4-1.5-4-4-1.5 4-1z' fill='%23E2B969'/%3E%3C/svg%3E"); }
+#season-badge { font-size: 18px; vertical-align: middle; margin-inline-start: 8px; }
+.portrait .deco { height: 48px; background-size: auto 48px; }
+/* night care: the screen dims after Isha (the remote wakes it) */
+.dim { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 3s ease; z-index: 50; }
+.dim.on { opacity: .5; }
+#home { transition: transform 2s ease; }

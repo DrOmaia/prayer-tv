@@ -11,6 +11,7 @@
 
   <!-- Main screen -->
   <section id="home" class="screen">
+    <div id="deco" class="deco"></div>
     <header class="top">
       <div class="wx-stack">
         <button id="w0-btn" class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><b id="w0-city" class="w-city">الرياض</b><span id="w0-temp" class="w-temp">—</span><span id="w0-hl" class="w-hl"></span></button>
@@ -29,7 +30,7 @@
       <div class="hero-main">
         <div id="clock" class="clock" dir="ltr"></div>
         <div id="g-date" class="g-date"></div>
-        <div class="h-date"><span id="h-date"></span></div>
+        <div class="h-date"><span id="h-date"></span> <span id="season-badge" class="badge-gold hidden"></span></div>
         <div id="ramadan" class="ramadan hidden">
           <div id="iftar-card" class="rcard"><div><b>متبقٍّ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div id="suhoor-card" class="rcard"><div><b>متبقٍّ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
@@ -43,7 +44,7 @@
           <div id="next-detail" class="muted next-detail"></div>
         </div>
         <div id="fact" class="fact">
-          <div class="gold fact-h">هل تعلم؟</div>
+          <div id="fact-h" class="gold fact-h">هل تعلم؟</div>
           <div id="fact-t" class="fact-t"></div>
           <div id="fact-x" class="fact-x"></div>
           <div id="fact-s" class="muted fact-s"></div>
@@ -240,10 +241,12 @@
     <div class="b-icon"><svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></div>
     <div><div id="b-title" class="b-title"></div><div id="b-sub" class="muted b-sub"></div></div>
   </div>
+  <div id="dim" class="dim"></div>
 </div>
 
 <script src="mushaf.js"></script>
 <script src="quran.js"></script>
+<script src="adhkar.js"></script>
 <script src="reminders.js"></script>
 <script src="family.js"></script>
 <script src="facts.js"></script>

@@ -38,6 +38,7 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      nightDim: s.nightDim !== false, // the TV dims at night
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
       // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
       loc: s.loc || { mode: 'city', name: 'الرياض', country: 'السعودية', lat: 24.7136, lon: 46.6753, tz: 'Asia/Riyadh', cc: 'SA' },
@@ -309,18 +310,61 @@
   }
   // «هل تعلم؟»: a new one every 10 minutes (can be hidden in the settings)
   var lastFact = -1;
-  function showFact(t) {
-    var card = document.querySelector('#home .next');
-    card.classList.toggle('no-fact', !S.showFact);
-    if (!S.showFact) return;
-    var n = Math.floor(t / (10 * MIN)) % FACTS.length;
-    if (n === lastFact) return;
-    var first = lastFact < 0, f = FACTS[n], box = $('fact');
-    lastFact = n;
+  // the «هل تعلم؟» box: adhkar at their times; on Friday, in the ten days of Dhul-Hijjah and on Eid
+  // the season's texts in turn with «هل تعلم؟»; otherwise «هل تعلم؟» (a new one every 10 minutes)
+  var ADHKAR_HEAD = { after: 'أذكار بعد الصلاة', morning: 'أذكار الصباح', evening: 'أذكار المساء', sleep: 'أذكار النوم' };
+  function adhkarNow(t, today, yest) {
+    var w = null;
+    FIVE.forEach(function (k) {
+      var base = today.iqamah[k] || today.at[k] + 45 * MIN, st = base + 10 * MIN; // Friday prayer: after the khutbah
+      if (t >= st && t < st + 15 * MIN) w = { kind: 'after', start: st };
+    });
+    if (w) return w;
+    var fj = (today.iqamah.fajr || today.at.fajr) + 25 * MIN, as = (today.iqamah.asr || today.at.asr) + 25 * MIN;
+    if (t >= fj && t < today.at.sunrise + HR) return { kind: 'morning', start: fj };
+    if (t >= as && t < today.at.maghrib) return { kind: 'evening', start: as };
+    var sl = [today.at.isha + 2 * HR, yest.at.isha + 2 * HR].filter(function (s) { return t >= s && t < s + HR; })[0];
+    return sl ? { kind: 'sleep', start: sl } : null;
+  }
+  // a Qur'an passage from mushaf.js: [surah] or [surah, first, last]
+  function quranText(q) {
+    var v = QURAN[q[0] - 1][1], a = q.length > 1 ? q[1] : 1, b = q[2] || (q.length > 1 ? q[1] : v.length), out = [];
+    for (var i = a; i <= b; i++) out.push(v[i - 1] + ' ﴿' + arNum(i) + '﴾');
+    return out.join(' ');
+  }
+  var season = {};
+  function seasonList() {
+    if (season.eid) return ADHKAR.eid;
+    if (season.arafah) return ADHKAR.arafah.concat(ADHKAR.hajj);
+    if (season.hajj) return ADHKAR.hajj;
+    if (season.friday) return ADHKAR.friday;
+    return null;
+  }
+  var lastFact = '';
+  function showFact(t, today, yest) {
+    var card = document.querySelector('#home .next'), w = adhkarNow(t, today, yest), item, head = 'هل تعلم؟', key;
+    card.classList.toggle('no-fact', !S.showFact && !w);
+    if (!S.showFact && !w) return;
+    if (w) {
+      var list = ADHKAR[w.kind], i = Math.floor((t - w.start) / 30000) % list.length;
+      item = list[i]; head = ADHKAR_HEAD[w.kind]; key = w.kind + i;
+    } else {
+      var slot = Math.floor(t / (10 * MIN)), sl = seasonList();
+      if (sl && slot % 2 === 0) { item = sl[(slot / 2) % sl.length]; head = 'فضل هذه الأيام'; key = 's' + slot; }
+      else { item = FACTS[slot % FACTS.length]; key = 'f' + (slot % FACTS.length); }
+    }
+    if (key === lastFact) return;
+    var first = !lastFact, box = $('fact');
+    lastFact = key;
     function put() {
-      $('fact-t').textContent = f.t;
-      $('fact-x').textContent = f.x.replace(/\(([^()]+) (\d+)\)/g, '($1\u00A0$2)');
-      $('fact-s').textContent = f.s;
+      var x = item.q ? quranText(item.q) : item.x.replace(/\(([^()]+) (\d+)\)/g, '($1 $2)');
+      $('fact-h').textContent = head;
+      $('fact-t').textContent = item.t || '';
+      $('fact-t').classList.toggle('hidden', !item.t);
+      $('fact-x').textContent = x;
+      $('fact-x').classList.toggle('quran', !!item.q);
+      $('fact-x').style.fontSize = x.length > 450 ? '19px' : x.length > 250 ? '21px' : '';
+      $('fact-s').textContent = item.s;
       box.classList.remove('fade');
     }
     if (first) put(); else { box.classList.add('fade'); setTimeout(put, 600); }
@@ -378,6 +422,12 @@
       setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
       setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
       // every day until Maghrib the Imsak card shows the time left to Maghrib (the end of the fast)
+      // Duha under sunrise; under Isha after its iqamah, the start of the last third of the night (Maghrib → Fajr)
+      if (k === 'sunrise') { setAll(c, '.pc-iq', 'الضحى ' + P.full(day.at.sunrise + 15 * MIN)); return; }
+      if (k === 'isha' && (t >= (today.iqamah.isha || today.at.isha) || t < today.at.fajr)) {
+        var m0 = t < today.at.fajr ? yest.at.maghrib : today.at.maghrib, f0 = t < today.at.fajr ? today.at.fajr : tom.at.fajr;
+        setAll(c, '.pc-iq', 'ثلث الليل ' + P.full(m0 + (f0 - m0) * 2 / 3)); return;
+      }
       setAll(c, '.pc-iq', k === 'imsak' ? (t < today.at.maghrib ? (today.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
@@ -402,10 +452,35 @@
     $('g-date').textContent = fGFull.format(new Date(t));
     $('h-date').textContent = fHFull.format(new Date(t));
     $('friday-box').classList.toggle('hidden', !today.friday);
+    // the seasons: Ramadan, the ten days of Dhul-Hijjah (and Arafah), the two Eids, Friday
+    var h = {};
+    fHMD.formatToParts(new Date(P.noonOf(r.y, r.m, r.d))).forEach(function (x) { h[x.type] = +x.value; });
+    season = { ramadan: h.month === 9, hajj: h.month === 12 && h.day <= 9, arafah: h.month === 12 && (h.day === 8 || h.day === 9),
+      eid: (h.month === 10 && h.day <= 3) || (h.month === 12 && h.day >= 10 && h.day <= 13), friday: today.friday };
+    ['ramadan', 'hajj', 'eid', 'friday'].forEach(function (k) { stage.classList.toggle('s-' + k, !!season[k]); });
+    var badge = season.eid ? 'عيدكم مبارك' : season.arafah && h.day === 9 ? 'يوم عرفة' : season.hajj ? 'عشر ذي الحجة' : season.ramadan ? 'رمضان كريم' : today.friday ? 'جمعة مباركة' : '';
+    $('season-badge').textContent = badge;
+    $('season-badge').classList.toggle('hidden', !badge);
+    lastFact = '';
+  }
+
+  // ---------- night care: the screen dims from two hours after Isha until Fajr, and the page moves a few pixels
+  // every 3 minutes so nothing stays on the same spot (the remote wakes it for 2 minutes) ----------
+  var lastKeyAt = 0, lastShift = -1;
+  function nightCare(t, today) {
+    var dim = TV && S.nightDim && Date.now() - lastKeyAt > 2 * MIN && (t >= today.at.isha + 2 * HR || t < today.at.fajr) && !iqOpen();
+    $('dim').classList.toggle('on', !!dim);
+    if (!TV) return;
+    var s = Math.floor(t / (3 * MIN)) % 5;
+    if (s !== lastShift) {
+      lastShift = s;
+      var o = [[0, 0], [5, 3], [-4, 5], [5, -4], [-4, -3]][s];
+      $('home').style.transform = 'translate(' + o[0] + 'px,' + o[1] + 'px)';
+    }
   }
 
   // ---------- every 3 minutes: a reminder (verse, hadith, wisdom, note) then a family message, in turn ----------
-  var CYCLE = ['aya', 'hadith', 'aya', 'hikma', 'hadith', 'faida'], lastQ = '';
+  var CYCLE = ['aya', 'hadith', 'asma', 'aya', 'hikma', 'hadith', 'faida'], lastQ = '';
   // the family set in the settings (the default family until changed)
   function fam() { return S.family || FAMILY.DEFAULT; }
   function famOrder() {
@@ -446,6 +521,11 @@
     var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
     var before = CYCLE.slice(0, n % CYCLE.length).filter(function (x) { return x === kind; }).length;
     var per = CYCLE.filter(function (x) { return x === kind; }).length;
+    // a name of Allah: one each day
+    if (kind === 'asma') {
+      var day = Math.floor((n * 3 * MIN) / 86400000), nm = ASMA[day % ASMA.length];
+      return { type: 'من أسماء الله الحسنى', text: nm[0] + ': ' + nm[1], src: '﴿وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَا﴾ الأعراف 180' };
+    }
     var list = REMINDERS[kind];
     return list[(round * per + before) % list.length];
   }
@@ -468,7 +548,16 @@
     for (var i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) out.push(a[i]); if (b[i]) out.push(b[i]); }
     return out;
   }
+  // on the Eid days the family messages become Eid greetings, to each one by name
+  function eidMessage(n) {
+    var ms = fam().members.filter(function (x) { return x.kind !== 'self'; }), x = ms[n % (ms.length + 1)];
+    if (!x) return { type: 'عيدكم مبارك', text: 'عيدكم مبارك، وكل عام وأنتم بخير، تقبّل الله منا ومنكم', src: '— مع المحبة', fam: true };
+    var she = x.kind === 'wife' || x.kind === 'daughter';
+    return { type: 'عيدك مبارك يا ' + x.name, text: she ? 'عيدكِ مبارك يا ' + x.name + '، وكل عام وأنتِ بخير، تقبّل الله منا ومنكِ' :
+      'عيدك مبارك يا ' + x.name + '، وكل عام وأنت بخير، تقبّل الله منا ومنك', src: '— ' + sign(x), fam: true };
+  }
   function famMessage(n) {
+    if (season.eid) return eidMessage(n);
     var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
     var type = m.to === 'all' ? 'رسالة إلى العائلة' : who.kind === 'departed' ?
       (who.dep.kind === 'father' ? 'دعاء لوالدي رحمه الله' : 'دعاء ل' + who.name + ' رحمها الله') :
@@ -524,8 +613,9 @@
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     $('clock').textContent = P.full(t);
     showReminder(t);
-    showFact(t);
+    showFact(t, today, yest);
     if (screen === 'home') renderHome(t, today, tom, yest);
+    nightCare(t, today);
     if (screen === 'kahf') $('kahf-clock').textContent = P.full(t);
     checkAlert(t, today);
     checkIqamah(t, today);
@@ -818,6 +908,7 @@
       (A && A.dreamOn ? '<div class="srow"><span class="sname">شاشة التوقف (Screensaver)</span><button class="sbtn f' + (A.dreamOn() ? ' on' : '') + '" data-k="dream">' + (A.dreamOn() ? 'يعمل' : 'متوقف') + '</button>' +
         (A.dreamOn() ? '<button class="sbtn f" data-k="dreamset">اختيارها في إعدادات التلفزيون</button>' : '') + '</div>' : '') +
       '<div class="srow"><span class="sname">إبقاء الشاشة مضاءة دائمًا (يمنع شاشة التوقف)</span><button class="sbtn al f' + (S.keepOn ? ' on' : '') + '" data-k="keep">' + (S.keepOn ? 'يعمل' : 'متوقف') + '</button></div>' +
+      '<div class="srow"><span class="sname">تخفيت الشاشة ليلًا (من بعد العشاء بساعتين حتى الفجر)</span><button class="sbtn f' + (S.nightDim ? ' on' : '') + '" data-k="ndim">' + (S.nightDim ? 'يعمل' : 'متوقف') + '</button></div>' +
       '<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>' +
       (overlay ? '<span class="sbtn al on">مسموح</span>' : (A && A.overlaySettingsAvailable && !A.overlaySettingsAvailable() ?
         '<span class="muted adb">هذا التلفزيون لا يعرض صفحة السماح. من كمبيوتر على نفس الشبكة:<br><span dir="ltr">adb shell appops set com.dromaia.prayertv SYSTEM_ALERT_WINDOW allow</span></span>' :
@@ -955,6 +1046,7 @@
       else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
       setRender(); return;
     }
+    if (a === 'ndim') { S.nightDim = !S.nightDim; save(); setRender(); return; }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
     if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
     if (a === 'sndt') { try { A.previewSound(S.sound[v]); } catch (e) {} return; }
@@ -1124,6 +1216,8 @@
   }
   document.addEventListener('keydown', function (e) {
     var k = e.key;
+    lastKeyAt = Date.now();
+    if ($('dim').classList.contains('on')) { $('dim').classList.remove('on'); e.preventDefault(); return; } // the first press only wakes the screen
     // typing in a text box: keep the keys for the text, only up/down move between items
     var typing = document.activeElement && document.activeElement.tagName === 'INPUT';
     if (k === 'Enter' && document.activeElement && document.activeElement.id === 'loc-q') { e.preventDefault(); locSearch(); return; }
