@@ -41,8 +41,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add STABLE
-          git commit -m "Mark $TAG as the stable version [skip ci]"
-          git push origin HEAD:main
+          if git diff --cached --quiet; then echo "$TAG was already the stable version"; else
+            git commit -m "Mark $TAG as the stable version [skip ci]"
+            git push origin HEAD:main
+          fi
           echo "::notice::$TAG is now the stable version"
       - name: Restore stable
         if: github.event.inputs.action == 'restore-stable'
@@ -55,8 +57,10 @@ jobs:
           # only the app itself goes back; these instructions and this workflow stay
           git rm -r -q app
           git checkout "$TAG" -- app build.gradle.kts settings.gradle.kts gradle.properties
-          git commit -m "Restore the stable version $TAG"
-          git push origin main
+          if git diff --cached --quiet; then echo "The app is already the same as $TAG"; else
+            git commit -m "Restore the stable version $TAG"
+            git push origin main
+          fi
           echo "::notice::Restored $TAG; publishing it as v${{ github.run_number }}"
       - name: Commit to publish
         id: head
