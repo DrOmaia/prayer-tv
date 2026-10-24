@@ -15,7 +15,7 @@
     <header class="top">
       <div class="wx-stack">
         <button id="w0-btn" class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><b id="w0-city" class="w-city">الرياض</b><span id="w0-temp" class="w-temp">—</span><span id="w0-hl" class="w-hl"></span></button>
-        <button class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><b class="w-city">إربد</b><span id="w1-temp" class="w-temp">—</span><span id="w1-hl" class="w-hl"></span></button>
+        <button id="w1-btn" class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><b class="w-city">إربد</b><span id="w1-temp" class="w-temp">—</span><span id="w1-hl" class="w-hl"></span></button>
       </div>
       <div id="events" class="events"></div>
       <div class="top-right">
@@ -103,7 +103,7 @@
     <header class="top">
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
-        <div><div id="k-title" class="quran big-title">سورة الكهف</div><div class="muted sub-title">بصوت الشيخ مشاري العفاسي</div></div>
+        <div><div id="k-title" class="quran big-title">سورة الكهف</div><div id="k-sub" class="muted sub-title">بصوت الشيخ مشاري العفاسي</div></div>
       </div>
       <div id="kahf-clock" class="muted sub-title"></div>
     </header>
@@ -128,10 +128,11 @@
     <header class="top">
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
-        <div><div class="big-title">القرآن الكريم</div><div class="muted sub-title">اختر سورة · بصوت الشيخ مشاري العفاسي</div></div>
+        <div><div class="big-title">القرآن الكريم</div><div id="q-sub" class="muted sub-title">اختر سورة · بصوت الشيخ مشاري العفاسي</div></div>
       </div>
       <div id="q-resume" class="top-right"></div>
     </header>
+    <div id="q-reciters" class="q-rec"></div>
     <div id="q-list" class="q-list"></div>
   </section>
 

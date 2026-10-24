@@ -412,3 +412,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .dim { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 3s ease; z-index: 50; }
 .dim.on { opacity: .5; }
 #home { transition: transform 2s ease; }
+
+/* the Qur'an: choose a reciter */
+.q-rec { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 12px; }
+.portrait .q-rec .sbtn { font-size: 30px; height: 80px; }
+/* weather alerts: dust, extreme heat */
+.weather.w-alert { border-color: #D9822B; background: rgba(217,130,43,.14); }
+.w-al { color: #C0601A; font-weight: 700; }
+.night .w-al { color: #F0A35E; }
+.fact.dhikr .fact-x { line-height: 1.6; font-weight: 500; }
+.fact.dhikr .fact-h { font-size: 26px; }

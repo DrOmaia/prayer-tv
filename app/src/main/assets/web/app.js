@@ -38,6 +38,7 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      reciter: s.reciter || 'alafasy',
       nightDim: s.nightDim !== false, // the TV dims at night
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
       // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
@@ -171,12 +172,21 @@
   function wIcon(code, day, cls) { var k = weatherInfo(code, day)[0]; return '<span class="wi wi-' + k + ' ' + (cls || '') + '">' + W_ICONS[k] + '</span>'; }
   function hiLo(w) { return '<span dir="ltr">' + w.hi + '° / ' + w.lo + '°</span>'; }
   function stat(k, v) { return '<span class="ws ws-' + k + '">' + W_ICONS[k] + '<b>' + v + '</b></span>'; }
-  var WX = [null, null];
+  var WX = [null, null], DUST = [0, 0];
+  // alerts inside the weather card: dust and extreme heat
+  function wAlert(i, w) {
+    if (DUST[i] >= 500) return 'عاصفة غبارية';
+    if (DUST[i] >= 150) return 'غبار';
+    if (Math.max(w.t, w.hi || 0) >= 45) return 'حرارة شديدة';
+    return '';
+  }
   function showWeather(i, w) {
     WX[i] = w;
     $('w' + i + '-icon').innerHTML = wIcon(w.code, w.day);
     $('w' + i + '-temp').textContent = w.t + '°';
-    $('w' + i + '-hl').innerHTML = (w.hi != null ? hiLo(w) : '') +
+    var al = wAlert(i, w);
+    $('w' + i + '-btn').classList.toggle('w-alert', !!al);
+    $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
       (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');
     if (screen === 'weather') weatherRender();
   }
@@ -207,6 +217,19 @@
           var w = parseWeather(j);
           try { localStorage.setItem('prayertv-w' + i, JSON.stringify(w)); } catch (e) {}
           showWeather(i, w);
+        })
+        .catch(function () {});
+      // dust in the next 6 hours (Open-Meteo air quality, µg/m³)
+      fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + c.lat + '&longitude=' + c.lon + '&hourly=dust&forecast_days=2&timezone=GMT')
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var now = Date.now(), max = 0;
+          j.hourly.time.forEach(function (tm, k) {
+            var at = Date.parse(tm + ':00Z');
+            if (at >= now - HR && at <= now + 6 * HR && j.hourly.dust[k] > max) max = j.hourly.dust[k];
+          });
+          DUST[i] = max;
+          if (WX[i]) showWeather(i, WX[i]);
         })
         .catch(function () {});
     });
@@ -369,7 +392,11 @@
       $('fact-t').classList.toggle('hidden', !item.t);
       $('fact-x').textContent = x;
       $('fact-x').classList.toggle('quran', !!item.q);
-      $('fact-x').style.fontSize = x.length > 450 ? '19px' : x.length > 250 ? '21px' : '';
+      // adhkar are read from afar: as big as the box allows
+      var dh = head !== 'هل تعلم؟' && head !== 'تصحيح خطأ شائع' && head !== 'فضل هذه الأيام';
+      $('fact').classList.toggle('dhikr', dh);
+      $('fact-x').style.fontSize = dh ? (x.length > 600 ? '24px' : x.length > 420 ? '27px' : x.length > 250 ? '31px' : x.length > 120 ? '36px' : '42px') :
+        (x.length > 450 ? '19px' : x.length > 250 ? '21px' : '');
       $('fact-s').textContent = item.s;
       box.classList.remove('fade');
     }
@@ -434,7 +461,10 @@
         var m0 = t < today.at.fajr ? yest.at.maghrib : today.at.maghrib, f0 = t < today.at.fajr ? today.at.fajr : tom.at.fajr;
         setAll(c, '.pc-iq', 'ثلث الليل ' + P.full(m0 + (f0 - m0) * 2 / 3)); return;
       }
-      setAll(c, '.pc-iq', k === 'imsak' ? (t < today.at.maghrib ? (today.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
+      // Imsak: in turn every 5 seconds, the length of the fast (Fajr → Maghrib) and the time left to Maghrib
+      var alt = Math.floor(t / 5000) % 2, fd = t < today.at.maghrib ? today : tom;
+      var fastLen = 'مدة الصيام ' + P.leftHM(fd.at.maghrib - fd.at.fajr);
+      setAll(c, '.pc-iq', k === 'imsak' ? (alt ? fastLen : t < today.at.maghrib ? (today.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
 
@@ -807,14 +837,26 @@
   function kCount() { return QURAN[kahf.s - 1][1].length; }
   // the Basmala comes first, except in Al-Fatiha (its first verse) and At-Tawbah
   function kFirst() { return kahf.s === 1 || kahf.s === 9 ? 1 : 0; }
+  // reciters (everyayah.com folders; a second folder is tried if the first does not play)
+  var RECITERS = [
+    { id: 'alafasy', name: 'مشاري العفاسي', dirs: ['Alafasy_128kbps', 'Alafasy_64kbps'] },
+    { id: 'sudais', name: 'عبد الرحمن السديس', dirs: ['Abdurrahmaan_As-Sudais_192kbps', 'Abdurrahmaan_As-Sudais_64kbps'] },
+    { id: 'shuraym', name: 'سعود الشريم', dirs: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'] },
+    { id: 'muaiqly', name: 'ماهر المعيقلي', dirs: ['MaherAlMuaiqly128kbps', 'Maher_AlMuaiqly_64kbps'] },
+    { id: 'dossary', name: 'ياسر الدوسري', dirs: ['Yasser_Ad-Dussary_128kbps'] }
+  ];
+  var dirTry = 0;
+  function reciter() { return RECITERS.filter(function (r) { return r.id === S.reciter; })[0] || RECITERS[0]; }
   function kSrc(i) {
-    return 'https://everyayah.com/data/Alafasy_128kbps/' + (i === 0 ? '001001' : pad3(kahf.s) + pad3(i)) + '.mp3';
+    var dirs = reciter().dirs;
+    return 'https://everyayah.com/data/' + dirs[Math.min(dirTry, dirs.length - 1)] + '/' + (i === 0 ? '001001' : pad3(kahf.s) + pad3(i)) + '.mp3';
   }
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
   function kRender() {
     var i = kahf.i, cur = kText(i), n = kCount();
     $('k-title').textContent = 'سورة ' + QURAN[kahf.s - 1][0];
+    $('k-sub').textContent = 'بصوت الشيخ ' + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').textContent = cur;
     $('k-next').textContent = kText(i + 1);
@@ -842,6 +884,7 @@
   });
   audio.addEventListener('error', function () {
     if (!audio.src) return;
+    if (dirTry < reciter().dirs.length - 1) { dirTry++; kPlay(kahf.i); return; }
     kahf.playing = false;
     $('k-msg').textContent = 'تعذّر التشغيل، تأكد من اتصال الإنترنت';
     kRender();
@@ -856,6 +899,10 @@
     var L = S.qLast;
     $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
       'متابعة سورة ' + QURAN[L.s - 1][0] + ' · الآية ' + L.i + '</button>' : '';
+    $('q-sub').textContent = 'اختر سورة · بصوت الشيخ ' + reciter().name;
+    $('q-reciters').innerHTML = RECITERS.map(function (r) {
+      return '<button class="sbtn f' + (r.id === reciter().id ? ' on' : '') + '" data-rec="' + r.id + '">' + r.name + '</button>';
+    }).join('');
     if (!$('q-list').firstChild) $('q-list').innerHTML = QURAN.map(function (q, k) {
       return '<button class="sura f" data-go="kahf" data-sura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, 'آية', 'آيتان', 'آيات', 'آية') + '</span></button>';
     }).join('');
@@ -1261,6 +1308,7 @@
       go(el.dataset.go); return;
     }
     if (el.hasAttribute('data-back')) { back(); return; }
+    if (el.dataset.rec) { S.reciter = el.dataset.rec; dirTry = 0; save(); quranRender(); var b = document.querySelector('[data-rec="' + S.reciter + '"]'); if (b) b.focus(); return; }
     if (el.dataset.pkg) {
       if (screen === 'apps' && appsMode === 'pick') {
         S.shortcuts = (S.shortcuts || []).concat([el.dataset.pkg]); save(); back(); return;
