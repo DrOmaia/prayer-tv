@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # The STABLE file holds the tag (vN) of the last version the owner tested and approved
       - name: Mark stable
         if: github.event.inputs.action == 'mark-stable'
         env:
@@ -35,22 +36,28 @@ jobs:
           TAG="v${VERSION#v}"
           [ -n "$VERSION" ] || TAG=$(gh release view --json tagName -q .tagName)
           git fetch --tags -f origin
-          SHA=$(git rev-list -n 1 "$TAG")
-          git tag -f stable "$SHA"
-          git push -f origin refs/tags/stable
-          echo "::notice::$TAG ($SHA) is now the stable version"
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "::error::No version $TAG"; exit 1; }
+          echo "$TAG" > STABLE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add STABLE
+          git commit -m "Mark $TAG as the stable version [skip ci]"
+          git push origin HEAD:main
+          echo "::notice::$TAG is now the stable version"
       - name: Restore stable
         if: github.event.inputs.action == 'restore-stable'
         run: |
+          TAG=$(cat STABLE)
           git fetch --tags -f origin
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout main
           # only the app itself goes back; these instructions and this workflow stay
           git rm -r -q app
-          git checkout stable -- app build.gradle.kts settings.gradle.kts gradle.properties
-          git commit -m "Restore the stable version ($(git rev-parse --short stable))"
+          git checkout "$TAG" -- app build.gradle.kts settings.gradle.kts gradle.properties
+          git commit -m "Restore the stable version $TAG"
           git push origin main
+          echo "::notice::Restored $TAG; publishing it as v${{ github.run_number }}"
       - name: Commit to publish
         id: head
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

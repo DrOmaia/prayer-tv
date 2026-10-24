@@ -46,24 +46,25 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
 5. **Both TV and phone** share the code: check a change in both (`.tv` / `.phone`, landscape and portrait).
    On TV everything must be reachable with the remote (elements with class `f` are focusable).
 6. **Small, focused changes.** Change only the files the request needs. Never delete features.
-7. **Git safety:** never force-push `main`, never rewrite history, never delete tags or releases (`vN`, `stable`).
+7. **Git safety:** never force-push `main`, never rewrite history, never delete tags or releases (`vN`).
    Work on `main` (it publishes directly, as the owner chose), one clear commit per request.
 
 ## 5. Backups and going back (the owner must never lose a working app)
 - Every build is kept forever as a GitHub release `vN` with its APK.
-- The git tag **`stable`** marks the last version the owner tested and approved on the TV.
-- **Mark stable** — when he says a version works ("تمام", "اعتمد", "شغال"): `git tag -f stable && git push -f origin stable`
-  (only the tag moves), or GitHub → Actions → *Build APK* → *Run workflow* → action `mark-stable`.
+- The file **`STABLE`** holds the tag (`vN`) of the last version the owner tested and approved on the TV.
+- **Mark stable** — when he says a version works ("تمام", "اعتمد", "شغال"): write that version's tag (normally the
+  latest release, `vN`) into `STABLE`, commit with `[skip ci]` in the message, push. Or GitHub → Actions →
+  *Build APK* → *Run workflow* → action `mark-stable` (optional version number; empty = latest).
 - **Restore stable** — when he says something broke ("ارجع للنسخة المستقرة", "رجّعه زي ما كان"):
   ```bash
   git fetch --tags origin && git checkout main && git pull
-  git rm -r -q app && git checkout stable -- app build.gradle.kts settings.gradle.kts gradle.properties
-  git commit -m "Restore the stable version" && git push origin main
+  git rm -r -q app && git checkout "$(cat STABLE)" -- app build.gradle.kts settings.gradle.kts gradle.properties
+  git commit -m "Restore the stable version $(cat STABLE)" && git push origin main
   ```
   or Actions → *Build APK* → *Run workflow* → action `restore-stable`. This makes a **new** commit with the stable
-  app files (history kept; these instructions and the workflow stay as they are) and a new release with a higher number, so it installs over the broken one without
-  losing settings. (Android refuses to install an older build number over a newer one, so never just point him
-  to an old APK.)
+  app files (history kept; these instructions and the workflow stay as they are) and a new release with a higher
+  number, so it installs over the broken one without losing settings. (Android refuses to install an older build
+  number over a newer one, so never just point him to an old APK.)
 - Before a big change, tell him which version is the current `stable`.
 
 ## 6. Checklist for every change
