@@ -49,16 +49,16 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* top bar */
 .top { display: flex; justify-content: space-between; align-items: center; height: 110px; flex-shrink: 0; gap: 20px; }
 .top-right { display: flex; align-items: center; gap: 16px; }
-.g-date { font-size: 44px; font-weight: 700; line-height: 1.3; }
-.h-date { font-size: 34px; color: var(--muted); font-weight: 500; }
-.weather { display: flex; align-items: center; gap: 12px; height: 110px; padding: 0 18px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); text-align: right; }
-.w-icon .wi .ic { width: 52px; height: 52px; stroke-width: 1.6; }
+.g-date { font-size: 34px; font-weight: 700; line-height: 1.3; margin-top: 6px; }
+.h-date { font-size: 28px; color: var(--muted); font-weight: 500; }
+.weather { display: flex; align-items: center; gap: 10px; height: 110px; padding: 0 16px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); text-align: right; }
+.w-icon .wi .ic { width: 42px; height: 42px; stroke-width: 1.6; }
 .w-main { display: flex; flex-direction: column; gap: 8px; }
 .w-row1 { display: flex; align-items: center; gap: 12px; }
-.w-temp { font-size: 50px; font-weight: 700; line-height: 1; direction: ltr; }
-.w-txt { display: flex; flex-direction: column; font-size: 18px; color: var(--muted); white-space: nowrap; }
-.w-txt b { font-size: 22px; color: var(--ink); }
-.w-meta { display: flex; gap: 10px; font-size: 16px; white-space: nowrap; }
+.w-temp { font-size: 40px; font-weight: 700; line-height: 1; direction: ltr; }
+.w-txt { display: flex; flex-direction: column; font-size: 16px; color: var(--muted); white-space: nowrap; }
+.w-txt b { font-size: 20px; color: var(--ink); }
+.w-meta { display: flex; gap: 8px; font-size: 14px; white-space: nowrap; }
 /* gently coloured weather icons */
 .wi { display: inline-flex; }
 .wi-sun { color: #E9A23B; } .wi-moon { color: #8C9BC0; } .wi-cloud, .wi-fog { color: #98A2AD; }
@@ -67,7 +67,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wi-storm { color: #8E86B8; } .wi-storm .bolt { stroke: #E9A23B; }
 .wi-snow { color: #7FB3D5; }
 .ws { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
-.ws .ic { width: 20px; height: 20px; }
+.ws .ic { width: 17px; height: 17px; }
 .ws b { font-weight: 600; color: var(--ink); direction: ltr; }
 .ws-hum .ic { color: #3E86C9; } .ws-umb .ic { color: #5B7FD1; } .ws-wind .ic { color: #2A9D8F; } .ws-feel .ic { color: #D9822B; }
 
@@ -98,40 +98,54 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .sub-title { font-size: 24px; }
 
 /* hero: date, Hijri date and clock on the right · next prayer on the left */
-.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; height: 360px; flex-shrink: 0; align-items: stretch; }
+.hero { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); gap: 40px; height: 360px; flex-shrink: 0; align-items: stretch; }
 .hero-main { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; }
 .clock { font-size: 230px; font-weight: 500; line-height: .95; letter-spacing: -4px; font-variant-numeric: tabular-nums; margin-top: 8px; }
-.has-ramadan .clock { font-size: 180px; }
-.ramadan { display: flex; gap: 14px; margin-top: 14px; align-self: stretch; }
-.rcard { flex: 1; border-radius: 20px; padding: 10px 22px; background: var(--card2); border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.has-ramadan .clock { font-size: 150px; }
+.hero-main { min-width: 0; overflow: hidden; }
+.ramadan { display: flex; gap: 12px; margin-top: 12px; align-self: stretch; }
+.rcard { flex: 1; min-width: 0; border-radius: 20px; padding: 10px 18px; background: var(--card2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .rcard > div { display: flex; flex-direction: column; font-size: 20px; }
 .rcard b { font-size: 24px; }
-.rnum { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.next { height: 100%; border-radius: 32px; padding: 32px 40px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.rnum { font-size: 34px; font-weight: 700; white-space: nowrap; text-align: right; }
+.next { height: 100%; border-radius: 32px; padding: 30px 36px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; }
+.next.no-fact { grid-template-columns: minmax(0, 1fr); }
+.next-main { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .next-label { font-size: 28px; font-weight: 600; }
 .next-name { font-size: 64px; font-weight: 700; line-height: 1.15; }
-.countdown { font-size: 100px; font-weight: 500; line-height: 1.05; text-align: right; font-variant-numeric: tabular-nums; }
+.countdown { font-size: 100px; font-weight: 500; line-height: 1.05; text-align: right; }
 .next-detail { font-size: 24px; }
+/* «هل تعلم؟» beside the countdown */
+.fact { border-right: 1px solid var(--line); padding-right: 32px; display: flex; flex-direction: column; justify-content: center; gap: 8px; transition: opacity .6s ease; }
+.fact.fade { opacity: 0; }
+.fact-h { font-size: 22px; font-weight: 700; }
+.fact-t { font-size: 30px; font-weight: 700; line-height: 1.3; }
+.fact-x { font-size: 24px; line-height: 1.55; }
+.fact-s { font-size: 19px; }
+.next.no-fact .fact { display: none; }
+/* digits keep their place: every digit has the same width */
+.dg { display: inline-block; width: .56em; text-align: center; }
+.cl { display: inline-block; width: .26em; text-align: center; }
 
 /* prayer cards */
 .prayers { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 18px; height: 220px; flex-shrink: 0; }
 .pc { position: relative; overflow: hidden; min-width: 0; border-radius: 24px; background: var(--pc-bg); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
 /* the card text; the gold copy on top shows only over the part of the period (clip-path set by the script) */
 .pc-in { position: absolute; inset: 0; box-sizing: border-box; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); }
-.pc-over { background: linear-gradient(135deg, #A07B3A, #6F521F); color: #fff; clip-path: inset(0 0 0 100%); transition: clip-path 1s linear; }
-.pc-over .pc-iq { opacity: .9; }
+.pc-bar { position: absolute; right: 0; bottom: 0; height: 8px; width: 0; background: linear-gradient(90deg, #C9A35E, #87642A); border-radius: 0 0 0 0; transition: width 1s linear; }
+.pc-now .pc-name::after { content: ' · الآن'; font-size: 20px; font-weight: 600; color: var(--gold); }
 .pc-name { font-size: 38px; font-weight: 700; white-space: nowrap; }
 .pc-time { white-space: nowrap; text-align: right; font-size: 60px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .pc-iq { font-size: 22px; font-weight: 500; opacity: .75; min-height: 30px; white-space: nowrap; }
-.pc.next-p { border: 3px solid var(--gold); }
+.pc.next-p { border: 3px solid var(--gold); background: var(--card2); }
 
 /* occasion countdowns in the top bar */
-.events { display: flex; gap: 12px; flex: 1; justify-content: center; min-width: 0; }
+.events { display: flex; gap: 10px; flex: 1; justify-content: flex-start; min-width: 0; }
 .ev { height: 110px; padding: 0 18px; flex-shrink: 0; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); display: flex; align-items: center; gap: 14px; min-width: 0; }
-.ev-n { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+.ev-n { font-size: 40px; font-weight: 800; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .ev-t { display: flex; flex-direction: column; min-width: 0; }
-.ev-t b { font-size: 22px; white-space: nowrap; }
-.ev-t span { font-size: 18px; color: var(--muted); }
+.ev-t b { font-size: 20px; white-space: nowrap; }
+.ev-t span { font-size: 16px; color: var(--muted); }
 
 /* bottom: rotating verse / hadith / wisdom · Friday · shortcuts */
 .bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 28px; flex: 1; min-height: 0; }
@@ -278,7 +292,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .hero { grid-template-columns: minmax(0, 1fr); height: auto; }
 .portrait .hero-main { text-align: center; }
 .portrait .ramadan { align-self: stretch; }
-.portrait .next { text-align: center; }
+.portrait .next { text-align: center; grid-template-columns: minmax(0, 1fr); }
+.portrait .fact { border-right: none; padding-right: 0; border-top: 1px solid var(--line); padding-top: 20px; }
 .portrait .countdown { text-align: center; }
 .portrait .prayers { display: flex; flex-direction: column; height: auto; gap: 14px; }
 .portrait .pc { min-height: 112px; }
@@ -308,3 +323,5 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .b-icon .ic { width: 48px; height: 48px; }
 .b-title { font-size: 44px; font-weight: 700; line-height: 1.2; }
 .b-sub { font-size: 26px; color: #5F5A52; }
+
+.tv .set-first { margin-top: 18px; }

@@ -25,19 +25,27 @@
 
     <div class="hero">
       <div class="hero-main">
+        <div id="clock" class="clock" dir="ltr"></div>
         <div id="g-date" class="g-date"></div>
         <div class="h-date"><span id="h-date"></span></div>
-        <div id="clock" class="clock" dir="ltr"></div>
         <div id="ramadan" class="ramadan hidden">
           <div class="rcard"><div><b>متبقٍ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div class="rcard"><div><b>متبقٍ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
         </div>
       </div>
       <div class="next card">
-        <div id="next-label" class="gold next-label"></div>
-        <div id="next-name" class="next-name"></div>
-        <div id="countdown" class="countdown" dir="ltr"></div>
-        <div id="next-detail" class="muted next-detail"></div>
+        <div class="next-main">
+          <div id="next-label" class="gold next-label"></div>
+          <div id="next-name" class="next-name"></div>
+          <div id="countdown" class="countdown" dir="ltr"></div>
+          <div id="next-detail" class="muted next-detail"></div>
+        </div>
+        <div id="fact" class="fact">
+          <div class="gold fact-h">هل تعلم؟</div>
+          <div id="fact-t" class="fact-t"></div>
+          <div id="fact-x" class="fact-x"></div>
+          <div id="fact-s" class="muted fact-s"></div>
+        </div>
       </div>
     </div>
 
@@ -144,15 +152,24 @@
     </header>
     <div class="set-body">
       <div class="card set-col">
-        <div class="set-h">مواقيت الأذان والتنبيه</div>
+        <div class="tv-only">
+        <div class="set-h">اختصارات التطبيقات</div>
+        <div class="muted set-note">تظهر في الشاشة الرئيسية بهذا الترتيب</div>
+        <div id="set-shortcuts"></div>
+        <button id="set-add" class="pill f">+ إضافة اختصار</button>
+        <div class="set-h set-h2">عام</div>
+        <div id="set-general"></div>
+        </div>
+        <div class="set-h set-first">مواقيت الأذان والتنبيه</div>
         <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
         <div id="set-prayers"></div>
         <div id="set-isha"></div>
+        <div id="set-show"></div>
         <div id="set-version" class="muted set-note"></div>
       </div>
       <div class="card set-col">
         <div class="set-h">عدّادات المناسبات</div>
-        <div class="muted set-note">تظهر أقرب 3 في الشاشة الرئيسية، وتختفي بعد مرور تاريخها</div>
+        <div class="muted set-note">تظهر أقرب 4 في الشاشة الرئيسية، وتختفي بعد مرور تاريخها</div>
         <div id="set-events"></div>
         <div class="ev-add">
           <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
@@ -174,14 +191,6 @@
         <div class="ev-add">
           <input id="fam-text" class="inp f" type="text" maxlength="120" placeholder="اكتب رسالتك هنا">
           <div class="ev-date"><button id="fam-to" class="pill f"></button><button id="fam-add" class="pill f">+ إضافة الرسالة</button></div>
-        </div>
-        <div class="tv-only">
-        <div class="set-h set-h2">اختصارات التطبيقات</div>
-        <div class="muted set-note">تظهر في الشاشة الرئيسية بهذا الترتيب</div>
-        <div id="set-shortcuts"></div>
-        <button id="set-add" class="pill f">+ إضافة اختصار</button>
-        <div class="set-h set-h2">عام</div>
-        <div id="set-general"></div>
         </div>
       </div>
     </div>
@@ -216,6 +225,7 @@
 <script src="quran.js"></script>
 <script src="reminders.js"></script>
 <script src="family.js"></script>
+<script src="facts.js"></script>
 <script src="prayer.js"></script>
 <script src="app.js"></script>
 </body>

@@ -25,7 +25,8 @@
       autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv),
       ishaMin: Object.assign({ normal: 90, ramadan: 120 }, s.ishaMin),
       famMsgs: s.famMsgs || [], // own family messages: {to, text}
-      family: s.family || null // null: the default family (family.js)
+      family: s.family || null, // null: the default family (family.js)
+      showFact: s.showFact !== false
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -252,11 +253,37 @@
     var c = document.createElement('div');
     c.className = 'pc';
     var inner = '<div class="pc-name"></div><div class="pc-time"></div><div class="pc-iq"></div>';
-    c.innerHTML = '<div class="pc-in">' + inner + '</div><div class="pc-in pc-over" aria-hidden="true">' + inner + '</div>';
+    c.innerHTML = '<div class="pc-in">' + inner + '</div><div class="pc-bar"></div>';
     $('prayers').appendChild(c);
     cards[k] = c;
   });
 
+  // countdowns: each digit in a box of the same width, so the numbers do not shift as they change
+  function putDigits(el, text) {
+    if (el.dataset.v === text) return;
+    el.dataset.v = text;
+    el.innerHTML = text.split('').map(function (ch) {
+      return /\d/.test(ch) ? '<span class="dg">' + ch + '</span>' : ch === ':' ? '<span class="cl">:</span>' : ch;
+    }).join('');
+  }
+  // «هل تعلم؟»: a new one every 30 minutes (can be hidden in the settings)
+  var lastFact = -1;
+  function showFact(t) {
+    var card = document.querySelector('#home .next');
+    card.classList.toggle('no-fact', !S.showFact);
+    if (!S.showFact) return;
+    var n = Math.floor(t / (30 * MIN)) % FACTS.length;
+    if (n === lastFact) return;
+    var first = lastFact < 0, f = FACTS[n], box = $('fact');
+    lastFact = n;
+    function put() {
+      $('fact-t').textContent = f.t;
+      $('fact-x').textContent = f.x;
+      $('fact-s').textContent = f.s;
+      box.classList.remove('fade');
+    }
+    if (first) put(); else { box.classList.add('fade'); setTimeout(put, 600); }
+  }
   function setAll(c, sel, text) { Array.prototype.forEach.call(c.querySelectorAll(sel), function (e) { if (e.textContent !== text) e.textContent = text; }); }
   function nextRamadan(t, days, field) {
     for (var i = 0; i < days.length; i++) if (days[i].ramadan && days[i][field] > t) return days[i][field];
@@ -293,26 +320,20 @@
     }
     $('next-label').textContent = label;
     $('next-name').textContent = name;
-    $('countdown').textContent = cd;
+    putDigits($('countdown'), cd);
     $('next-detail').textContent = detail;
 
-    // the dark fill passes gradually from the current time to the next one:
-    // the current card keeps the part of the period that is left, the next card fills with the part that has passed
+    // a thin gold bar under the next time fills up from the previous time until it comes
     var seq = [['isha', yest.at.isha], ['imsak', today.imsak]].concat(ORDER.map(function (k) { return [k, today.at[k]]; }), [['imsak', tom.imsak]]);
     var ci = 0;
     for (var i = 0; i < seq.length - 1; i++) if (seq[i][1] <= t) ci = i;
     var p = Math.min(1, Math.max(0, (t - seq[ci][1]) / (seq[ci + 1][1] - seq[ci][1])));
-    var fill = {};
-    fill[seq[ci][0]] = 1 - p;
-    fill[seq[ci + 1][0]] = p;
 
     CARDS.forEach(function (k) {
       var day = tomorrow && (k === 'fajr' || k === 'imsak') ? tom : today;
       var c = cards[k];
-      c.className = 'pc' + (k === nextK ? ' next-p' : '');
-      // the gold part moves right to left: it leaves the current card from its right side and enters the next card on its right side
-      var hide = (100 - (fill[k] || 0) * 100).toFixed(2) + '%';
-      c.querySelector('.pc-over').style.clipPath = k === seq[ci][0] && fill[k] < 1 ? 'inset(0 ' + hide + ' 0 0)' : 'inset(0 0 0 ' + hide + ')';
+      c.className = 'pc' + (k === nextK ? ' next-p' : '') + (k === seq[ci][0] && k !== 'imsak' ? ' pc-now' : '');
+      c.querySelector('.pc-bar').style.width = k === seq[ci + 1][0] ? (p * 100).toFixed(2) + '%' : '0';
       setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
       setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
       setAll(c, '.pc-iq', k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
@@ -326,9 +347,9 @@
     if (showR) {
       var days = [today, tom], ift = nextRamadan(t, days, 'maghribAt'), suh = nextRamadan(t, days, 'imsak');
       $('iftar-at').textContent = ift ? P.full(ift) : '—';
-      $('iftar-left').textContent = ift ? P.leftHM(ift - t) : '—';
+      putDigits($('iftar-left'), ift ? P.leftHM(ift - t) : '—');
       $('suhoor-at').textContent = suh ? P.full(suh) : '—';
-      $('suhoor-left').textContent = suh ? P.leftHM(suh - t) : '—';
+      putDigits($('suhoor-left'), suh ? P.leftHM(suh - t) : '—');
     }
   }
 
@@ -411,7 +432,7 @@
       $('quote-type').textContent = q.type;
       $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
       $('quote').className = 'q-text' + (q.quran ? ' quran' : '') + (q.fam ? ' fam' : '');
-      $('quote').style.fontSize = q.text.length > 110 ? (q.quran ? '32px' : '26px') : q.text.length > 60 ? (q.quran ? '36px' : '30px') : '';
+      $('quote').style.fontSize = q.text.length > 80 ? (q.quran ? '32px' : '26px') : q.text.length > 50 ? (q.quran ? '36px' : '30px') : '';
       $('quote-src').textContent = q.src;
       box.classList.toggle('special', !!sp);
       box.classList.remove('fade');
@@ -438,6 +459,7 @@
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     $('clock').textContent = P.full(t);
     showReminder(t);
+    showFact(t);
     if (screen === 'home') renderHome(t, today, tom, yest);
     if (screen === 'kahf') $('kahf-clock').textContent = P.full(t);
     checkAlert(t, today);
@@ -484,7 +506,7 @@
     S.events = S.events.filter(function (e) { return daysTo(e, r) >= 0; }); // past dates disappear
     if (S.events.length !== before) save();
     sendWidget();
-    $('events').innerHTML = allEvents(r).slice(0, 3).map(function (e) {
+    $('events').innerHTML = allEvents(r).slice(0, 4).map(function (e) {
       return '<div class="ev"><span class="ev-n">' + (e.left === 0 ? 'اليوم' : e.left) + '</span><div class="ev-t"><b>' + esc(e.name) +
         '</b><span>' + (e.left === 0 ? '' : daysWord(e.left) + ' · ') + dmy(e) + '</span></div></div>';
     }).join('');
@@ -517,7 +539,7 @@
       iqAt = key;
       var left = target - t;
       $('iq-label').textContent = label;
-      $('iq-cd').textContent = P.left(left);
+      putDigits($('iq-cd'), P.left(left));
       $('iq-cd').classList.toggle('soon', left <= 60000);
       $('iq-detail').textContent = detail;
       $('iq-clock').textContent = P.full(t);
@@ -673,6 +695,8 @@
         '<button class="sbtn f" data-k="ip-' + x[0] + '" aria-label="زائد دقيقة">+</button>' +
         '<span class="sbtn al muted" style="border:none;background:none">دقيقة</span></div>';
     }).join('');
+    $('set-show').innerHTML = '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
+      (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? 'يظهر' : 'مخفي') + '</button></div>';
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
@@ -730,6 +754,7 @@
     else if (a === 'dreamset') { if (A) A.openDreamSettings(); return; }
     else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
     else if (a === 'fx') S.famMsgs.splice(+v, 1);
+    else if (a === 'fact') { S.showFact = !S.showFact; lastFact = -1; }
     else if (a === 'fpar' || a === 'fmx' || a === 'fan') {
       // the first change copies the default family into the settings
       if (!S.family) S.family = JSON.parse(JSON.stringify(FAMILY.DEFAULT));
