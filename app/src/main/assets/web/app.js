@@ -146,6 +146,7 @@
       var at = T.at[k];
       if (S.alerts[k] && t >= at && t < at + 15000 && !alerted[at]) {
         alerted[at] = true;
+        if (T.iqamah[k]) return; // the full-screen iqamah countdown shows instead
         $('b-title').textContent = alertTitle(k, T);
         $('b-sub').textContent = alertSub(k, T);
         $('banner').classList.remove('hidden');
@@ -161,7 +162,7 @@
     var c = document.createElement('div');
     c.className = 'pc';
     c.innerHTML = '<div class="pc-head"><span class="pc-name"></span><span class="pc-badge hidden"></span></div>' +
-      '<div class="pc-time"><span></span><small></small></div><div class="pc-iq"></div>';
+      '<div class="pc-row"><div class="pc-time"><span></span><small></small></div><div class="pc-cd"><small>متبقٍ</small><b></b></div></div><div class="pc-iq"></div>';
     $('prayers').appendChild(c);
     cards[k] = c;
   });
@@ -204,6 +205,8 @@
     $('countdown').textContent = cd;
     $('next-detail').textContent = detail;
 
+    // the next prayer takes the width of two cards
+    $('prayers').style.gridTemplateColumns = ORDER.map(function (k) { return k === nextK ? 'minmax(0, 2fr)' : 'minmax(0, 1fr)'; }).join(' ');
     ORDER.forEach(function (k) {
       var day = tomorrow && k === 'fajr' ? tom : today;
       var isNow = k === cur, isNext = k === nextK && !isNow;
@@ -215,6 +218,7 @@
       b.classList.toggle('hidden', !isNow && !isNext);
       c.querySelector('.pc-time span').textContent = x.t;
       c.querySelector('.pc-time small').textContent = x.ap;
+      if (isNext) c.querySelector('.pc-cd b').textContent = P.left(day.at[k] - t);
       c.querySelector('.pc-iq').textContent = day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : '');
     });
 
@@ -263,7 +267,36 @@
     if (screen === 'home') renderHome(t, today, tom);
     if (screen === 'kahf') $('kahf-clock').textContent = P.full(t);
     checkAlert(t, today);
+    checkIqamah(t, today);
   }
+
+  // ---------- full-screen countdown from the adhan to the iqamah ----------
+  var iqDismissed = {}, iqAt = 0, iqPrevFocus = null;
+  function iqOpen() { return !$('iqamah').classList.contains('hidden'); }
+  function checkIqamah(t, T) {
+    var on = null;
+    FIVE.forEach(function (k) { if (S.alerts[k] && T.iqamah[k] && t >= T.at[k] && t < T.iqamah[k]) on = k; });
+    if (on && !iqDismissed[T.at[on]]) {
+      if (!iqOpen()) {
+        iqPrevFocus = document.activeElement;
+        $('iqamah').classList.remove('hidden');
+        $('iq-close').focus();
+      }
+      iqAt = T.at[on];
+      var left = T.iqamah[on] - t;
+      $('iq-label').textContent = 'متبقٍ على إقامة صلاة ' + P.name(on, T.friday);
+      $('iq-cd').textContent = P.left(left);
+      $('iq-cd').classList.toggle('soon', left <= 60000);
+      $('iq-detail').textContent = 'الأذان ' + P.full(T.at[on]) + ' · الإقامة ' + P.full(T.iqamah[on]);
+      $('iq-clock').textContent = P.full(t);
+    } else if (iqOpen()) iqHide();
+  }
+  function iqHide() {
+    $('iqamah').classList.add('hidden');
+    if (iqPrevFocus && document.body.contains(iqPrevFocus) && iqPrevFocus.offsetParent !== null) iqPrevFocus.focus();
+    else focusFirst();
+  }
+  function iqDismiss() { iqDismissed[iqAt] = true; iqHide(); }
 
   // ---------- calendar ----------
   var cal = {};
@@ -439,11 +472,13 @@
     focusFirst(lf && document.body.contains(lf) && !lf.closest('.hidden') ? lf : null);
   }
   function focusFirst(el) {
+    if (iqOpen()) el = $('iq-close');
     el = el || document.querySelector('#' + screen + (screen === 'home' ? ' #shortcuts .f' : ' .f'));
     if (el) el.focus();
   }
   function go(name) { stack.push(screen); show(name); }
   function back() {
+    if (iqOpen()) { iqDismiss(); return; }
     if (screen === 'home') return;
     if (screen === 'kahf') kStop();
     var to = stack.pop() || 'home';
@@ -454,7 +489,7 @@
 
   // ---------- remote control: arrows move between the nearest items ----------
   function focusables() {
-    return Array.prototype.filter.call(document.querySelectorAll('#' + screen + ' .f'), function (e) { return e.offsetParent !== null; });
+    return Array.prototype.filter.call(document.querySelectorAll(iqOpen() ? '#iqamah .f' : '#' + screen + ' .f'), function (e) { return e.offsetParent !== null; });
   }
   function move(dir) {
     var cur = document.activeElement, list = focusables();
@@ -510,6 +545,7 @@
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     switch (el.id) {
+      case 'iq-close': iqDismiss(); break;
       case 'cal-prev': calMonth(-1); break;
       case 'cal-next': calMonth(1); break;
       case 'cal-today': calOpen(); break;
