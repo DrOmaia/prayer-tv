@@ -2,7 +2,9 @@ package com.dromaia.prayertv
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -35,7 +37,14 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (Device.isTv(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            packageManager.setComponentEnabledSetting(ComponentName(this, "$packageName.HomeAlias"),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+        } else if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
@@ -71,10 +80,14 @@ class MainActivity : Activity() {
         super.onPause()
     }
 
-    // Back is handled by the page (close a screen); on the main screen it does nothing
+    // Back is handled by the page (close a screen); on the main screen: nothing on a TV, leave the app on a phone
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_UP) web.evaluateJavascript("window.App && App.back()", null)
+            if (event.action == KeyEvent.ACTION_UP) {
+                web.evaluateJavascript("window.App ? App.back() : false") { handled ->
+                    if (handled != "true" && !Device.isTv(this)) moveTaskToBack(true)
+                }
+            }
             return true
         }
         return super.dispatchKeyEvent(event)
@@ -115,6 +128,9 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun schedule(json: String) = Schedule.save(this@MainActivity, json)
+
+        @JavascriptInterface
+        fun isTv(): Boolean = Device.isTv(this@MainActivity)
 
         @JavascriptInterface
         fun canOverlay(): Boolean =

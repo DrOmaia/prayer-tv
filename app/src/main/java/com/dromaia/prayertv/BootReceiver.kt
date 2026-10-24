@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
         Schedule.armNext(ctx)
         val openOnBoot = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getBoolean("openOnBoot", true)
         val allowed = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx)
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED && openOnBoot && allowed) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED && Device.isTv(ctx) && openOnBoot && allowed) {
             try {
                 ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } catch (_: Exception) {

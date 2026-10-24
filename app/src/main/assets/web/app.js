@@ -26,9 +26,22 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
   // ---------- fit the 1920×1080 design to the screen ----------
+  // TV: remote control, app shortcuts, alert over other apps. Phone: touch, notification.
+  var TV = A ? A.isTv() : !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  stage.classList.add(TV ? 'tv' : 'phone');
+
+  // ---------- fit any screen: landscape is 1080 units high, portrait 1080 units wide ----------
   function fit() {
-    var k = Math.min(innerWidth / 1920, innerHeight / 1080);
-    stage.style.transform = 'translate(' + (innerWidth - 1920 * k) / 2 + 'px,' + (innerHeight - 1080 * k) / 2 + 'px) scale(' + k + ')';
+    var w = innerWidth, h = innerHeight, portrait = h > w * 1.05, W, H, k;
+    if (portrait) { W = 1080; k = w / W; H = h / k; }
+    else {
+      H = 1080; k = h / H; W = w / k;
+      if (W < 1920) { W = 1920; k = w / W; H = Math.max(1080, h / k); } // squarer screens (4:3, 16:10): taller, same width
+    }
+    stage.classList.toggle('portrait', portrait);
+    stage.style.width = W + 'px';
+    stage.style.height = H + 'px';
+    stage.style.transform = 'translate(' + (w - W * k) / 2 + 'px,' + (h - H * k) / 2 + 'px) scale(' + k + ')';
   }
   addEventListener('resize', fit);
   fit();
@@ -64,6 +77,7 @@
   }
   function renderShortcuts() {
     var box = $('shortcuts');
+    if (!TV) { box.innerHTML = ''; return; }
     var idx = Array.prototype.indexOf.call(box.children, document.activeElement);
     box.innerHTML = shortcutApps().map(tileHtml).join('') +
       '<button class="tile f" data-go="apps">' + ICON_ALL + '<span>كل التطبيقات</span></button>';
@@ -259,7 +273,7 @@
     if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); }
     // dark from two hours after Isha until Fajr
     var n = t >= today.at.isha + 2 * HR || t < today.at.fajr;
-    if (n !== night) { night = n; stage.className = n ? 'night' : 'day'; }
+    if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     var c = P.hm(t);
     $('clock').textContent = c.t;
     $('ampm').textContent = c.ap;
@@ -478,13 +492,14 @@
   }
   function go(name) { stack.push(screen); show(name); }
   function back() {
-    if (iqOpen()) { iqDismiss(); return; }
-    if (screen === 'home') return;
+    if (iqOpen()) { iqDismiss(); return true; }
+    if (screen === 'home') return false;
     if (screen === 'kahf') kStop();
     var to = stack.pop() || 'home';
     if (screen === 'apps' && appsMode === 'pick') to = 'settings';
     appsMode = 'launch';
     show(to);
+    return true;
   }
 
   // ---------- remote control: arrows move between the nearest items ----------
@@ -544,6 +559,7 @@
       return;
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
+    if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
       case 'cal-prev': calMonth(-1); break;
@@ -567,7 +583,7 @@
     }
   };
 
-  if (A) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
+  if (A && TV) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
   renderShortcuts();
   tick();
   setTimeout(function () { tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);
