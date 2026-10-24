@@ -24,7 +24,7 @@ Edit only this file, then run the script.
 Arabic only, right-to-left, 24-hour clock, Tajawal font. Light design by day; dark mode (`.night`) is an Islamic design: navy/purple, geometric pattern, mosque drawing, next prayer in a glowing circle, prayer times as one strip. Features: prayer times + iqamah countdown, Imsak,
 Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, verses on screen; Al-Kahf button on Friday), occasion countdowns
 (own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
-3 min), «هل تعلم؟» (every 10 min), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
+3 min), «هل تعلم؟» (every 3 min, 260+ items incl. «تصحيح خطأ شائع»), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
 over other apps, open on boot, screensaver, phone notifications and home-screen widgets.
 User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
 

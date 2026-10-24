@@ -349,9 +349,15 @@
       var list = ADHKAR[w.kind], i = Math.floor((t - w.start) / 30000) % list.length;
       item = list[i]; head = ADHKAR_HEAD[w.kind]; key = w.kind + i;
     } else {
-      var slot = Math.floor(t / (10 * MIN)), sl = seasonList();
+      // a new one every 3 minutes; each day starts at a different place so they don't come at the same hours
+      var slot = Math.floor(t / (3 * MIN)), sl = seasonList();
       if (sl && slot % 2 === 0) { item = sl[(slot / 2) % sl.length]; head = 'فضل هذه الأيام'; key = 's' + slot; }
-      else { item = FACTS[slot % FACTS.length]; key = 'f' + (slot % FACTS.length); }
+      else {
+        // stepping 67 places at a time mixes the sections (67 shares no factor with the list length)
+        var fi = ((slot + Math.floor(t / 86400000) * 61) * 67) % FACTS.length;
+        item = FACTS[fi]; key = 'f' + fi;
+        if (item.k === 'myth') head = 'تصحيح خطأ شائع';
+      }
     }
     if (key === lastFact) return;
     var first = !lastFact, box = $('fact');
