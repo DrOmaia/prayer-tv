@@ -15,20 +15,10 @@ android {
         versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
     }
 
-    // A fixed key so a new version installs over the old one (keeps the settings)
-    signingConfigs {
-        create("release") {
-            storeFile = file("release.keystore")
-            storePassword = "prayertv123"
-            keyAlias = "prayertv"
-            keyPassword = "prayertv123"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            // unsigned here: CI signs it with the private key from the repository secrets (see .github/workflows/build.yml)
         }
     }
 

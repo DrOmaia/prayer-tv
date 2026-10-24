@@ -47,4 +47,25 @@ object Device {
             .build()
         try { nm.notify(2, n) } catch (_: SecurityException) {}
     }
+
+    // the alert list has run out: a quiet reminder to open the app once
+    fun notifyRefresh(ctx: Context) {
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        val b = if (Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(NotificationChannel("refresh", "تحديث المواقيت", NotificationManager.IMPORTANCE_LOW))
+            Notification.Builder(ctx, "refresh")
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(ctx)
+        }
+        val open = PendingIntent.getActivity(ctx, 4,
+            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        val n = b.setSmallIcon(R.drawable.ic_moon)
+            .setContentTitle("افتح «مواقيت الصلاة»")
+            .setContentText("لتحديث مواقيت الأيام القادمة وتنبيهاتها")
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        try { nm.notify(3, n) } catch (_: SecurityException) {}
+    }
 }

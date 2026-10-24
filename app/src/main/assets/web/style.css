@@ -18,10 +18,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* 1920×1080 stage, scaled to the screen */
 #stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); }
-.day { --pc-bg: #FBFAF8; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.72); --card2: rgba(255,255,255,.85); --tile: #FFFFFF; --line: #E4DDD1; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
+.day { --now-tint: #F1E8D6; --pc-bg: #FBFAF8; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.72); --card2: rgba(255,255,255,.85); --tile: #FFFFFF; --line: #E4DDD1; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
   background-color: #F5F3EF;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.95), rgba(255,255,255,0) 70%), radial-gradient(ellipse 700px 500px at 90% 95%, rgba(255,255,255,.8), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(140,128,115,.10) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(140,128,115,.06) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(150,138,124,.08) 66.5%, rgba(0,0,0,0) 67.3%), linear-gradient(96deg, rgba(0,0,0,0) 14%, rgba(150,138,124,.06) 14.6%, rgba(0,0,0,0) 15.8%), linear-gradient(170deg, rgba(0,0,0,0) 82%, rgba(140,128,115,.07) 82.4%, rgba(0,0,0,0) 83.2%); }
-.night { --pc-bg: #212327; --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
+.night { --now-tint: #2D2A24; --pc-bg: #212327; --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
   background-color: #16181B;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.05), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(255,255,255,.05) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(255,255,255,.03) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(255,255,255,.04) 66.5%, rgba(0,0,0,0) 67.3%); }
 
@@ -35,7 +35,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* focus for the remote */
 .f { outline: none; transition: transform .12s ease, box-shadow .12s ease; }
-.f:focus { box-shadow: 0 0 0 4px var(--gold), 0 0 0 9px rgba(135,100,42,.18); transform: scale(1.04); }
+/* remote focus: a white and blue ring with a lift, unlike the gold of the next prayer */
+.f:focus { box-shadow: 0 0 0 4px #FFFFFF, 0 0 0 9px #2F6FDE, 0 12px 30px rgba(47,111,222,.35); transform: scale(1.05); }
 
 .round { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--card2); display: flex; align-items: center; justify-content: center; padding: 0; }
 .round.big { width: 76px; height: 76px; }
@@ -56,9 +57,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .w-main { display: flex; flex-direction: column; gap: 8px; }
 .w-row1 { display: flex; align-items: center; gap: 12px; }
 .w-temp { font-size: 40px; font-weight: 700; line-height: 1; direction: ltr; }
-.w-txt { display: flex; flex-direction: column; font-size: 16px; color: var(--muted); white-space: nowrap; }
+.w-txt { display: flex; flex-direction: column; font-size: 18px; color: var(--muted); white-space: nowrap; }
 .w-txt b { font-size: 20px; color: var(--ink); }
-.w-meta { display: flex; gap: 8px; font-size: 14px; white-space: nowrap; }
+.w-meta { display: flex; gap: 8px; font-size: 16px; white-space: nowrap; }
 /* gently coloured weather icons */
 .wi { display: inline-flex; }
 .wi-sun { color: #E9A23B; } .wi-moon { color: #8C9BC0; } .wi-cloud, .wi-fog { color: #98A2AD; }
@@ -86,7 +87,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wx-h { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 20px; }
 .wx-h .wi .ic { width: 36px; height: 36px; }
 .wx-h b { font-size: 24px; direction: ltr; }
-.wx-p { color: #3E86C9; font-size: 18px; direction: ltr; }
+.wx-p { color: #2766B0; font-size: 20px; font-weight: 600; direction: ltr; }
 .wx-days { display: flex; flex-direction: column; gap: 4px; }
 .wx-d { display: grid; grid-template-columns: 140px 48px 70px 70px 60px; align-items: center; gap: 16px; font-size: 24px; padding: 6px 0; }
 .wx-d .wi .ic { width: 34px; height: 34px; }
@@ -104,10 +105,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .has-ramadan .clock { font-size: 150px; }
 .hero-main { min-width: 0; overflow: hidden; }
 .ramadan { display: flex; gap: 12px; margin-top: 12px; align-self: stretch; }
-.rcard { flex: 1; min-width: 0; border-radius: 20px; padding: 10px 18px; background: var(--card2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.rcard { flex: 1; min-width: 0; border-radius: 20px; padding: 12px 22px; background: var(--card2); border: 1px solid var(--line); display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; }
 .rcard > div { display: flex; flex-direction: column; font-size: 20px; }
 .rcard b { font-size: 24px; }
-.rnum { font-size: 34px; font-weight: 700; white-space: nowrap; text-align: right; }
+.rnum { font-size: 52px; font-weight: 700; line-height: 1; white-space: nowrap; }
 .next { height: 100%; border-radius: 32px; padding: 30px 36px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; }
 .next.no-fact { grid-template-columns: minmax(0, 1fr); }
 .next-main { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
@@ -133,7 +134,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* the card text; the gold copy on top shows only over the part of the period (clip-path set by the script) */
 .pc-in { position: absolute; inset: 0; box-sizing: border-box; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); }
 .pc-bar { position: absolute; right: 0; bottom: 0; height: 8px; width: 0; background: linear-gradient(90deg, #C9A35E, #87642A); border-radius: 0 0 0 0; transition: width 1s linear; }
-.pc-now .pc-name::after { content: ' · الآن'; font-size: 20px; font-weight: 600; color: var(--gold); }
+.pc.pc-now { background: var(--now-tint); }
 .pc-name { font-size: 38px; font-weight: 700; white-space: nowrap; }
 .pc-time { white-space: nowrap; text-align: right; font-size: 60px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .pc-iq { font-size: 22px; font-weight: 500; opacity: .75; min-height: 30px; white-space: nowrap; }
@@ -145,7 +146,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .ev-n { font-size: 40px; font-weight: 800; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .ev-t { display: flex; flex-direction: column; min-width: 0; }
 .ev-t b { font-size: 20px; white-space: nowrap; }
-.ev-t span { font-size: 16px; color: var(--muted); }
+.ev-t span { font-size: 18px; color: var(--muted); }
 
 /* bottom: rotating verse / hadith / wisdom · Friday · shortcuts */
 .bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 28px; flex: 1; min-height: 0; }
@@ -325,3 +326,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .b-sub { font-size: 26px; color: #5F5A52; }
 
 .tv .set-first { margin-top: 18px; }
+.iqs { display: inline-flex; align-items: center; gap: 8px; width: 230px; justify-content: center; }
+.iqh { width: 230px; text-align: center; font-size: 20px; }
+.adb { font-size: 18px; line-height: 1.5; max-width: 520px; }
+.sbtn.al:not(.f) { display: inline-flex; align-items: center; justify-content: center; }
+.sbtn.al:not(.on):not(.f) { color: var(--muted); border-style: dashed; background: transparent; }
+.chd { display: none; }
+.portrait .cell .ch { display: none; }
+.portrait .cell .chd { display: inline; font-size: 26px; color: var(--muted); }
+.phone [data-back] { display: none; }

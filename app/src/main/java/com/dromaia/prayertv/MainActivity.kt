@@ -11,16 +11,21 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Base64
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.TextView
 import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,13 +37,16 @@ class MainActivity : Activity() {
         @Volatile var visible = false
     }
 
-    private lateinit var web: WebView
+    private var web: WebView? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Device.isTv(this)) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            // keeping the screen on is a setting (it would stop the TV's screensaver)
+            if (getSharedPreferences(Schedule.PREFS, MODE_PRIVATE).getBoolean("keepOn", false)) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
             packageManager.setComponentEnabledSetting(ComponentName(this, "$packageName.HomeAlias"),
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
         } else if (Build.VERSION.SDK_INT >= 33 &&
@@ -48,31 +56,62 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
+        buildWebView()
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun buildWebView() {
         val loader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
-
-        web = WebView(this)
-        web.setBackgroundColor(Color.parseColor("#F5F3EF"))
-        web.settings.javaScriptEnabled = true
-        web.settings.domStorageEnabled = true
-        web.settings.mediaPlaybackRequiresUserGesture = false
-        web.isFocusable = true
-        web.isFocusableInTouchMode = true
-        web.webViewClient = object : WebViewClient() {
+        val w = try {
+            WebView(this)
+        } catch (e: Exception) {
+            // the system WebView is missing or being updated
+            setContentView(TextView(this).apply {
+                text = "تعذّر فتح الشاشة الآن (مكوّن Android System WebView غير متاح). أعد المحاولة بعد قليل."
+                textSize = 22f
+                gravity = Gravity.CENTER
+                setPadding(48, 48, 48, 48)
+            })
+            return
+        }
+        w.setBackgroundColor(Color.parseColor("#F5F3EF"))
+        w.settings.javaScriptEnabled = true
+        w.settings.domStorageEnabled = true
+        w.settings.mediaPlaybackRequiresUserGesture = false
+        w.isFocusable = true
+        w.isFocusableInTouchMode = true
+        w.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                 loader.shouldInterceptRequest(request.url)
+
+            // the page never leaves the app's own files
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                request.url.host != "appassets.androidplatform.net"
+
+            // the page's process was stopped (low memory): build the screen again instead of closing the app
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                if (web === view) {
+                    web = null
+                    (view.parent as? ViewGroup)?.removeView(view)
+                    view.destroy()
+                    buildWebView()
+                }
+                return true
+            }
         }
-        web.addJavascriptInterface(Bridge(), "Android")
-        setContentView(web)
-        web.loadUrl("https://appassets.androidplatform.net/assets/web/index.html")
-        web.requestFocus()
+        w.addJavascriptInterface(Bridge(), "Android")
+        setContentView(w)
+        w.loadUrl("https://appassets.androidplatform.net/assets/web/index.html")
+        w.requestFocus()
+        web = w
     }
 
     override fun onResume() {
         super.onResume()
         visible = true
-        web.evaluateJavascript("window.App && App.onResume()", null)
+        web?.evaluateJavascript("window.App && App.onResume()", null)
     }
 
     override fun onPause() {
@@ -84,7 +123,9 @@ class MainActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
-                web.evaluateJavascript("window.App ? App.back() : false") { handled ->
+                val w = web
+                if (w == null) { if (!Device.isTv(this)) moveTaskToBack(true) }
+                else w.evaluateJavascript("window.App ? App.back() : false") { handled ->
                     if (handled != "true" && !Device.isTv(this)) moveTaskToBack(true)
                 }
             }
@@ -160,6 +201,51 @@ class MainActivity : Activity() {
         fun canOverlay(): Boolean =
             Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this@MainActivity)
 
+        // some Google TV builds have no screen for this permission
+        @JavascriptInterface
+        fun overlaySettingsAvailable(): Boolean =
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")).resolveActivity(packageManager) != null
+
+        @JavascriptInterface
+        fun setKeepOn(on: Boolean) {
+            getSharedPreferences(Schedule.PREFS, MODE_PRIVATE).edit().putBoolean("keepOn", on).apply()
+            runOnUiThread {
+                if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+
+        // phone: what the alerts need (notifications, exact alarms, no battery restriction)
+        @JavascriptInterface
+        fun notifOk(): Boolean = Build.VERSION.SDK_INT < 33 ||
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+        @JavascriptInterface
+        fun askNotif() {
+            runOnUiThread {
+                if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+            }
+        }
+
+        @JavascriptInterface
+        fun exactOk(): Boolean = Schedule.exactAllowed(this@MainActivity)
+
+        @JavascriptInterface
+        fun batteryOk(): Boolean =
+            (getSystemService(POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
+
+        @SuppressLint("BatteryLife")
+        @JavascriptInterface
+        fun askBattery() {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+                } catch (e: Exception) {
+                    try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } catch (_: Exception) {}
+                }
+            }
+        }
+
         @JavascriptInterface
         fun openOverlaySettings() {
             runOnUiThread {
@@ -181,8 +267,9 @@ class MainActivity : Activity() {
     }
 
     private fun iconData(d: android.graphics.drawable.Drawable): String {
-        val w = if (d.intrinsicWidth > 0) d.intrinsicWidth.coerceAtMost(320) else 160
-        val h = if (d.intrinsicHeight > 0) (w * d.intrinsicHeight / d.intrinsicWidth.coerceAtLeast(1)).coerceAtMost(320) else 160
+        // small icons keep the list fast on the TV
+        val w = if (d.intrinsicWidth > 0) d.intrinsicWidth.coerceAtMost(192) else 128
+        val h = if (d.intrinsicHeight > 0) (w * d.intrinsicHeight / d.intrinsicWidth.coerceAtLeast(1)).coerceAtMost(192) else 128
         val bmp = Bitmap.createBitmap(w, h.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         d.setBounds(0, 0, c.width, c.height)

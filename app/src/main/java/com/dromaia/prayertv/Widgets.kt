@@ -49,7 +49,10 @@ object Widgets {
             am.updateAppWidget(id, eventViews(ctx, d, now))
         }
         nextChange = minOf(nextChange, nextMidnight(now))
-        arm(ctx, nextChange)
+        // refresh again only while there is a widget on the home screen
+        val any = am.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java)).isNotEmpty() ||
+            am.getAppWidgetIds(ComponentName(ctx, EventWidget::class.java)).isNotEmpty()
+        if (any) arm(ctx, nextChange)
     }
 
     private val NAME_IDS = intArrayOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5)
@@ -63,9 +66,10 @@ object Widgets {
         var day: JSONObject? = null
         var next = -1
         if (days != null) for (i in 0 until days.length()) {
-            val o = days.getJSONObject(i)
-            val at = o.getJSONArray("at")
-            for (k in 0 until at.length()) if (at.getLong(k) > now) { day = o; next = k; break }
+            val o = days.optJSONObject(i) ?: continue
+            val at = o.optJSONArray("at") ?: continue
+            if (at.length() < 6 || (o.optJSONArray("names")?.length() ?: 0) < 6) continue
+            for (k in 0 until 6) if (at.getLong(k) > now) { day = o; next = k; break }
             if (day != null) break
         }
         if (day == null) {

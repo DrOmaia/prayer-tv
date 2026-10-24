@@ -11,6 +11,8 @@ import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
@@ -50,6 +52,8 @@ class AlertService : Service() {
 
     private fun stopNow(): Int {
         removeBanner()
+        if (Build.VERSION.SDK_INT >= 26) focus?.let { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) }
+        focus = null
         player?.release()
         player = null
         stopForeground(true)
@@ -75,8 +79,19 @@ class AlertService : Service() {
         }
     }
 
+    // the chime lowers other sound (YouTube) for a moment instead of playing over it
+    private var focus: AudioFocusRequest? = null
+
     private fun playChime() {
         try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                    .build()
+                getSystemService(AudioManager::class.java).requestAudioFocus(req)
+                focus = req
+            }
             player?.release()
             player = MediaPlayer.create(this, R.raw.chime, AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)

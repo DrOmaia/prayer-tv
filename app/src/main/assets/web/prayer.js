@@ -10,6 +10,14 @@
   // Umm al-Qura: Isha is 90 minutes after Maghrib, 120 in Ramadan (adjustable in the settings)
   var ISHA = { normal: 90, ramadan: 120 };
   function setIsha(v) { if (v) { ISHA.normal = v.normal; ISHA.ramadan = v.ramadan; } }
+  // minutes from adhan to iqamah, per prayer (adjustable in the settings)
+  function setIqamah(v) {
+    if (!v) return;
+    Object.keys(IQ_NORMAL).forEach(function (k) {
+      if (v.normal && v.normal[k] != null) IQ_NORMAL[k] = v.normal[k];
+      if (v.ramadan && v.ramadan[k] != null) IQ_RAMADAN[k] = v.ramadan[k];
+    });
+  }
 
   function rad(d) { return d * Math.PI / 180; }
   function deg(r) { return r * 180 / Math.PI; }
@@ -104,7 +112,7 @@
 
   window.Prayer = {
     ORDER: ORDER, HR: HR, MIN: MIN, TZ: TZ,
-    dayTimes: dayTimes, setIsha: setIsha, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
+    dayTimes: dayTimes, setIsha: setIsha, setIqamah: setIqamah, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
     pad: pad, addDays: addDays, isRamadan: isRamadan
   };
 })();
