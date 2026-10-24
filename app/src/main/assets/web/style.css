@@ -1,25 +1,27 @@
-@font-face { font-family: 'Plex'; font-weight: 300; src: url(fonts/ibm-plex-sans-arabic-arabic-300-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
-@font-face { font-family: 'Plex'; font-weight: 400; src: url(fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
-@font-face { font-family: 'Plex'; font-weight: 600; src: url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
-@font-face { font-family: 'Plex'; font-weight: 700; src: url(fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
-@font-face { font-family: 'Plex'; font-weight: 300; src: url(fonts/ibm-plex-sans-arabic-latin-300-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
-@font-face { font-family: 'Plex'; font-weight: 400; src: url(fonts/ibm-plex-sans-arabic-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
-@font-face { font-family: 'Plex'; font-weight: 600; src: url(fonts/ibm-plex-sans-arabic-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
-@font-face { font-family: 'Plex'; font-weight: 700; src: url(fonts/ibm-plex-sans-arabic-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Tajawal'; font-weight: 300; src: url(fonts/tajawal-arabic-300-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Tajawal'; font-weight: 300; src: url(fonts/tajawal-latin-300-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Tajawal'; font-weight: 400; src: url(fonts/tajawal-arabic-400-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Tajawal'; font-weight: 400; src: url(fonts/tajawal-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Tajawal'; font-weight: 500; src: url(fonts/tajawal-arabic-500-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Tajawal'; font-weight: 500; src: url(fonts/tajawal-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Tajawal'; font-weight: 700; src: url(fonts/tajawal-arabic-700-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Tajawal'; font-weight: 700; src: url(fonts/tajawal-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'Tajawal'; font-weight: 800; src: url(fonts/tajawal-arabic-800-normal.woff2) format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Tajawal'; font-weight: 800; src: url(fonts/tajawal-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
 @font-face { font-family: 'AmiriQuran'; src: url(fonts/amiri-quran-arabic-400-normal.woff2) format('woff2'); }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #16181B; }
-body { font-family: 'Plex', sans-serif; }
+body { font-family: 'Tajawal', sans-serif; }
 button { font-family: inherit; color: inherit; cursor: pointer; }
 .hidden { display: none !important; }
 
 /* 1920×1080 stage, scaled to the screen */
 #stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); }
-.day { --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.72); --card2: rgba(255,255,255,.85); --tile: #FFFFFF; --line: #E4DDD1; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
+.day { --pc-bg: #FBFAF8; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.72); --card2: rgba(255,255,255,.85); --tile: #FFFFFF; --line: #E4DDD1; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
   background-color: #F5F3EF;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.95), rgba(255,255,255,0) 70%), radial-gradient(ellipse 700px 500px at 90% 95%, rgba(255,255,255,.8), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(140,128,115,.10) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(140,128,115,.06) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(150,138,124,.08) 66.5%, rgba(0,0,0,0) 67.3%), linear-gradient(96deg, rgba(0,0,0,0) 14%, rgba(150,138,124,.06) 14.6%, rgba(0,0,0,0) 15.8%), linear-gradient(170deg, rgba(0,0,0,0) 82%, rgba(140,128,115,.07) 82.4%, rgba(0,0,0,0) 83.2%); }
-.night { --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
+.night { --pc-bg: #212327; --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
   background-color: #16181B;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.05), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(255,255,255,.05) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(255,255,255,.03) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(255,255,255,.04) 66.5%, rgba(0,0,0,0) 67.3%); }
 
@@ -29,7 +31,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .card { border-radius: 24px; background: var(--card2); border: 1px solid var(--line); box-shadow: 0 16px 40px var(--shadow); }
 .ic { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .ic.fill { fill: currentColor; stroke: none; }
-.quran { font-family: 'AmiriQuran', 'Plex', serif; }
+.quran { font-family: 'AmiriQuran', 'Tajawal', serif; }
 
 /* focus for the remote */
 .f { outline: none; transition: transform .12s ease, box-shadow .12s ease; }
@@ -47,8 +49,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* top bar */
 .top { display: flex; justify-content: space-between; align-items: center; height: 88px; flex-shrink: 0; }
 .top-right { display: flex; align-items: center; gap: 16px; }
-.g-date { font-size: 42px; font-weight: 700; line-height: 1.3; }
-.h-date { font-size: 32px; color: var(--muted); }
+.g-date { font-size: 44px; font-weight: 700; line-height: 1.3; }
+.h-date { font-size: 34px; color: var(--muted); font-weight: 500; }
 .weather { display: flex; align-items: center; gap: 16px; height: 88px; padding: 0 28px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); }
 .w-icon .ic { width: 48px; height: 48px; stroke: var(--gold); stroke-width: 1.6; }
 .w-temp { font-size: 54px; font-weight: 600; line-height: 1; direction: ltr; }
@@ -59,36 +61,42 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .quran.big-title { line-height: 1.5; font-size: 48px; }
 .sub-title { font-size: 24px; }
 
-/* hero: dates | clock in the centre | next prayer */
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 40px; height: 360px; flex-shrink: 0; align-items: center; }
-.hero-dates { display: flex; flex-direction: column; gap: 6px; }
-.hero-clock { display: flex; justify-content: center; }
-#clock { font-size: 250px; font-weight: 300; line-height: .9; letter-spacing: -6px; font-variant-numeric: tabular-nums; }
-.ramadan { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
-.rcard { border-radius: 20px; padding: 12px 22px; background: var(--card2); border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+/* hero: date, Hijri date and clock on the right · next prayer on the left */
+.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; height: 380px; flex-shrink: 0; align-items: stretch; }
+.hero-main { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; }
+.clock { font-size: 230px; font-weight: 500; line-height: .95; letter-spacing: -4px; font-variant-numeric: tabular-nums; margin-top: 8px; }
+.has-ramadan .clock { font-size: 180px; }
+.ramadan { display: flex; gap: 14px; margin-top: 14px; align-self: stretch; }
+.rcard { flex: 1; border-radius: 20px; padding: 10px 22px; background: var(--card2); border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .rcard > div { display: flex; flex-direction: column; font-size: 20px; }
 .rcard b { font-size: 24px; }
-.rnum { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rnum { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .next { height: 100%; border-radius: 32px; padding: 32px 40px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .next-label { font-size: 28px; font-weight: 600; }
 .next-name { font-size: 64px; font-weight: 700; line-height: 1.15; }
-.countdown { font-size: 92px; font-weight: 300; line-height: 1.05; text-align: right; font-variant-numeric: tabular-nums; }
+.countdown { font-size: 100px; font-weight: 500; line-height: 1.05; text-align: right; font-variant-numeric: tabular-nums; }
 .next-detail { font-size: 24px; }
 
 /* prayer cards */
-.prayers { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 18px; height: 230px; flex-shrink: 0; }
-.pc { min-width: 0; border-radius: 24px; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
-.pc-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.pc-name { font-size: 36px; font-weight: 700; white-space: nowrap; }
-.pc-badge { font-size: 17px; font-weight: 600; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
-.pc-time { white-space: nowrap; text-align: right; font-size: 58px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-.pc-iq { font-size: 22px; font-weight: 400; color: var(--muted); min-height: 30px; white-space: nowrap; }
-.pc.now { background: var(--now-bg); color: var(--now-fg); border-color: var(--now-bg); }
-.pc.now .pc-iq { color: var(--now-sub); }
-.pc.now .pc-badge { background: var(--now-badge); color: var(--now-bg); }
-.night .pc.now .pc-badge { color: var(--ink); }
-.pc.next-p { border: 2px solid var(--gold); background: var(--card2); }
-.pc.next-p .pc-badge { background: var(--gold); color: var(--on-gold); }
+.prayers { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 18px; height: 220px; flex-shrink: 0; }
+.pc { position: relative; isolation: isolate; overflow: hidden; min-width: 0; border-radius: 24px; background: var(--pc-bg); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
+/* the dark part: width = how much of this period is left (current) or has passed (next); grows from the right */
+.pc-fill { position: absolute; top: 0; bottom: 0; right: 0; width: 0; background: var(--now-bg); transition: width 1s linear; }
+.pc-fill.cur { right: auto; left: 0; }
+/* text inverts over the dark part */
+.pc-in { position: relative; height: 100%; box-sizing: border-box; padding: 22px 22px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; mix-blend-mode: difference; }
+.pc-name { font-size: 38px; font-weight: 700; white-space: nowrap; }
+.pc-time { white-space: nowrap; text-align: right; font-size: 60px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pc-iq { font-size: 22px; font-weight: 500; opacity: .75; min-height: 30px; white-space: nowrap; }
+.pc.next-p { border: 3px solid var(--gold); }
+
+/* occasion countdowns in the top bar */
+.events { display: flex; gap: 14px; flex: 1; justify-content: center; min-width: 0; }
+.ev { height: 88px; padding: 0 22px; border-radius: 24px; background: var(--card2); border: 1px solid var(--line); display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ev-n { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+.ev-t { display: flex; flex-direction: column; min-width: 0; }
+.ev-t b { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.ev-t span { font-size: 18px; color: var(--muted); }
 
 /* bottom: rotating verse / hadith / wisdom · Friday · shortcuts */
 .bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 28px; flex: 1; min-height: 0; }
@@ -147,7 +155,14 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* settings */
 .set-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; flex: 1; min-height: 0; }
-.set-col { padding: 32px 40px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.set-col { padding: 32px 40px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; scrollbar-width: none; }
+.set-col::-webkit-scrollbar { display: none; }
+.ev-add { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.inp { height: 60px; border-radius: 14px; border: 1px solid var(--line); background: var(--card2); color: var(--ink); font-family: inherit; font-size: 24px; padding: 0 18px; }
+.ev-date { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; font-size: 24px; }
+.ev-date > span { display: flex; align-items: center; gap: 8px; }
+.ev-date b { min-width: 64px; text-align: center; direction: ltr; }
+#ev-add { align-self: flex-start; }
 .set-h { font-size: 30px; font-weight: 700; }
 .set-h2 { margin-top: 18px; }
 .set-note { font-size: 20px; margin-bottom: 6px; }
@@ -184,13 +199,17 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .title-row { justify-content: flex-start; }
 .portrait .weather { flex: 1 1 300px; }
 .portrait .hero { grid-template-columns: minmax(0, 1fr); height: auto; }
-.portrait .hero-dates { align-items: center; text-align: center; }
+.portrait .hero-main { text-align: center; }
 .portrait .ramadan { align-self: stretch; }
 .portrait .next { text-align: center; }
 .portrait .countdown { text-align: center; }
 .portrait .prayers { display: flex; flex-direction: column; height: auto; gap: 14px; }
-.portrait .pc { flex-direction: row; align-items: center; gap: 20px; padding: 18px 28px; min-height: 112px; }
-.portrait .pc-head { flex: 0 0 300px; justify-content: flex-start; gap: 16px; }
+.portrait .pc { min-height: 112px; }
+.portrait .pc-in { flex-direction: row; align-items: center; gap: 20px; padding: 18px 28px; }
+.portrait .events { flex-wrap: wrap; justify-content: stretch; }
+.portrait .ev { flex: 1 1 280px; }
+.portrait .hero-main { align-items: center; }
+.portrait .pc-name { flex: 0 0 300px; }
 .portrait .pc-time { flex: 1; }
 .portrait .pc-iq { flex: 0 0 auto; min-height: 0; }
 .portrait .bottom { grid-template-columns: minmax(0, 1fr); flex: none; }

@@ -20,7 +20,9 @@
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
       alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true }, s.alerts),
       shortcuts: s.shortcuts || null,
-      openOnBoot: s.openOnBoot !== false
+      openOnBoot: s.openOnBoot !== false,
+      events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
+      autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv)
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -176,8 +178,7 @@
   CARDS.forEach(function (k) {
     var c = document.createElement('div');
     c.className = 'pc';
-    c.innerHTML = '<div class="pc-head"><span class="pc-name"></span><span class="pc-badge hidden"></span></div>' +
-      '<div class="pc-time"></div><div class="pc-iq"></div>';
+    c.innerHTML = '<div class="pc-fill"></div><div class="pc-in"><div class="pc-name"></div><div class="pc-time"></div><div class="pc-iq"></div></div>';
     $('prayers').appendChild(c);
     cards[k] = c;
   });
@@ -187,7 +188,7 @@
     return null;
   }
 
-  function renderHome(t, today, tom) {
+  function renderHome(t, today, tom, yest) {
     var cur = null, iq = null, nextK = null;
     ORDER.forEach(function (k) {
       if (today.at[k] <= t) cur = k;
@@ -220,15 +221,25 @@
     $('countdown').textContent = cd;
     $('next-detail').textContent = detail;
 
+    // the dark fill passes gradually from the current time to the next one:
+    // the current card keeps the part of the period that is left, the next card fills with the part that has passed
+    var seq = [['isha', yest.at.isha], ['imsak', today.imsak]].concat(ORDER.map(function (k) { return [k, today.at[k]]; }), [['imsak', tom.imsak]]);
+    var ci = 0;
+    for (var i = 0; i < seq.length - 1; i++) if (seq[i][1] <= t) ci = i;
+    var p = Math.min(1, Math.max(0, (t - seq[ci][1]) / (seq[ci + 1][1] - seq[ci][1])));
+    var fill = {};
+    fill[seq[ci][0]] = 1 - p;
+    fill[seq[ci + 1][0]] = p;
+
     CARDS.forEach(function (k) {
       var day = tomorrow && (k === 'fajr' || k === 'imsak') ? tom : today;
-      var isNow = k === cur, isNext = k === nextK && !isNow;
       var c = cards[k];
-      c.className = 'pc' + (isNow ? ' now' : '') + (isNext ? ' next-p' : '');
+      c.className = 'pc' + (k === nextK ? ' next-p' : '');
+      var fl = c.querySelector('.pc-fill');
+      fl.style.width = ((fill[k] || 0) * 100).toFixed(2) + '%';
+      // the dark part moves right to left: it leaves the current card from its right side and enters the next card on its right side
+      fl.classList.toggle('cur', k === seq[ci][0] && fill[k] < 1);
       c.querySelector('.pc-name').textContent = k === 'imsak' ? 'الإمساك' : P.name(k, day.friday);
-      var b = c.querySelector('.pc-badge');
-      b.textContent = isNow ? 'الآن' : 'التالية';
-      b.classList.toggle('hidden', !isNow && !isNext);
       c.querySelector('.pc-time').textContent = P.full(k === 'imsak' ? day.imsak : day.at[k]);
       c.querySelector('.pc-iq').textContent = k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : '');
@@ -237,6 +248,7 @@
     // Ramadan: time left to iftar and to suhoor (imsak)
     var showR = today.ramadan || tom.ramadan;
     $('ramadan').classList.toggle('hidden', !showR);
+    $('ramadan').parentNode.classList.toggle('has-ramadan', showR);
     if (showR) {
       var days = [today, tom], ift = nextRamadan(t, days, 'maghribAt'), suh = nextRamadan(t, days, 'imsak');
       $('iftar-at').textContent = ift ? P.full(ift) : '—';
@@ -289,37 +301,87 @@
   function tick() {
     var t = Date.now(), r = P.ymd(t);
     var today = dayOf(r.y, r.m, r.d), tm = P.addDays(r.y, r.m, r.d, 1), tom = dayOf(tm.y, tm.m, tm.d);
+    var ym = P.addDays(r.y, r.m, r.d, -1), yest = dayOf(ym.y, ym.m, ym.d);
     var key = r.y + '-' + r.m + '-' + r.d;
-    if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); }
+    if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); renderEvents(r); }
     // dark from two hours after Isha until Fajr
     var n = t >= today.at.isha + 2 * HR || t < today.at.fajr;
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     $('clock').textContent = P.full(t);
     showReminder(t);
-    if (screen === 'home') renderHome(t, today, tom);
+    if (screen === 'home') renderHome(t, today, tom, yest);
     if (screen === 'kahf') $('kahf-clock').textContent = P.full(t);
     checkAlert(t, today);
     checkIqamah(t, today);
   }
 
-  // ---------- full-screen countdown from the adhan to the iqamah ----------
+  // ---------- occasion countdowns (days left): own dates + Ramadan and the two Eids (Umm al-Qura) ----------
+  var AUTO = [{ id: 'ramadan', name: 'دخول رمضان', m: 9, d: 1 }, { id: 'fitr', name: 'عيد الفطر', m: 10, d: 1 }, { id: 'adha', name: 'عيد الأضحى', m: 12, d: 10 }];
+  var fHMD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'Asia/Riyadh', month: 'numeric', day: 'numeric' });
+  var autoCache = { key: '', list: [] };
+  function autoEvents(r) {
+    var key = r.y + '-' + r.m + '-' + r.d;
+    if (autoCache.key === key) return autoCache.list;
+    var found = {}, list = [];
+    for (var i = 0; i < 400 && list.length < AUTO.length; i++) {
+      var dd = P.addDays(r.y, r.m, r.d, i), h = {};
+      fHMD.formatToParts(new Date(P.noonOf(dd.y, dd.m, dd.d))).forEach(function (x) { h[x.type] = +x.value; });
+      AUTO.forEach(function (a) {
+        if (!found[a.id] && h.month === a.m && h.day === a.d) { found[a.id] = 1; list.push({ auto: a.id, name: a.name, y: dd.y, m: dd.m, d: dd.d }); }
+      });
+    }
+    autoCache = { key: key, list: list };
+    return list;
+  }
+  function daysTo(e, r) { return Math.round((Date.UTC(e.y, e.m - 1, e.d) - Date.UTC(r.y, r.m - 1, r.d)) / 86400000); }
+  function daysWord(n) { return n >= 3 && n <= 10 ? 'أيام' : 'يوم'; }
+  function dmy(e) { return e.d + '/' + e.m + '/' + e.y; }
+  function allEvents(r) {
+    var own = S.events.filter(function (e) { return daysTo(e, r) >= 0; });
+    var auto = autoEvents(r).filter(function (e) { return S.autoEv[e.auto] !== false; });
+    return own.concat(auto).map(function (e) { return Object.assign({ left: daysTo(e, r) }, e); })
+      .sort(function (a, b) { return a.left - b.left; });
+  }
+  function renderEvents(r) {
+    var before = S.events.length;
+    S.events = S.events.filter(function (e) { return daysTo(e, r) >= 0; }); // past dates disappear
+    if (S.events.length !== before) save();
+    $('events').innerHTML = allEvents(r).slice(0, 3).map(function (e) {
+      return '<div class="ev"><span class="ev-n">' + (e.left === 0 ? 'اليوم' : e.left) + '</span><div class="ev-t"><b>' + esc(e.name) +
+        '</b><span>' + (e.left === 0 ? '' : daysWord(e.left) + ' · ') + dmy(e) + '</span></div></div>';
+    }).join('');
+  }
+  var evDraft = (function () { var r = P.ymd(Date.now()), x = P.addDays(r.y, r.m, r.d, 30); return { y: x.y, m: x.m, d: x.d }; })();
+
+  // ---------- full-screen countdowns: adhan → iqamah, and in Ramadan the last 15 minutes before Maghrib ----------
   var iqDismissed = {}, iqAt = 0, iqPrevFocus = null;
   function iqOpen() { return !$('iqamah').classList.contains('hidden'); }
   function checkIqamah(t, T) {
-    var on = null;
+    var on = null, key, label, target, detail;
     FIVE.forEach(function (k) { if (S.alerts[k] && T.iqamah[k] && t >= T.at[k] && t < T.iqamah[k]) on = k; });
-    if (on && !iqDismissed[T.at[on]]) {
+    if (on) {
+      key = 'iq' + T.at[on];
+      label = 'متبقٍ على إقامة صلاة ' + P.name(on, T.friday);
+      target = T.iqamah[on];
+      detail = 'الأذان ' + P.full(T.at[on]) + ' · الإقامة ' + P.full(T.iqamah[on]);
+    } else if (T.ramadan && t >= T.at.maghrib - 15 * MIN && t < T.at.maghrib) {
+      key = 'if' + T.at.maghrib;
+      label = 'متبقٍ على أذان المغرب · الإفطار';
+      target = T.at.maghrib;
+      detail = 'أذان المغرب ' + P.full(T.at.maghrib) + ' · اللهم تقبّل صيامنا';
+    }
+    if (key && !iqDismissed[key]) {
       if (!iqOpen()) {
         iqPrevFocus = document.activeElement;
         $('iqamah').classList.remove('hidden');
         $('iq-close').focus();
       }
-      iqAt = T.at[on];
-      var left = T.iqamah[on] - t;
-      $('iq-label').textContent = 'متبقٍ على إقامة صلاة ' + P.name(on, T.friday);
+      iqAt = key;
+      var left = target - t;
+      $('iq-label').textContent = label;
       $('iq-cd').textContent = P.left(left);
       $('iq-cd').classList.toggle('soon', left <= 60000);
-      $('iq-detail').textContent = 'الأذان ' + P.full(T.at[on]) + ' · الإقامة ' + P.full(T.iqamah[on]);
+      $('iq-detail').textContent = detail;
       $('iq-clock').textContent = P.full(t);
     } else if (iqOpen()) iqHide();
   }
@@ -464,6 +526,19 @@
       '<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f' + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? 'يعمل' : 'متوقف') + '</button></div>' +
       '<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>' +
       (overlay ? '<span class="muted">مسموح</span>' : '<button class="sbtn f" data-k="overlay">السماح</button>') + '</div>';
+    $('set-events').innerHTML = autoEvents(r).map(function (e) {
+      var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
+      return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + n + ' ' + daysWord(n) + '</span></span>' +
+        '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? 'يظهر' : 'مخفي') + '</button></div>';
+    }).join('') + S.events.map(function (e, i) {
+      var n = daysTo(e, r);
+      return '<div class="srow"><span class="sname">' + esc(e.name) + ' <span class="muted">· ' + dmy(e) + ' · ' + n + ' ' + daysWord(n) + '</span></span>' +
+        '<button class="sbtn al f" data-k="evx-' + i + '">حذف</button></div>';
+    }).join('');
+    $('ev-date').innerHTML = [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']].map(function (f) {
+      return '<span>' + f[1] + ' <button class="sbtn f" data-k="evd-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + evDraft[f[0]] +
+        '</b><button class="sbtn f" data-k="evd-' + f[0] + 'p" aria-label="زائد">+</button></span>';
+    }).join('');
     $('set-version').textContent = A ? 'الإصدار ' + A.version() : '';
     if (keep) {
       var el = document.querySelector('#settings [data-k="' + keep + '"]');
@@ -480,12 +555,35 @@
     } else if (a === 'x') S.shortcuts.splice(+v, 1);
     else if (a === 'boot') { S.openOnBoot = !S.openOnBoot; if (A) A.setOpenOnBoot(S.openOnBoot); }
     else if (a === 'overlay') { if (A) A.openOverlaySettings(); return; }
+    else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
+    else if (a === 'evx') S.events.splice(+v, 1);
+    else if (a === 'evd') {
+      var f = v[0], step = v[1] === 'p' ? 1 : -1, r0 = P.ymd(Date.now());
+      if (f === 'd') evDraft.d += step;
+      if (f === 'm') evDraft.m = (evDraft.m + 11 + step) % 12 + 1;
+      if (f === 'y') evDraft.y = Math.max(r0.y, Math.min(r0.y + 10, evDraft.y + step));
+      var dim = new Date(Date.UTC(evDraft.y, evDraft.m, 0)).getUTCDate();
+      if (evDraft.d < 1) evDraft.d = dim;
+      if (evDraft.d > dim) evDraft.d = f === 'd' ? 1 : dim;
+    }
     save();
+    if (a === 'eva' || a === 'evx') renderEvents(P.ymd(Date.now()));
     if (a === 'm' || a === 'p' || a === 'a') { sendSchedule(); lastDay = ''; }
     setRender();
     if (!document.activeElement || document.activeElement === document.body) {
       var f = document.querySelector('#settings .f'); if (f) f.focus();
     }
+  }
+
+  function addEvent() {
+    var name = $('ev-name').value.trim(), r = P.ymd(Date.now());
+    if (!name) { $('ev-name').focus(); return; }
+    if (daysTo(evDraft, r) < 0) return;
+    S.events.push({ name: name, y: evDraft.y, m: evDraft.m, d: evDraft.d });
+    save();
+    $('ev-name').value = '';
+    renderEvents(r);
+    setRender();
   }
 
   // ---------- screens ----------
@@ -549,6 +647,9 @@
   }
   document.addEventListener('keydown', function (e) {
     var k = e.key;
+    // typing in a text box: keep the keys for the text, only up/down move between items
+    var typing = document.activeElement && document.activeElement.tagName === 'INPUT';
+    if (typing && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'Escape' && k !== 'GoBack') return;
     var dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (dirs[k]) { e.preventDefault(); move(dirs[k]); return; }
     if (k === 'Enter' || k === ' ') {
@@ -586,6 +687,7 @@
       case 'k-prev-btn': if (kahf.i > 0) kPlay(kahf.i - 1); break;
       case 'k-next-btn': if (kahf.i < 110) kPlay(kahf.i + 1); break;
       case 'set-add': appsMode = 'pick'; go('apps'); break;
+      case 'ev-add': addEvent(); break;
     }
   });
 

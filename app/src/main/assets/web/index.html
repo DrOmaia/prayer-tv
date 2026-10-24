@@ -16,6 +16,7 @@
         <div class="weather"><span id="w0-icon" class="w-icon"></span><span id="w0-temp" class="w-temp">—</span><div class="w-txt"><b>الرياض</b><span id="w0-desc"></span></div></div>
         <div class="weather"><span id="w1-icon" class="w-icon"></span><span id="w1-temp" class="w-temp">—</span><div class="w-txt"><b>إربد</b><span id="w1-desc"></span></div></div>
       </div>
+      <div id="events" class="events"></div>
       <div class="top-right">
         <button class="pill f" data-go="calendar"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>التقويم</button>
         <button class="round f" data-go="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
@@ -23,15 +24,15 @@
     </header>
 
     <div class="hero">
-      <div class="hero-dates">
+      <div class="hero-main">
         <div id="g-date" class="g-date"></div>
         <div class="h-date"><span id="h-date"></span></div>
+        <div id="clock" class="clock" dir="ltr"></div>
         <div id="ramadan" class="ramadan hidden">
           <div class="rcard"><div><b>متبقٍ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div class="rcard"><div><b>متبقٍ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
         </div>
       </div>
-      <div class="hero-clock"><div id="clock" class="clock" dir="ltr"></div></div>
       <div class="next card">
         <div id="next-label" class="gold next-label"></div>
         <div id="next-name" class="next-name"></div>
@@ -137,13 +138,23 @@
         <div id="set-prayers"></div>
         <div id="set-version" class="muted set-note"></div>
       </div>
-      <div class="card set-col tv-only">
-        <div class="set-h">اختصارات التطبيقات</div>
+      <div class="card set-col">
+        <div class="set-h">عدّادات المناسبات</div>
+        <div class="muted set-note">تظهر أقرب 3 في الشاشة الرئيسية، وتختفي بعد مرور تاريخها</div>
+        <div id="set-events"></div>
+        <div class="ev-add">
+          <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
+          <div id="ev-date" class="ev-date"></div>
+          <button id="ev-add" class="pill f">+ إضافة</button>
+        </div>
+        <div class="tv-only">
+        <div class="set-h set-h2">اختصارات التطبيقات</div>
         <div class="muted set-note">تظهر في الشاشة الرئيسية بهذا الترتيب</div>
         <div id="set-shortcuts"></div>
         <button id="set-add" class="pill f">+ إضافة اختصار</button>
         <div class="set-h set-h2">عام</div>
         <div id="set-general"></div>
+        </div>
       </div>
     </div>
   </section>
