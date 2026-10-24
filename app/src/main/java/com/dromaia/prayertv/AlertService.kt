@@ -3,6 +3,7 @@ package com.dromaia.prayertv
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -28,8 +29,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
-// At adhan time: a short soft chime, and a banner on top of any app for 15 seconds
+// At adhan time: the chosen sound (tone, full or short adhan, or none), and a banner on top of any app for 15 seconds
 class AlertService : Service() {
+
+    companion object {
+        const val ACTION_STOP = "com.dromaia.prayertv.STOP_ADHAN"
+    }
 
     private var view: View? = null
     private var player: MediaPlayer? = null
@@ -38,19 +43,23 @@ class AlertService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) return stopNow()
         startAsForeground()
         val title = intent?.getStringExtra("title") ?: return stopNow()
         val sub = intent.getStringExtra("sub") ?: ""
-        playChime()
+        playSound(Device.soundRes(intent.getStringExtra("snd") ?: "tone"))
         if (!MainActivity.visible && (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this))) {
             showBanner(title, sub)
         }
         handler.removeCallbacksAndMessages(null)
-        handler.postDelayed({ stopNow() }, 15000)
+        // the banner goes after 15 seconds; the service stays until the sound ends
+        handler.postDelayed({ removeBanner(); if (player?.isPlaying != true) stopNow() }, 15000)
+        handler.postDelayed({ stopNow() }, 6 * 60_000L)
         return START_NOT_STICKY
     }
 
     private fun stopNow(): Int {
+        handler.removeCallbacksAndMessages(null)
         removeBanner()
         if (Build.VERSION.SDK_INT >= 26) focus?.let { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) }
         focus = null
@@ -69,8 +78,12 @@ class AlertService : Service() {
         } else {
             @Suppress("DEPRECATION") Notification.Builder(this)
         }
+        val stop = PendingIntent.getService(this, 5, Intent(this, AlertService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE)
+        @Suppress("DEPRECATION")
         val n = b.setContentTitle(getString(R.string.app_name))
             .setSmallIcon(R.drawable.ic_moon)
+            .addAction(Notification.Action.Builder(null, "إيقاف الأذان", stop).build())
             .build()
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -82,7 +95,8 @@ class AlertService : Service() {
     // the chime lowers other sound (YouTube) for a moment instead of playing over it
     private var focus: AudioFocusRequest? = null
 
-    private fun playChime() {
+    private fun playSound(res: Int) {
+        if (res == 0) return
         try {
             if (Build.VERSION.SDK_INT >= 26) {
                 val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
@@ -93,10 +107,11 @@ class AlertService : Service() {
                 focus = req
             }
             player?.release()
-            player = MediaPlayer.create(this, R.raw.chime, AudioAttributes.Builder()
+            player = MediaPlayer.create(this, res, AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build(), 0)
+            player?.setOnCompletionListener { if (view == null) stopNow() }
             player?.start()
         } catch (_: Exception) {
         }

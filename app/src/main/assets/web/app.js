@@ -32,10 +32,28 @@
       famMsgs: s.famMsgs || [], // own family messages: {to, text}
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
-      keepOn: !!s.keepOn
+      keepOn: !!s.keepOn,
+      // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
+      theme: s.theme || 'auto', // 'auto' (dark at night) · 'light' · 'dark'
+      sound: Object.assign({ normal: 'tone', fajr: 'none' }, s.sound)
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  // a family saved before these were added (the default family): add the writer, interests and the departed
+  (function () {
+    var F = S.family, D = FAMILY.DEFAULT;
+    if (!F || F.v2) return;
+    if (F.members.some(function (x) { return x.id === 'rund'; })) {
+      D.members.forEach(function (d) {
+        var x = F.members.filter(function (m) { return m.id === d.id; })[0];
+        if (!x && d.kind === 'self') F.members.push(JSON.parse(JSON.stringify(d)));
+        if (x && d.likes) x.likes = d.likes;
+      });
+      if (!F.departed) F.departed = JSON.parse(JSON.stringify(D.departed));
+    }
+    F.v2 = true;
+    save();
+  })();
   P.setIsha(S.ishaMin);
   P.setIqamah(S.iqMin);
 
@@ -139,12 +157,10 @@
   var WX = [null, null];
   function showWeather(i, w) {
     WX[i] = w;
-    var info = weatherInfo(w.code, w.day);
     $('w' + i + '-icon').innerHTML = wIcon(w.code, w.day);
     $('w' + i + '-temp').textContent = w.t + '°';
-    $('w' + i + '-desc').innerHTML = info[1] + (w.hi != null ? ' · ' + hiLo(w) : '');
-    $('w' + i + '-meta').innerHTML = w.hum != null ?
-      stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + ' كم/س') + stat('feel', w.feels + '°') : '';
+    $('w' + i + '-hl').innerHTML = (w.hi != null ? hiLo(w) : '') +
+      (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');
     if (screen === 'weather') weatherRender();
   }
   function parseWeather(j) {
@@ -219,7 +235,7 @@
     for (var i = 0; i < 60; i++) {
       var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
       FIVE.forEach(function (k) {
-        if (S.alerts[k] && T.at[k] > t) ev.push({ at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T) });
+        if (S.alerts[k] && T.at[k] > t) ev.push({ at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T), snd: k === 'fajr' ? S.sound.fajr : S.sound.normal });
       });
     }
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
@@ -345,7 +361,8 @@
       c.querySelector('.pc-bar').style.width = k === seq[ci + 1][0] ? (p * 100).toFixed(2) + '%' : '0';
       setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
       setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
-      setAll(c, '.pc-iq', k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
+      // in Ramadan the Imsak card shows the time left to iftar while fasting
+      setAll(c, '.pc-iq', k === 'imsak' ? (today.ramadan && t < today.at.maghrib ? 'متبقٍّ للإفطار ' + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
 
@@ -379,26 +396,35 @@
     var ms = fam().members;
     return ms.filter(function (x) { return x.kind === 'son' || x.kind === 'daughter'; })
       .concat(ms.filter(function (x) { return x.kind === 'wife' || x.kind === 'husband'; }))
-      .map(function (x) { return x.id; }).concat(['all']);
+      .map(function (x) { return x.id; }).concat(['all'])
+      .concat((fam().departed || []).map(function (x) { return 'd-' + x.id; }));
   }
   function member(id) {
+    var d = (fam().departed || []).filter(function (x) { return 'd-' + x.id === id; })[0];
+    if (d) return { id: id, name: d.name, kind: 'departed', dep: d };
     return fam().members.filter(function (x) { return x.id === id; })[0] || { id: 'all', name: 'العائلة', kind: 'all' };
   }
   function sign(x) {
     if (x.kind === 'wife') return 'زوجك';
     if (x.kind === 'husband') return 'زوجتك';
     if (x.kind === 'all') return 'مع المحبة';
+    if (x.kind === 'self') return fam().parent === 'mother' ? 'زوجك وأولادك' : 'زوجتك وأولادك';
+    if (x.kind === 'departed') return 'اللهم آمين';
     return fam().parent === 'mother' ? 'ماما' : 'بابا';
   }
   // which message set suits this person: sons under 13 get the children's set
   function msgKind(x) {
+    if (x.kind === 'self') return fam().parent === 'mother' ? 'selfMother' : 'self';
+    if (x.kind === 'departed') return x.dep.kind;
     if (x.kind !== 'son') return x.kind;
     return x.y && P.ymd(Date.now()).y - x.y < 13 ? 'sonChild' : 'sonTeen';
   }
   function fill(t, x) {
-    var names = fam().members.map(function (m) { return m.name; });
+    var names = fam().members.filter(function (m) { return m.kind !== 'self'; }).map(function (m) { return m.name; });
     var list = names.length > 1 ? names.slice(0, -1).join('، ') + ' و' + names[names.length - 1] : names.join('');
-    return t.replace(/\{name\}/g, x ? x.name : '').replace(/\{names\}/g, list);
+    var d = x && x.dep, sp = spouse();
+    return t.replace(/\{name\}/g, x ? x.name : '').replace(/\{names\}/g, list)
+      .replace(/\{acc\}/g, d ? d.acc || d.name : '').replace(/\{gen\}/g, d ? d.gen || d.name : '').replace(/\{spouse\}/g, sp ? sp.name : '');
   }
   function reminder(n) {
     var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
@@ -412,6 +438,8 @@
     var lists = {}, pool = [], max = 0, order = famOrder();
     order.forEach(function (id) {
       var x = member(id), base = FAMILY.messages[id === 'all' ? 'all' : msgKind(x)] || [];
+      // a child who loves football: every other message is a football one
+      if (x.likes === 'football') base = mix(base, FAMILY.messages.football);
       lists[id] = base.map(function (t) { return fill(t, x); })
         .concat(S.famMsgs.filter(function (m) { return m.to === id; }).map(function (m) { return m.text; }));
       max = Math.max(max, lists[id].length);
@@ -419,9 +447,17 @@
     for (var i = 0; i < max; i++) order.forEach(function (id) { if (lists[id][i]) pool.push({ to: id, text: lists[id][i] }); });
     return pool;
   }
+  function mix(a, b) {
+    var out = [];
+    for (var i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) out.push(a[i]); if (b[i]) out.push(b[i]); }
+    return out;
+  }
   function famMessage(n) {
     var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
-    return { type: m.to === 'all' ? 'رسالة إلى العائلة' : 'رسالة إلى ' + who.name, text: m.text, src: '— ' + sign(who), fam: true };
+    var type = m.to === 'all' ? 'رسالة إلى العائلة' : who.kind === 'departed' ?
+      (who.dep.kind === 'father' ? 'دعاء لوالدي رحمه الله' : 'دعاء ل' + who.name + (who.dep.full ? ' (' + who.dep.full + ')' : '') + ' رحمها الله') :
+      'رسالة إلى ' + who.name;
+    return { type: type, text: m.text, src: '— ' + sign(who), fam: true };
   }
   function spouse() { return fam().members.filter(function (x) { return x.kind === 'wife' || x.kind === 'husband'; })[0]; }
   // birthday or wedding anniversary today: its greeting stays all day
@@ -468,7 +504,7 @@
     var key = r.y + '-' + r.m + '-' + r.d;
     if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); renderEvents(r); }
     // dark from two hours after Isha until Fajr
-    var n = t >= today.at.isha + 2 * HR || t < today.at.fajr;
+    var n = S.theme === 'dark' || (S.theme === 'auto' && (t >= today.at.isha + 2 * HR || t < today.at.fajr));
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     $('clock').textContent = P.full(t);
     showReminder(t);
@@ -520,12 +556,26 @@
     S.events = S.events.filter(function (e) { return daysTo(e, r) >= 0; }); // past dates disappear
     if (S.events.length !== before) save();
     sendWidget();
-    $('events').innerHTML = allEvents(r).slice(0, 4).map(function (e) {
-      var big = e.left <= 2 ? daysText(e.left) : e.left;
-      return '<div class="ev"><span class="ev-n">' + big + '</span><div class="ev-t"><b>' + esc(e.name) +
-        '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? 'أيام' : 'يومًا') + ' · ') + dmy(e) + '</span></div></div>';
-    }).join('');
+    // Ramadan, Eid al-Fitr and Eid al-Adha share the first card, in turn; then the other occasions
+    var all = allEvents(r);
+    seasons = all.filter(function (e) { return SEASON[e.auto]; });
+    $('events').innerHTML = (seasons.length ? '<div id="ev-season" class="ev">' + evInner(seasons[seasonI % seasons.length]) + '</div>' : '') +
+      all.filter(function (e) { return !SEASON[e.auto]; }).slice(0, seasons.length ? 4 : 5).map(function (e) {
+        return '<div class="ev">' + evInner(e) + '</div>';
+      }).join('');
   }
+  var SEASON = { ramadan: 1, fitr: 1, adha: 1 }, seasons = [], seasonI = 0;
+  function evInner(e) {
+    var big = e.left <= 2 ? daysText(e.left) : e.left;
+    return '<span class="ev-n">' + big + '</span><div class="ev-t"><b>' + esc(e.name) +
+      '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? 'أيام' : 'يومًا') + ' · ') + dmy(e) + '</span></div>';
+  }
+  setInterval(function () {
+    var box = $('ev-season');
+    if (!box || seasons.length < 2) return;
+    box.classList.add('fade');
+    setTimeout(function () { seasonI++; box.innerHTML = evInner(seasons[seasonI % seasons.length]); box.classList.remove('fade'); }, 400);
+  }, 6000);
   var evDraft = (function () { var r = P.ymd(Date.now()), x = P.addDays(r.y, r.m, r.d, 30); return { y: x.y, m: x.m, d: x.d }; })();
 
   // ---------- full-screen countdowns: adhan → iqamah, and in Ramadan the last 15 minutes before Maghrib ----------
@@ -682,6 +732,11 @@
   function setRender() {
     var keep = document.activeElement && document.activeElement.dataset.k;
     var r = P.ymd(Date.now()), T = P.dayTimes(r.y, r.m, r.d, S.offsets);
+    $('set-sound').innerHTML = [['normal', 'صوت التنبيه'], ['fajr', 'صوت تنبيه الفجر']].map(function (x) {
+      return '<div class="srow snd-row"><span class="sname">' + x[1] + '</span><span class="snd-opts">' + SOUNDS.map(function (o) {
+        return '<button class="sbtn f' + (S.sound[x[0]] === o[0] ? ' on' : '') + '" data-k="snd-' + x[0] + '-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
+    }).join('');
     $('set-prayers').innerHTML = ORDER.map(function (k) {
       var off = S.offsets[k];
       return '<div class="srow"><span class="sname">' + P.name(k) + '</span><span class="stime">' + P.full(T.at[k]) + '</span>' +
@@ -730,7 +785,10 @@
         }
         return '<div class="srow"><span class="sname">' + P.name(k) + '</span>' + st('n') + st('r') + '</div>';
       }).join('');
-    $('set-show').innerHTML = '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
+    $('set-show').innerHTML = '<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">' +
+      [['auto', 'تلقائي (داكن ليلًا)'], ['light', 'فاتح'], ['dark', 'داكن']].map(function (o) {
+        return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</span></div>' + '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
       (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? 'يظهر' : 'مخفي') + '</button></div>';
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
@@ -775,8 +833,12 @@
       if (el) el.focus();
     }
   }
+  var SOUNDS = [['tone', 'نغمة'], ['adhan', 'أذان كامل'], ['short', 'أذان مختصر'], ['none', 'بدون صوت']];
   function setAction(k) {
     var p = k.split('-'), a = p[0], v = p[1];
+    if (a === 'theme') { S.theme = v; night = null; tick(); }
+    if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
+    if (a === 'sndt') { try { A.previewSound(S.sound[v]); } catch (e) {} return; }
     if (a === 'm' || a === 'p') { S.offsets[v] = Math.max(-30, Math.min(30, S.offsets[v] + (a === 'p' ? 1 : -1))); }
     else if (a === 'a') S.alerts[v] = !S.alerts[v];
     else if (a === 'u' || a === 'd') {
@@ -835,7 +897,7 @@
     }
     save();
     if (a === 'eva' || a === 'evx' || a === 'fmx' || a === 'fan') renderEvents(P.ymd(Date.now()));
-    if (a === 'm' || a === 'p' || a === 'a' || a === 'im' || a === 'ip' || /^q[nr][mp]$/.test(a)) { sendSchedule(); lastDay = ''; }
+    if (a === 'snd' || a === 'm' || a === 'p' || a === 'a' || a === 'im' || a === 'ip' || /^q[nr][mp]$/.test(a)) { sendSchedule(); lastDay = ''; }
     setRender();
     if (!document.activeElement || document.activeElement === document.body) {
       var f = document.querySelector('#settings .f'); if (f) f.focus();
@@ -981,6 +1043,8 @@
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
+      // quick switch: dark ↔ light (the settings also have «تلقائي»)
+      case 'theme-btn': S.theme = night ? 'light' : 'dark'; save(); night = null; tick(); break;
       case 'cal-prev': calMonth(-1); break;
       case 'cal-next': calMonth(1); break;
       case 'cal-today': calOpen(); break;

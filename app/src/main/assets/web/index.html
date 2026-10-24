@@ -12,12 +12,13 @@
   <!-- Main screen -->
   <section id="home" class="screen">
     <header class="top">
-      <div class="top-right">
-        <button class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><div class="w-main"><div class="w-row1"><span id="w0-temp" class="w-temp">—</span><div class="w-txt"><b>الرياض</b><span id="w0-desc"></span></div></div><div id="w0-meta" class="w-meta"></div></div></button>
-        <button class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><div class="w-main"><div class="w-row1"><span id="w1-temp" class="w-temp">—</span><div class="w-txt"><b>إربد</b><span id="w1-desc"></span></div></div><div id="w1-meta" class="w-meta"></div></div></button>
+      <div class="wx-stack">
+        <button class="weather f" data-go="weather" aria-label="الطقس في الرياض"><span id="w0-icon" class="w-icon"></span><b class="w-city">الرياض</b><span id="w0-temp" class="w-temp">—</span><span id="w0-hl" class="w-hl"></span></button>
+        <button class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><b class="w-city">إربد</b><span id="w1-temp" class="w-temp">—</span><span id="w1-hl" class="w-hl"></span></button>
       </div>
       <div id="events" class="events"></div>
       <div class="top-right">
+        <button id="theme-btn" class="round f" aria-label="الوضع الداكن / الفاتح"><svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
         <button class="round f tv-only" data-go="calendar" aria-label="التقويم"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
         <button class="round f tv-only" data-go="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
       </div>
@@ -163,6 +164,7 @@
         <div id="set-phone"></div>
         <div class="set-h set-first">مواقيت الأذان والتنبيه</div>
         <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
+        <div id="set-sound"></div>
         <div id="set-prayers"></div>
         <div id="set-isha"></div>
         <div class="set-h set-h2">مدة الإقامة بعد الأذان (دقائق)</div>

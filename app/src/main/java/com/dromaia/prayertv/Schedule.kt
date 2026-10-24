@@ -47,6 +47,7 @@ object Schedule {
             intent.putExtra("title", best.optString("title"))
             intent.putExtra("sub", best.optString("sub"))
             intent.putExtra("at", best.optLong("at"))
+            intent.putExtra("snd", best.optString("snd", "tone"))
         }
         val pi = PendingIntent.getBroadcast(ctx, 1, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

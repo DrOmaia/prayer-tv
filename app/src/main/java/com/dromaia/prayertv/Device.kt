@@ -20,18 +20,33 @@ object Device {
             ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
     }
 
-    // Phone alert: a notification that plays the soft chime
-    fun notify(ctx: Context, title: String, sub: String) {
+    // the sound of each choice: tone, the full adhan, its opening, or none (0)
+    fun soundRes(snd: String): Int = when (snd) {
+        "adhan" -> R.raw.adhan
+        "short" -> R.raw.adhan_short
+        "none" -> 0
+        else -> R.raw.chime
+    }
+
+    // Phone alert: a notification with the chosen sound (each sound has its own channel, as Android requires)
+    fun notify(ctx: Context, title: String, sub: String, snd: String = "tone") {
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        val sound = Uri.parse("android.resource://" + ctx.packageName + "/" + R.raw.chime)
+        val res = soundRes(snd)
+        val sound = if (res != 0) Uri.parse("android.resource://" + ctx.packageName + "/" + res) else null
+        val (id, name) = when (snd) {
+            "adhan" -> Pair("adhan_full", "الأذان كاملًا")
+            "short" -> Pair("adhan_short", "الأذان مختصرًا")
+            "none" -> Pair("adhan_silent", "التنبيه بدون صوت")
+            else -> Pair("adhan_phone", "الأذان")
+        }
         val b = if (Build.VERSION.SDK_INT >= 26) {
-            val ch = NotificationChannel("adhan_phone", "الأذان", NotificationManager.IMPORTANCE_HIGH)
-            ch.setSound(sound, AudioAttributes.Builder()
+            val ch = NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH)
+            ch.setSound(sound, if (sound == null) null else AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build())
             nm.createNotificationChannel(ch)
-            Notification.Builder(ctx, "adhan_phone")
+            Notification.Builder(ctx, id)
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(ctx).setSound(sound).setPriority(Notification.PRIORITY_HIGH)

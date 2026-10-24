@@ -38,6 +38,7 @@ class MainActivity : Activity() {
     }
 
     private var web: WebView? = null
+    private var preview: android.media.MediaPlayer? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +117,8 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         visible = false
+        preview?.release()
+        preview = null
         super.onPause()
     }
 
@@ -253,6 +256,22 @@ class MainActivity : Activity() {
                     startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
                 } catch (e: Exception) {
                     try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (_: Exception) {}
+                }
+            }
+        }
+
+        // settings: hear a sound choice; "stop" (or a second press) stops it
+        @JavascriptInterface
+        fun previewSound(snd: String) {
+            runOnUiThread {
+                val was = preview != null
+                preview?.release()
+                preview = null
+                val res = Device.soundRes(snd)
+                if (snd == "stop" || res == 0 || was) return@runOnUiThread
+                preview = android.media.MediaPlayer.create(this@MainActivity, res)?.apply {
+                    setOnCompletionListener { it.release(); if (preview === it) preview = null }
+                    start()
                 }
             }
         }
