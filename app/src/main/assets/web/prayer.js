@@ -82,11 +82,13 @@
   }
 
   function name(k, friday) { return k === 'dhuhr' && friday ? 'الجمعة' : NAMES[k]; }
-  function hm(ts) {
-    var t = ymd(ts);
-    return { t: (t.h % 12 || 12) + ':' + pad(t.mi), ap: t.h < 12 ? 'ص' : 'م' };
+  // 24-hour clock: 04:37, 15:45
+  function full(ts) { var t = ymd(ts); return pad(t.h) + ':' + pad(t.mi); }
+  // time left without seconds: 2:05
+  function leftHM(ms) {
+    var m = Math.max(0, Math.ceil(ms / 60000));
+    return Math.floor(m / 60) + ':' + pad(m % 60);
   }
-  function full(ts) { var x = hm(ts); return x.t + ' ' + x.ap; }
   function left(ms) {
     var s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
     s = s % 60;
@@ -99,7 +101,7 @@
 
   window.Prayer = {
     ORDER: ORDER, HR: HR, MIN: MIN, TZ: TZ,
-    dayTimes: dayTimes, ymd: ymd, noonOf: noonOf, name: name, hm: hm, full: full, left: left,
+    dayTimes: dayTimes, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
     pad: pad, addDays: addDays, isRamadan: isRamadan
   };
 })();

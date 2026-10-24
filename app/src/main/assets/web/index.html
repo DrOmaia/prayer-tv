@@ -12,26 +12,26 @@
   <!-- Main screen -->
   <section id="home" class="screen">
     <header class="top">
-      <div class="dates">
-        <div id="g-date" class="g-date"></div>
-        <div class="h-date"><span id="h-date"></span> · الرياض</div>
-      </div>
       <div class="top-right">
         <div class="weather"><span id="w0-icon" class="w-icon"></span><span id="w0-temp" class="w-temp">—</span><div class="w-txt"><b>الرياض</b><span id="w0-desc"></span></div></div>
         <div class="weather"><span id="w1-icon" class="w-icon"></span><span id="w1-temp" class="w-temp">—</span><div class="w-txt"><b>إربد</b><span id="w1-desc"></span></div></div>
+      </div>
+      <div class="top-right">
         <button class="pill f" data-go="calendar"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>التقويم</button>
         <button class="round f" data-go="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
       </div>
     </header>
 
     <div class="hero">
-      <div class="hero-clock">
-        <div class="clock" dir="ltr"><span id="clock"></span><div class="clock-side"><span id="ampm" class="gold"></span><span id="secs" class="muted"></span></div></div>
+      <div class="hero-dates">
+        <div id="g-date" class="g-date"></div>
+        <div class="h-date"><span id="h-date"></span></div>
         <div id="ramadan" class="ramadan hidden">
           <div class="rcard"><div><b>متبقٍ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div class="rcard"><div><b>متبقٍ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
         </div>
       </div>
+      <div class="hero-clock"><div id="clock" class="clock" dir="ltr"></div></div>
       <div class="next card">
         <div id="next-label" class="gold next-label"></div>
         <div id="next-name" class="next-name"></div>
@@ -44,12 +44,13 @@
 
     <div class="bottom">
       <div id="quote-box" class="quote card">
-        <div id="quote" class="quran"></div>
+        <div class="q-type gold" id="quote-type"></div>
+        <div id="quote" class="q-text"></div>
         <div id="quote-src" class="muted src"></div>
       </div>
       <div id="friday-box" class="friday card hidden">
-        <div><div class="gold fr-t">يوم الجمعة</div><div class="quran fr-q">قراءة سورة الكهف · والإكثار من الصلاة على النبي ﷺ</div></div>
-        <button class="gold-btn f" data-go="kahf"><svg viewBox="0 0 24 24" class="ic fill"><path d="M7 5v14l12-7z"/></svg>تشغيل سورة الكهف</button>
+        <div class="gold fr-t">يوم الجمعة</div>
+        <button class="gold-btn f" data-go="kahf"><svg viewBox="0 0 24 24" class="ic fill"><path d="M7 5v14l12-7z"/></svg>سورة الكهف</button>
       </div>
       <div id="shortcuts" class="shortcuts"></div>
     </div>
@@ -81,7 +82,6 @@
           <div class="cal-tr cal-th muted"><span>الصلاة</span><span>الأذان</span><span>الإقامة</span></div>
           <div id="cal-rows"></div>
         </div>
-        <div id="cal-ram" class="cal-ram hidden"></div>
       </div>
     </div>
   </section>
@@ -166,6 +166,7 @@
 </div>
 
 <script src="quran.js"></script>
+<script src="reminders.js"></script>
 <script src="prayer.js"></script>
 <script src="app.js"></script>
 </body>

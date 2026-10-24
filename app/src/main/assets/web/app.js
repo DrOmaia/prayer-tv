@@ -171,12 +171,13 @@
   }
 
   // ---------- main screen ----------
-  var cards = {};
-  ORDER.forEach(function (k) {
+  // cards: Imsak (10 minutes before Fajr) then the prayers
+  var CARDS = ['imsak'].concat(ORDER), cards = {};
+  CARDS.forEach(function (k) {
     var c = document.createElement('div');
     c.className = 'pc';
     c.innerHTML = '<div class="pc-head"><span class="pc-name"></span><span class="pc-badge hidden"></span></div>' +
-      '<div class="pc-row"><div class="pc-time"><span></span><small></small></div><div class="pc-cd"><small>متبقٍ</small><b></b></div></div><div class="pc-iq"></div>';
+      '<div class="pc-time"></div><div class="pc-iq"></div>';
     $('prayers').appendChild(c);
     cards[k] = c;
   });
@@ -219,21 +220,18 @@
     $('countdown').textContent = cd;
     $('next-detail').textContent = detail;
 
-    // the next prayer takes the width of two cards
-    $('prayers').style.gridTemplateColumns = ORDER.map(function (k) { return k === nextK ? 'minmax(0, 2fr)' : 'minmax(0, 1fr)'; }).join(' ');
-    ORDER.forEach(function (k) {
-      var day = tomorrow && k === 'fajr' ? tom : today;
+    CARDS.forEach(function (k) {
+      var day = tomorrow && (k === 'fajr' || k === 'imsak') ? tom : today;
       var isNow = k === cur, isNext = k === nextK && !isNow;
-      var c = cards[k], x = P.hm(day.at[k]);
+      var c = cards[k];
       c.className = 'pc' + (isNow ? ' now' : '') + (isNext ? ' next-p' : '');
-      c.querySelector('.pc-name').textContent = P.name(k, day.friday);
+      c.querySelector('.pc-name').textContent = k === 'imsak' ? 'الإمساك' : P.name(k, day.friday);
       var b = c.querySelector('.pc-badge');
       b.textContent = isNow ? 'الآن' : 'التالية';
       b.classList.toggle('hidden', !isNow && !isNext);
-      c.querySelector('.pc-time span').textContent = x.t;
-      c.querySelector('.pc-time small').textContent = x.ap;
-      if (isNext) c.querySelector('.pc-cd b').textContent = P.left(day.at[k] - t);
-      c.querySelector('.pc-iq').textContent = day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : '');
+      c.querySelector('.pc-time').textContent = P.full(k === 'imsak' ? day.imsak : day.at[k]);
+      c.querySelector('.pc-iq').textContent = k === 'imsak' ? 'قبل الفجر بـ 10 دقائق' :
+        day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : '');
     });
 
     // Ramadan: time left to iftar and to suhoor (imsak)
@@ -242,9 +240,9 @@
     if (showR) {
       var days = [today, tom], ift = nextRamadan(t, days, 'maghribAt'), suh = nextRamadan(t, days, 'imsak');
       $('iftar-at').textContent = ift ? P.full(ift) : '—';
-      $('iftar-left').textContent = ift ? P.left(ift - t) : '—';
+      $('iftar-left').textContent = ift ? P.leftHM(ift - t) : '—';
       $('suhoor-at').textContent = suh ? P.full(suh) : '—';
-      $('suhoor-left').textContent = suh ? P.left(suh - t) : '—';
+      $('suhoor-left').textContent = suh ? P.leftHM(suh - t) : '—';
     }
   }
 
@@ -252,11 +250,33 @@
     $('g-date').textContent = fGFull.format(new Date(t));
     $('h-date').textContent = fHFull.format(new Date(t));
     $('friday-box').classList.toggle('hidden', !today.friday);
-    $('quote-box').classList.toggle('hidden', today.friday);
-    var q = DAILY_AYAT[Math.floor(Date.UTC(r.y, r.m - 1, r.d) / 86400000) % DAILY_AYAT.length];
-    $('quote').textContent = '﴿' + q[0] + '﴾';
-    $('quote').style.fontSize = q[0].length > 70 ? '34px' : '40px';
-    $('quote-src').textContent = q[1];
+  }
+
+  // ---------- a new reminder every 3 minutes: verse, hadith, verse, wisdom, hadith, useful note ----------
+  var CYCLE = ['aya', 'hadith', 'aya', 'hikma', 'hadith', 'faida'], lastQ = -1;
+  function reminder(n) {
+    var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
+    var before = CYCLE.slice(0, n % CYCLE.length).filter(function (x) { return x === kind; }).length;
+    var per = CYCLE.filter(function (x) { return x === kind; }).length;
+    var list = REMINDERS[kind];
+    return list[(round * per + before) % list.length];
+  }
+  function showReminder(t) {
+    var n = Math.floor(t / (3 * MIN));
+    if (n === lastQ) return;
+    var first = lastQ < 0;
+    lastQ = n;
+    var q = reminder(n), box = $('quote-box');
+    function put() {
+      $('quote-type').textContent = q.type;
+      $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
+      $('quote').className = 'q-text' + (q.quran ? ' quran' : '');
+      $('quote').style.fontSize = q.text.length > 110 ? (q.quran ? '32px' : '26px') : q.text.length > 60 ? (q.quran ? '36px' : '30px') : '';
+      $('quote-src').textContent = q.src;
+      box.classList.remove('fade');
+    }
+    if (first) put();
+    else { box.classList.add('fade'); setTimeout(put, 600); }
   }
 
   // ---------- every second ----------
@@ -274,10 +294,8 @@
     // dark from two hours after Isha until Fajr
     var n = t >= today.at.isha + 2 * HR || t < today.at.fajr;
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
-    var c = P.hm(t);
-    $('clock').textContent = c.t;
-    $('ampm').textContent = c.ap;
-    $('secs').textContent = P.pad(r.s);
+    $('clock').textContent = P.full(t);
+    showReminder(t);
     if (screen === 'home') renderHome(t, today, tom);
     if (screen === 'kahf') $('kahf-clock').textContent = P.full(t);
     checkAlert(t, today);
@@ -351,12 +369,11 @@
     $('cal-greg').textContent = fGFull.format(new Date(ts));
     $('cal-hdate').textContent = fHFull.format(new Date(ts));
     $('cal-is-today').classList.toggle('hidden', !(cal.sy === cal.ty && cal.sm === cal.tm && cal.sd === cal.td));
-    $('cal-rows').innerHTML = ORDER.map(function (k) {
-      return '<div class="cal-tr"><span class="n">' + P.name(k, T.friday) + '</span><span class="a">' + P.full(T.at[k]) +
-        '</span><span class="i">' + (T.iqamah[k] ? P.full(T.iqamah[k]) : '—') + '</span></div>';
+    $('cal-rows').innerHTML = ['imsak'].concat(ORDER).map(function (k) {
+      var at = k === 'imsak' ? T.imsak : T.at[k], iq = k === 'imsak' ? null : T.iqamah[k];
+      return '<div class="cal-tr"><span class="n">' + (k === 'imsak' ? 'الإمساك' : P.name(k, T.friday)) + '</span><span class="a">' + P.full(at) +
+        '</span><span class="i">' + (iq ? P.full(iq) : '—') + '</span></div>';
     }).join('');
-    $('cal-ram').classList.toggle('hidden', !T.ramadan);
-    $('cal-ram').innerHTML = '<span>الإمساك ' + P.full(T.imsak) + '</span><span>الإفطار ' + P.full(T.at.maghrib) + '</span>';
   }
   function calMonth(step) {
     cal.vm += step;
