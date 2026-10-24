@@ -7,6 +7,9 @@
   // Ministry of Islamic Affairs: 10 min between adhan and iqamah, Fajr 20; in Ramadan Fajr and Isha also 10
   var IQ_NORMAL = { fajr: 20, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
   var IQ_RAMADAN = { fajr: 10, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
+  // Umm al-Qura: Isha is 90 minutes after Maghrib, 120 in Ramadan (adjustable in the settings)
+  var ISHA = { normal: 90, ramadan: 120 };
+  function setIsha(v) { if (v) { ISHA.normal = v.normal; ISHA.ramadan = v.ramadan; } }
 
   function rad(d) { return d * Math.PI / 180; }
   function deg(r) { return r * 180 / Math.PI; }
@@ -67,7 +70,7 @@
       asr: asr(13 / 24) + adj,
       maghrib: angleTime(0.833, 18 / 24, false) + adj
     };
-    h.isha = h.maghrib + (ramadan ? 2 : 1.5);
+    h.isha = h.maghrib + (ramadan ? ISHA.ramadan : ISHA.normal) / 60;
     var base = Date.UTC(y, m - 1, d) - TZ * HR;
     var friday = new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 5;
     var iq = ramadan ? IQ_RAMADAN : IQ_NORMAL;
@@ -101,7 +104,7 @@
 
   window.Prayer = {
     ORDER: ORDER, HR: HR, MIN: MIN, TZ: TZ,
-    dayTimes: dayTimes, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
+    dayTimes: dayTimes, setIsha: setIsha, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
     pad: pad, addDays: addDays, isRamadan: isRamadan
   };
 })();

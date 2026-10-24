@@ -136,6 +136,7 @@
         <div class="set-h">مواقيت الأذان والتنبيه</div>
         <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
         <div id="set-prayers"></div>
+        <div id="set-isha"></div>
         <div id="set-version" class="muted set-note"></div>
       </div>
       <div class="card set-col">
@@ -146,6 +147,13 @@
           <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
           <div id="ev-date" class="ev-date"></div>
           <button id="ev-add" class="pill f">+ إضافة</button>
+        </div>
+        <div class="set-h set-h2">رسائل العائلة</div>
+        <div class="muted set-note">تظهر بالتناوب مع التذكير، مع رسائل جاهزة لكل واحد منهم</div>
+        <div id="set-fam"></div>
+        <div class="ev-add">
+          <input id="fam-text" class="inp f" type="text" maxlength="120" placeholder="اكتب رسالتك هنا">
+          <div class="ev-date"><button id="fam-to" class="pill f"></button><button id="fam-add" class="pill f">+ إضافة الرسالة</button></div>
         </div>
         <div class="tv-only">
         <div class="set-h set-h2">اختصارات التطبيقات</div>
@@ -178,6 +186,7 @@
 
 <script src="quran.js"></script>
 <script src="reminders.js"></script>
+<script src="family.js"></script>
 <script src="prayer.js"></script>
 <script src="app.js"></script>
 </body>

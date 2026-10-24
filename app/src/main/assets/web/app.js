@@ -22,10 +22,13 @@
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
-      autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv)
+      autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv),
+      ishaMin: Object.assign({ normal: 90, ramadan: 120 }, s.ishaMin),
+      famMsgs: s.famMsgs || [] // own family messages: {to, text}
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  P.setIsha(S.ishaMin);
 
   // ---------- fit the 1920×1080 design to the screen ----------
   // TV: remote control, app shortcuts, alert over other apps. Phone: touch, notification.
@@ -264,8 +267,10 @@
     $('friday-box').classList.toggle('hidden', !today.friday);
   }
 
-  // ---------- a new reminder every 3 minutes: verse, hadith, verse, wisdom, hadith, useful note ----------
-  var CYCLE = ['aya', 'hadith', 'aya', 'hikma', 'hadith', 'faida'], lastQ = -1;
+  // ---------- every 3 minutes: a reminder (verse, hadith, wisdom, note) then a family message, in turn ----------
+  var CYCLE = ['aya', 'hadith', 'aya', 'hikma', 'hadith', 'faida'], lastQ = '';
+  var FAM_ORDER = ['hassan', 'salma', 'abdulmalik', 'rund', 'all'];
+  function member(id) { return FAMILY.members.filter(function (x) { return x.id === id; })[0] || FAMILY.all; }
   function reminder(n) {
     var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
     var before = CYCLE.slice(0, n % CYCLE.length).filter(function (x) { return x === kind; }).length;
@@ -273,18 +278,42 @@
     var list = REMINDERS[kind];
     return list[(round * per + before) % list.length];
   }
+  // family messages, one for each person in turn (own messages added to that person's list)
+  function famPool() {
+    var lists = {}, pool = [], max = 0;
+    FAM_ORDER.forEach(function (id) {
+      lists[id] = FAMILY.messages[id].concat(S.famMsgs.filter(function (m) { return m.to === id; }).map(function (m) { return m.text; }));
+      max = Math.max(max, lists[id].length);
+    });
+    for (var i = 0; i < max; i++) FAM_ORDER.forEach(function (id) { if (lists[id][i]) pool.push({ to: id, text: lists[id][i] }); });
+    return pool;
+  }
+  function famMessage(n) {
+    var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
+    return { type: m.to === 'all' ? 'رسالة إلى العائلة' : 'رسالة إلى ' + who.name, text: m.text, src: '— ' + who.sign, fam: true };
+  }
+  // birthday or wedding anniversary today: its greeting stays all day
+  function special(r) {
+    var b = FAMILY.members.filter(function (x) { return x.birthday.m === r.m && x.birthday.d === r.d; })[0];
+    if (b) return { id: 'b-' + b.id, type: 'يوم ميلاد ' + b.name, text: FAMILY.birthdayText[b.id], src: '— ' + b.sign, fam: true };
+    var a = FAMILY.anniversary;
+    if (a.m === r.m && a.d === r.d) return { id: 'anniv', type: a.name, text: a.text, src: '— زوجك', fam: true };
+    return null;
+  }
   function showReminder(t) {
-    var n = Math.floor(t / (3 * MIN));
-    if (n === lastQ) return;
-    var first = lastQ < 0;
-    lastQ = n;
-    var q = reminder(n), box = $('quote-box');
+    var r = P.ymd(t), sp = special(r), n = Math.floor(t / (3 * MIN));
+    var key = sp ? sp.id : String(n);
+    if (key === lastQ) return;
+    var first = lastQ === '';
+    lastQ = key;
+    var q = sp || (n % 2 ? famMessage(Math.floor(n / 2)) : reminder(Math.floor(n / 2))), box = $('quote-box');
     function put() {
       $('quote-type').textContent = q.type;
       $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
-      $('quote').className = 'q-text' + (q.quran ? ' quran' : '');
+      $('quote').className = 'q-text' + (q.quran ? ' quran' : '') + (q.fam ? ' fam' : '');
       $('quote').style.fontSize = q.text.length > 110 ? (q.quran ? '32px' : '26px') : q.text.length > 60 ? (q.quran ? '36px' : '30px') : '';
       $('quote-src').textContent = q.src;
+      box.classList.toggle('special', !!sp);
       box.classList.remove('fade');
     }
     if (first) put();
@@ -330,6 +359,14 @@
         if (!found[a.id] && h.month === a.m && h.day === a.d) { found[a.id] = 1; list.push({ auto: a.id, name: a.name, y: dd.y, m: dd.m, d: dd.d }); }
       });
     }
+    // birthdays and the wedding anniversary, every year
+    FAMILY.members.map(function (x) { return { auto: 'b-' + x.id, name: 'ميلاد ' + x.name, m: x.birthday.m, d: x.birthday.d }; })
+      .concat([{ auto: 'anniv', name: FAMILY.anniversary.name, m: FAMILY.anniversary.m, d: FAMILY.anniversary.d }])
+      .forEach(function (x) {
+        var y = r.y;
+        if (daysTo({ y: y, m: x.m, d: x.d }, r) < 0) y++;
+        list.push({ auto: x.auto, name: x.name, y: y, m: x.m, d: x.d });
+      });
     autoCache = { key: key, list: list };
     return list;
   }
@@ -480,7 +517,7 @@
   audio.addEventListener('error', function () {
     if (!audio.src) return;
     kahf.playing = false;
-    $('k-msg').textContent = 'تعذّر التشغيل، تأكدي من اتصال الإنترنت';
+    $('k-msg').textContent = 'تعذّر التشغيل، تأكد من اتصال الإنترنت';
     kRender();
   });
   function kToggle() {
@@ -495,7 +532,7 @@
   function appsRender() {
     var list = apps();
     if (appsMode === 'pick') list = list.filter(function (a) { return (S.shortcuts || []).indexOf(a.pkg) < 0; });
-    $('apps-title').textContent = appsMode === 'pick' ? 'اختاري تطبيقًا للاختصارات' : 'كل التطبيقات';
+    $('apps-title').textContent = appsMode === 'pick' ? 'اختر تطبيقًا للاختصارات' : 'كل التطبيقات';
     $('apps-sub').textContent = list.length + ' تطبيق';
     $('apps-grid').innerHTML = list.map(tileHtml).join('');
   }
@@ -526,6 +563,18 @@
       '<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f' + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? 'يعمل' : 'متوقف') + '</button></div>' +
       '<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>' +
       (overlay ? '<span class="muted">مسموح</span>' : '<button class="sbtn f" data-k="overlay">السماح</button>') + '</div>';
+    $('set-isha').innerHTML = [['normal', 'العشاء بعد المغرب'], ['ramadan', 'العشاء بعد المغرب في رمضان']].map(function (x) {
+      return '<div class="srow"><span class="sname">' + x[1] + '</span>' +
+        '<button class="sbtn f" data-k="im-' + x[0] + '" aria-label="ناقص دقيقة">−</button>' +
+        '<span class="soff">' + S.ishaMin[x[0]] + '</span>' +
+        '<button class="sbtn f" data-k="ip-' + x[0] + '" aria-label="زائد دقيقة">+</button>' +
+        '<span class="sbtn al muted" style="border:none;background:none">دقيقة</span></div>';
+    }).join('');
+    $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
+      return '<div class="srow"><span class="sname">' + (m.to === 'all' ? 'العائلة' : member(m.to).name) + ': <span class="muted">' + esc(m.text) + '</span></span>' +
+        '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
+    }).join('');
+    $('fam-to').textContent = 'إلى: ' + (famTo === 'all' ? 'العائلة' : member(famTo).name);
     $('set-events').innerHTML = autoEvents(r).map(function (e) {
       var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + n + ' ' + daysWord(n) + '</span></span>' +
@@ -556,6 +605,11 @@
     else if (a === 'boot') { S.openOnBoot = !S.openOnBoot; if (A) A.setOpenOnBoot(S.openOnBoot); }
     else if (a === 'overlay') { if (A) A.openOverlaySettings(); return; }
     else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
+    else if (a === 'fx') S.famMsgs.splice(+v, 1);
+    else if (a === 'im' || a === 'ip') {
+      S.ishaMin[v] = Math.max(60, Math.min(180, S.ishaMin[v] + (a === 'ip' ? 1 : -1)));
+      P.setIsha(S.ishaMin);
+    }
     else if (a === 'evx') S.events.splice(+v, 1);
     else if (a === 'evd') {
       var f = v[0], step = v[1] === 'p' ? 1 : -1, r0 = P.ymd(Date.now());
@@ -568,13 +622,22 @@
     }
     save();
     if (a === 'eva' || a === 'evx') renderEvents(P.ymd(Date.now()));
-    if (a === 'm' || a === 'p' || a === 'a') { sendSchedule(); lastDay = ''; }
+    if (a === 'm' || a === 'p' || a === 'a' || a === 'im' || a === 'ip') { sendSchedule(); lastDay = ''; }
     setRender();
     if (!document.activeElement || document.activeElement === document.body) {
       var f = document.querySelector('#settings .f'); if (f) f.focus();
     }
   }
 
+  var famTo = 'hassan';
+  function addFamMsg() {
+    var text = $('fam-text').value.trim();
+    if (!text) { $('fam-text').focus(); return; }
+    S.famMsgs.push({ to: famTo, text: text });
+    save();
+    $('fam-text').value = '';
+    setRender();
+  }
   function addEvent() {
     var name = $('ev-name').value.trim(), r = P.ymd(Date.now());
     if (!name) { $('ev-name').focus(); return; }
@@ -688,6 +751,8 @@
       case 'k-next-btn': if (kahf.i < 110) kPlay(kahf.i + 1); break;
       case 'set-add': appsMode = 'pick'; go('apps'); break;
       case 'ev-add': addEvent(); break;
+      case 'fam-to': famTo = FAM_ORDER[(FAM_ORDER.indexOf(famTo) + 1) % FAM_ORDER.length]; setRender(); $('fam-to').focus(); break;
+      case 'fam-add': addFamMsg(); break;
     }
   });
 

@@ -105,6 +105,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .q-type { font-size: 20px; font-weight: 600; }
 .q-text { font-size: 34px; line-height: 1.5; font-weight: 600; }
 .q-text.quran { font-size: 40px; font-weight: 400; }
+.q-text.fam { font-weight: 700; }
+.quote.special { border: 3px solid var(--gold); }
+.quote.special .q-type { font-size: 26px; }
 .src { font-size: 20px; margin-top: 6px; }
 .friday { padding: 20px 28px; display: flex; flex-direction: column; justify-content: center; gap: 14px; border: 2px solid var(--gold); box-shadow: none; background: var(--card); }
 .fr-t { font-size: 26px; font-weight: 700; text-align: center; }
