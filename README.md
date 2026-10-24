@@ -94,8 +94,4 @@ adb shell settings put secure screensaver_enabled 1
 
 كل دفع إلى `main` يبني ملف APK تلقائيًا (GitHub Actions) وينشره في Releases.
 
-**التوقيع:** مفتاح التوقيع ليس في المستودع، بل في أسرار المستودع (Settings ← Secrets and variables ← Actions):
-`SIGNING_KEYSTORE` (ملف المفتاح بصيغة base64) و `SIGNING_PASSWORD`. البناء يوقّع بالمفتاح الجديد مع «إثبات تدوير»
-من المفتاح القديم (`app/release.keystore`)، فيُحدَّث التطبيق المثبَّت فوق النسخة القديمة دون حذف (أندرويد 9 فأحدث).
-بدون الأسرار يُوقَّع بالمفتاح القديم فقط مع تحذير. احتفظ بنسخة من ملف المفتاح الجديد وكلمة سره في مكان آمن.
 الكود: `app/src/main/assets/web/` (الواجهة: HTML/CSS/JS) و `app/src/main/java/` (التنبيه، الإقلاع، فتح التطبيقات).

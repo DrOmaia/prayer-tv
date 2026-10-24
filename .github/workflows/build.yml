@@ -22,28 +22,13 @@ jobs:
           gradle-version: "8.9"
       - name: Build
         run: gradle :app:assembleRelease --no-daemon
-      # Signing: the private key comes from the repository secrets SIGNING_KEYSTORE (base64) and SIGNING_PASSWORD.
-      # The old key (app/release.keystore, public) signs only the proof of rotation, so installed copies update in place
-      # (Android 9+); it can no longer sign an update on its own.
+      # Signed with app/release.keystore (kept in the repository so every build updates the installed app in place)
       - name: Sign
-        env:
-          SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BT/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          OLD="--ks app/release.keystore --ks-pass pass:prayertv123 --ks-key-alias prayertv"
-          if [ -n "$SIGNING_KEYSTORE" ]; then
-            echo "$SIGNING_KEYSTORE" | base64 -d > new.jks
-            NEW="--ks new.jks --ks-pass env:SIGNING_PASSWORD --ks-key-alias prayertv"
-            "$BT/apksigner" rotate --out lineage.bin --old-signer $OLD --new-signer $NEW
-            "$BT/apksigner" sign $OLD --next-signer $NEW --lineage lineage.bin --rotation-min-sdk-version 28 --out prayer-tv.apk aligned.apk
-            rm -f new.jks
-          else
-            echo "::warning::The SIGNING_KEYSTORE secret is not set: signed with the old public key only"
-            "$BT/apksigner" sign $OLD --out prayer-tv.apk aligned.apk
-          fi
-          "$BT/apksigner" verify --verbose --print-certs prayer-tv.apk | grep -E "Verified using|Signer|certificate SHA-256" | head -20
+          "$BT/apksigner" sign --ks app/release.keystore --ks-pass pass:prayertv123 --ks-key-alias prayertv --out prayer-tv.apk aligned.apk
+          "$BT/apksigner" verify prayer-tv.apk
       - uses: actions/upload-artifact@v4
         with:
           name: prayer-tv
