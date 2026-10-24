@@ -51,6 +51,16 @@ adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
 - شريط سفلي: الرئيسية · التقويم · الطقس · الكهف · الإعدادات، والسحب يمينًا/يسارًا بين الأشهر وبين الآيات.
 - **ويدجت على الشاشة الرئيسية للجوال** (شفاف فوق الخلفية): «مواقيت اليوم» (4×2) فيه الصلاة القادمة وعدّ تنازلي والمواقيت الست، و«عدّاد المناسبة» (2×2) لأقرب مناسبة. للإضافة: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة.
 
+## شاشة التوقف (Screensaver)
+
+من إعدادات التطبيق: «شاشة التوقف» ← يعمل، ثم «اختيارها في إعدادات التلفزيون» واختر «مواقيت الصلاة».
+إذا لم يظهر التطبيق في قائمة شاشات التوقف في Google TV، فمن كمبيوتر على نفس الشبكة:
+
+```
+adb shell settings put secure screensaver_components com.dromaia.prayertv/.PrayerDream
+adb shell settings put secure screensaver_enabled 1
+```
+
 ## فتح التطبيق بزر في الريموت (TCL CHANNEL)
 
 1. ثبّت **Button Mapper** من Google Play.

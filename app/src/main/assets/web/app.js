@@ -35,6 +35,9 @@
   // TV: remote control, app shortcuts, alert over other apps. Phone: touch, notification.
   var TV = A ? A.isTv() : !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   stage.classList.add(TV ? 'tv' : 'phone');
+  // shown as the TV screensaver: the main screen only, nothing to press
+  var DREAM = location.search.indexOf('dream') >= 0;
+  if (DREAM) stage.classList.add('dream');
 
   // ---------- fit any screen: landscape is 1080 units high, portrait 1080 units wide ----------
   function fit() {
@@ -659,6 +662,8 @@
     var overlay = !A || A.canOverlay();
     $('set-general').innerHTML =
       '<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f' + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? 'يعمل' : 'متوقف') + '</button></div>' +
+      (A && A.dreamOn ? '<div class="srow"><span class="sname">شاشة التوقف (Screensaver)</span><button class="sbtn f' + (A.dreamOn() ? ' on' : '') + '" data-k="dream">' + (A.dreamOn() ? 'يعمل' : 'متوقف') + '</button>' +
+        (A.dreamOn() ? '<button class="sbtn f" data-k="dreamset">اختيارها في إعدادات التلفزيون</button>' : '') + '</div>' : '') +
       '<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>' +
       (overlay ? '<span class="muted">مسموح</span>' : '<button class="sbtn f" data-k="overlay">السماح</button>') + '</div>';
     $('set-isha').innerHTML = [['normal', 'العشاء بعد المغرب'], ['ramadan', 'العشاء بعد المغرب في رمضان']].map(function (x) {
@@ -721,6 +726,8 @@
     } else if (a === 'x') S.shortcuts.splice(+v, 1);
     else if (a === 'boot') { S.openOnBoot = !S.openOnBoot; if (A) A.setOpenOnBoot(S.openOnBoot); }
     else if (a === 'overlay') { if (A) A.openOverlaySettings(); return; }
+    else if (a === 'dream') { if (A) A.setDream(!A.dreamOn()); }
+    else if (a === 'dreamset') { if (A) A.openDreamSettings(); return; }
     else if (a === 'eva') S.autoEv[v] = S.autoEv[v] === false;
     else if (a === 'fx') S.famMsgs.splice(+v, 1);
     else if (a === 'fpar' || a === 'fmx' || a === 'fan') {

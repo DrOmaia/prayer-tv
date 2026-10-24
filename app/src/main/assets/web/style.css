@@ -229,6 +229,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .phone .bottom { grid-template-columns: minmax(0, 1fr) auto; }
 .phone .f:focus { box-shadow: none; transform: none; }
 
+/* screensaver: no buttons, no focus ring */
+.dream .shortcuts, .dream .round, .dream .tabbar, .dream #iq-close, .dream .friday .gold-btn { display: none !important; }
+.dream .f:focus { box-shadow: none; transform: none; }
+.dream .bottom { grid-template-columns: minmax(0, 1fr) auto; }
+
 /* phone: bottom navigation bar, room for it under every screen */
 .tabbar { display: none; }
 .phone .tabbar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; height: 120px; z-index: 8; background: var(--card2); border-top: 1px solid var(--line); backdrop-filter: blur(12px); justify-content: space-around; align-items: stretch; }

@@ -129,6 +129,27 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun schedule(json: String) = Schedule.save(this@MainActivity, json)
 
+        // the screensaver: shown in the TV's screensaver list only while it is switched on
+        @JavascriptInterface
+        fun dreamOn(): Boolean = packageManager.getComponentEnabledSetting(ComponentName(this@MainActivity, PrayerDream::class.java)) !=
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+
+        @JavascriptInterface
+        fun setDream(on: Boolean) {
+            packageManager.setComponentEnabledSetting(ComponentName(this@MainActivity, PrayerDream::class.java),
+                if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP)
+        }
+
+        @JavascriptInterface
+        fun openDreamSettings() {
+            runOnUiThread {
+                try { startActivity(Intent(Settings.ACTION_DREAM_SETTINGS)) } catch (e: Exception) {
+                    try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (_: Exception) {}
+                }
+            }
+        }
+
         @JavascriptInterface
         fun widgetData(json: String) = Widgets.save(this@MainActivity, json)
 
