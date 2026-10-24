@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">مواقيت الصلاة</string>
+    <string name="widget_prayer">مواقيت اليوم</string>
+    <string name="widget_event">عدّاد المناسبة</string>
 </resources>

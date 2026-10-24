@@ -9,6 +9,7 @@ import android.provider.Settings
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Schedule.armNext(ctx)
+        Widgets.updateAll(ctx)
         val openOnBoot = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getBoolean("openOnBoot", true)
         val allowed = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx)
         if (intent.action == Intent.ACTION_BOOT_COMPLETED && Device.isTv(ctx) && openOnBoot && allowed) {

@@ -18,8 +18,8 @@
       </div>
       <div id="events" class="events"></div>
       <div class="top-right">
-        <button class="round f" data-go="calendar" aria-label="التقويم"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
-        <button class="round f" data-go="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
+        <button class="round f tv-only" data-go="calendar" aria-label="التقويم"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
+        <button class="round f tv-only" data-go="settings" aria-label="الإعدادات"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
       </div>
     </header>
 
@@ -186,6 +186,15 @@
       </div>
     </div>
   </section>
+
+  <!-- Phone: bottom navigation -->
+  <nav id="tabbar" class="tabbar">
+    <button data-tab="home"><svg viewBox="0 0 24 24" class="ic"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg><span>الرئيسية</span></button>
+    <button data-tab="calendar"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>التقويم</span></button>
+    <button data-tab="weather"><svg viewBox="0 0 24 24" class="ic"><path d="M8 3.5v1.5M3.5 8H2M4.8 4.8l1 1M12.5 6.2A4 4 0 0 0 5 9.5"/><path d="M7.5 20h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.6 13 3.5 3.5 0 0 0 7.5 20z"/></svg><span>الطقس</span></button>
+    <button data-tab="kahf"><svg viewBox="0 0 24 24" class="ic"><path d="M12 6c-2-1.5-5-2-8-1.5v14c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-14c-3-.5-6 0-8 1.5zM12 6v14"/></svg><span>الكهف</span></button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24" class="ic"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>الإعدادات</span></button>
+  </nav>
 
   <!-- Full-screen countdown to the iqamah (from the adhan until the iqamah) -->
   <div id="iqamah" class="iqamah hidden">

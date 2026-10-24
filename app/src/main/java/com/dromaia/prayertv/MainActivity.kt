@@ -130,6 +130,9 @@ class MainActivity : Activity() {
         fun schedule(json: String) = Schedule.save(this@MainActivity, json)
 
         @JavascriptInterface
+        fun widgetData(json: String) = Widgets.save(this@MainActivity, json)
+
+        @JavascriptInterface
         fun isTv(): Boolean = Device.isTv(this@MainActivity)
 
         @JavascriptInterface

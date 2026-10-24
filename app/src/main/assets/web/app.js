@@ -210,6 +210,19 @@
       });
     }
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
+    sendWidget();
+  }
+
+  // home-screen widgets (phone): times of the coming days and the nearest occasions
+  function sendWidget() {
+    if (!A || !A.widgetData) return;
+    var r = P.ymd(Date.now()), days = [];
+    for (var i = 0; i < 10; i++) {
+      var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
+      days.push({ names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }) });
+    }
+    var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
+    try { A.widgetData(JSON.stringify({ days: days, events: events })); } catch (e) {}
   }
 
   // banner inside the app (the Android side plays the chime)
@@ -467,6 +480,7 @@
     var before = S.events.length;
     S.events = S.events.filter(function (e) { return daysTo(e, r) >= 0; }); // past dates disappear
     if (S.events.length !== before) save();
+    sendWidget();
     $('events').innerHTML = allEvents(r).slice(0, 3).map(function (e) {
       return '<div class="ev"><span class="ev-n">' + (e.left === 0 ? 'اليوم' : e.left) + '</span><div class="ev-t"><b>' + esc(e.name) +
         '</b><span>' + (e.left === 0 ? '' : daysWord(e.left) + ' · ') + dmy(e) + '</span></div></div>';
@@ -792,6 +806,7 @@
     if (document.activeElement && document.activeElement.classList.contains('f')) lastFocus[screen] = document.activeElement;
     Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.classList.toggle('hidden', s.id !== name); });
     screen = name;
+    Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
     if (name === 'kahf') { kPlay(0); $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
@@ -868,6 +883,16 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest('button');
     if (!el) return;
+    if (el.dataset.tab) {
+      // bottom bar (phone): go straight to that screen
+      if (el.dataset.tab === screen) return;
+      if (iqOpen()) iqDismiss();
+      if (screen === 'kahf') kStop();
+      appsMode = 'launch';
+      stack = el.dataset.tab === 'home' ? [] : ['home'];
+      show(el.dataset.tab);
+      return;
+    }
     if (el.hasAttribute('data-go')) { if (el.dataset.go === 'apps') appsMode = 'launch'; go(el.dataset.go); return; }
     if (el.hasAttribute('data-back')) { back(); return; }
     if (el.dataset.pkg) {
@@ -895,6 +920,21 @@
       case 'fm-add': addMember(); break;
     }
   });
+
+  // swipe (phone): months in the calendar, verses in Surah Al-Kahf. Right-to-left layout: swipe right = next
+  function onSwipe(el, next, prev) {
+    var x0 = null, y0 = null;
+    el.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx > 0) next(); else prev();
+    }, { passive: true });
+  }
+  onSwipe($('cal-grid'), function () { calMonth(1); }, function () { calMonth(-1); });
+  onSwipe(document.querySelector('.kahf-text'), function () { if (kahf.i < 110) kPlay(kahf.i + 1); }, function () { if (kahf.i > 0) kPlay(kahf.i - 1); });
 
   // called by Android
   window.App = {

@@ -229,6 +229,40 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .phone .bottom { grid-template-columns: minmax(0, 1fr) auto; }
 .phone .f:focus { box-shadow: none; transform: none; }
 
+/* phone: bottom navigation bar, room for it under every screen */
+.tabbar { display: none; }
+.phone .tabbar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; height: 120px; z-index: 8; background: var(--card2); border-top: 1px solid var(--line); backdrop-filter: blur(12px); justify-content: space-around; align-items: stretch; }
+.tabbar button { flex: 1; border: none; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 22px; font-weight: 600; }
+.tabbar .ic { width: 40px; height: 40px; }
+.tabbar button.on { color: var(--gold); }
+.phone .screen { padding-bottom: 150px; }
+.portrait .tabbar { height: 170px; }
+.portrait .tabbar button { font-size: 30px; }
+.portrait .tabbar .ic { width: 56px; height: 56px; }
+.portrait.phone .screen { padding-bottom: 210px; }
+
+/* portrait: bigger touch targets */
+.portrait .round { width: 110px; height: 110px; }
+.portrait .round .ic { width: 48px; height: 48px; }
+.portrait .pill, .portrait .gold-btn { height: 100px; font-size: 36px; padding: 0 40px; }
+.portrait .sbtn { height: 92px; min-width: 92px; font-size: 36px; border-radius: 22px; }
+.portrait .sbtn.al { width: 250px; }
+.portrait .inp { height: 104px; font-size: 36px; border-radius: 22px; }
+.portrait .srow { font-size: 34px; flex-wrap: wrap; padding: 14px 0; gap: 16px; }
+.portrait .srow .stime { width: 130px; }
+.portrait .set-h { font-size: 44px; }
+.portrait .set-note { font-size: 30px; }
+.portrait .ev-date { font-size: 34px; }
+.portrait .big-title { font-size: 60px; }
+.portrait .sub-title { font-size: 32px; }
+.portrait .k-ctrl .round.big { width: 130px; height: 130px; }
+.portrait .round.huge { width: 170px; height: 170px; }
+.portrait .round.huge .ic { width: 70px; height: 70px; }
+.portrait .k-info { font-size: 32px; }
+.portrait .cal-tr .n { font-size: 40px; }
+.portrait .cal-tr .a { font-size: 44px; }
+.portrait .cal-tr .i { font-size: 34px; }
+
 /* portrait (phone held upright): one column, the page scrolls if needed */
 .portrait .screen { padding: 48px 40px; gap: 28px; overflow-y: auto; scrollbar-width: none; }
 .portrait .screen::-webkit-scrollbar { display: none; }

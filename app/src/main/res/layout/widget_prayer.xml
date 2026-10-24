@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today's prayer times: transparent over the wallpaper, white text with a soft shadow -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/next_name"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/next_time"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="22sp" />
+
+        <!-- spacer (a widget may only use the allowed view types) -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/left_label"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="متبقٍ"
+            android:textSize="14sp" />
+
+        <Chronometer
+            android:id="@+id/countdown"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#F2CF8A"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n0" style="@style/WidgetName" />
+            <TextView android:id="@+id/t0" style="@style/WidgetTime" />
+        </LinearLayout>
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n1" style="@style/WidgetName" />
+            <TextView android:id="@+id/t1" style="@style/WidgetTime" />
+        </LinearLayout>
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n2" style="@style/WidgetName" />
+            <TextView android:id="@+id/t2" style="@style/WidgetTime" />
+        </LinearLayout>
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n3" style="@style/WidgetName" />
+            <TextView android:id="@+id/t3" style="@style/WidgetTime" />
+        </LinearLayout>
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n4" style="@style/WidgetName" />
+            <TextView android:id="@+id/t4" style="@style/WidgetTime" />
+        </LinearLayout>
+        <LinearLayout style="@style/WidgetCol">
+            <TextView android:id="@+id/n5" style="@style/WidgetName" />
+            <TextView android:id="@+id/t5" style="@style/WidgetTime" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
