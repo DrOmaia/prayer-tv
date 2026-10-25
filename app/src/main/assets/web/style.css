@@ -485,3 +485,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .set-note { font-size: 32px; }
 .portrait .cell .cg { font-size: 38px; }
 .portrait .cell .chd { font-size: 30px; }
+
+/* the second city's prayer times, a small line under the cards */
+.city2 { display: flex; justify-content: center; gap: 34px; font-size: 22px; color: var(--muted); margin: -24px 0 -14px; flex-shrink: 0; white-space: nowrap; }
+.city2 b { font-weight: 600; color: var(--ink); }
+.portrait .city2 { order: 2; flex-wrap: wrap; gap: 14px 28px; font-size: 34px; margin: 0; white-space: normal; }
+.fr-left { font-size: 22px; text-align: center; color: var(--muted); }
+.fr-left:empty { display: none; }
+.portrait .fr-left { font-size: 34px; }

@@ -93,7 +93,10 @@
   }
 
   var fHMonth = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'Asia/Riyadh', month: 'numeric' });
-  function hijriMonth(ts) { return parseInt(fHMonth.format(new Date(ts)), 10); }
+  // the Hijri date can be moved a day forward or back when the moon sighting differs from Umm al-Qura
+  var HADJ = 0;
+  function setHijriAdj(days) { HADJ = days || 0; }
+  function hijriMonth(ts) { return parseInt(fHMonth.format(new Date(ts + HADJ * 86400000)), 10); }
   function isRamadan(y, m, d) { return hijriMonth(noonOf(y, m, d)) === 9; }
 
   // Adhan times of one day; offsets = minutes added to each adhan (settings)
@@ -156,7 +159,15 @@
 
   window.Prayer = {
     ORDER: ORDER, HR: HR, MIN: MIN, zone: function () { return ZONE; }, setLocation: setLocation, methodFor: methodFor, METHODS: METHODS,
-    method: function () { return METHOD; },
+    method: function () { return METHOD; }, setHijriAdj: setHijriAdj,
+    // times of another city (e.g. Irbid), without changing the main one: fn runs with that city set
+    withLocation: function (loc, fn) {
+      var keep = { lat: LAT, lon: LNG, tz: ZONE, method: METHOD, month: fHMonth };
+      setLocation(loc);
+      try { return fn(); } finally {
+        LAT = keep.lat; LNG = keep.lon; ZONE = keep.tz; METHOD = keep.method; fHMonth = keep.month; offCache = {};
+      }
+    },
     dayTimes: dayTimes, setIsha: setIsha, setIqamah: setIqamah, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
     pad: pad, addDays: addDays, isRamadan: isRamadan
   };

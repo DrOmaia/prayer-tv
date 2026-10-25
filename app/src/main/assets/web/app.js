@@ -9,11 +9,16 @@
   function makeFormats() {
     var TZO = { timeZone: P.zone() };
     fGFull = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, TZO));
-    fHFull = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO));
-    fHDay = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO));
-    fHMY = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
+    fHFull = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO)));
+    fHDay = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO)));
+    fHMY = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO)));
     fGMY = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
-    fHMD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'numeric', day: 'numeric' }, TZO));
+    fHMD = hijriShift(new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'numeric', day: 'numeric' }, TZO)));
+  }
+  // Hijri dates follow the ±days adjustment of the settings
+  function hijriShift(f) {
+    function d(x) { return new Date(+x + S.hijriAdj * 86400000); }
+    return { format: function (x) { return f.format(d(x)); }, formatToParts: function (x) { return f.formatToParts(d(x)); } };
   }
 
   // ---------- settings (kept on the TV) ----------
@@ -38,6 +43,7 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      hijriAdj: s.hijriAdj || 0, // days added to the Umm al-Qura Hijri date (−2 … +2)
       fontSize: s.fontSize || 'normal', // phone text size
       reciter: s.reciter || 'alafasy',
       nightDim: s.nightDim !== false, // the TV dims at night
@@ -71,6 +77,7 @@
     save();
   })();
   P.setLocation(S.loc);
+  P.setHijriAdj(S.hijriAdj);
   makeFormats();
   P.setIsha(S.ishaMin);
   P.setIqamah(S.iqMin);
@@ -363,10 +370,10 @@
     if (season.eid) return ADHKAR.eid;
     if (season.arafah) return ADHKAR.arafah.concat(ADHKAR.hajj);
     if (season.hajj) return ADHKAR.hajj;
-    if (season.friday) return ADHKAR.friday;
+    if (season.friday) return fridayMorning ? ADHKAR.fridayMorning.concat(ADHKAR.friday) : ADHKAR.friday;
     return null;
   }
-  var lastFact = '';
+  var lastFact = '', fridayMorning = false;
   function showFact(t, today, yest) {
     var card = document.querySelector('#home .next'), w = adhkarNow(t, today, yest), item, head = 'هل تعلم؟', key;
     card.classList.toggle('no-fact', !S.showFact && !w);
@@ -488,7 +495,17 @@
     if (showSuhoor) { $('suhoor-at').textContent = P.full(suhDay.imsak); putDigits($('suhoor-left'), P.leftHM(suhDay.imsak - t)); }
   }
 
+  // a second city (Irbid): its five prayer times in a small line under the cards, its own method and time zone
+  var CITY2 = { name: 'إربد', lat: 32.5556, lon: 35.85, tz: 'Asia/Amman', cc: 'JO' };
+  function renderCity2(r) {
+    var line = P.withLocation(CITY2, function () {
+      var n = P.ymd(Date.now()), T = P.dayTimes(n.y, n.m, n.d);
+      return FIVE.map(function (k) { return '<span><b>' + P.name(k, T.friday) + '</b> ' + P.full(T.at[k]) + '</span>'; }).join('');
+    });
+    $('city2').innerHTML = '<span class="gold">' + CITY2.name + '</span>' + line;
+  }
   function renderDay(t, r, today) {
+    renderCity2(r);
     $('g-date').textContent = fGFull.format(new Date(t));
     $('h-date').textContent = fHFull.format(new Date(t));
     $('friday-box').classList.toggle('hidden', !today.friday);
@@ -653,6 +670,8 @@
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
     $('clock').textContent = P.full(t);
     showReminder(t);
+    fridayMorning = today.friday && t >= today.at.sunrise && t < today.at.dhuhr;
+    if (today.friday) $('fr-left').textContent = t < today.at.dhuhr ? 'متبقٍّ على الجمعة ' + P.leftHM(today.at.dhuhr - t) : '';
     showFact(t, today, yest);
     if (screen === 'home') renderHome(t, today, tom, yest);
     nightCare(t, today);
@@ -992,6 +1011,9 @@
         }
         return '<div class="srow"><span class="sname">' + P.name(k) + '</span>' + st('n') + st('r') + '</div>';
       }).join('');
+    $('set-hijri').innerHTML = '<div class="srow"><span class="sname">تعديل التاريخ الهجري <span class="muted">(' + fHFull.format(Date.now()) + ')</span></span>' +
+      '<button class="sbtn f" data-k="hadj-m" aria-label="يوم قبل">−</button><span class="soff">' + (S.hijriAdj > 0 ? '+' : '') + S.hijriAdj + '</span>' +
+      '<button class="sbtn f" data-k="hadj-p" aria-label="يوم بعد">+</button><span class="sbtn al muted" style="border:none;background:none">يوم</span></div>';
     $('set-show').innerHTML = (stage.classList.contains('portrait') ? '<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">' +
       [['small', 'صغير'], ['normal', 'عادي'], ['large', 'كبير'], ['xlarge', 'كبير جدًا']].map(function (o) {
         return '<button class="sbtn f' + (S.fontSize === o[0] ? ' on' : '') + '" data-k="fsz-' + o[0] + '">' + o[1] + '</button>';
@@ -1107,6 +1129,10 @@
       setRender(); return;
     }
     if (a === 'fsz') { S.fontSize = v; save(); fit(); setRender(); return; }
+    if (a === 'hadj') {
+      S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
+      P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
+    }
     if (a === 'ndim') { S.nightDim = !S.nightDim; save(); setRender(); return; }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
     if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
