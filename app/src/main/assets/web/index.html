@@ -30,7 +30,7 @@
       <div class="hero-main">
         <div id="clock" class="clock" dir="ltr"></div>
         <div id="g-date" class="g-date"></div>
-        <div class="h-date"><span id="h-date"></span> <span id="season-badge" class="badge-gold hidden"></span></div>
+        <div class="h-date"><span id="moon" class="moon"></span><span id="h-date"></span> <span id="season-badge" class="badge-gold hidden"></span></div>
         <div id="ramadan" class="ramadan hidden">
           <div id="iftar-card" class="rcard"><div><b>متبقٍّ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div id="suhoor-card" class="rcard"><div><b>متبقٍّ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
@@ -80,6 +80,7 @@
       <div class="top-right">
         <button id="cal-prev" class="round f" aria-label="الشهر السابق"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
         <button id="cal-next" class="round f" aria-label="الشهر التالي"><svg viewBox="0 0 24 24" class="ic"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button class="pill f" data-go="imsak">إمساكية رمضان</button>
         <button id="cal-today" class="gold-btn f"><svg viewBox="0 0 24 24" class="ic"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>العودة إلى اليوم</button>
       </div>
     </header>
@@ -123,6 +124,17 @@
         <button id="k-next-btn" class="round big f" aria-label="الآية التالية"><svg viewBox="0 0 24 24" class="ic fill"><path d="M6 5h2v14H6zM9.5 12L19 5v14z"/></svg></button>
       </div>
     </div>
+  </section>
+
+  <!-- Ramadan imsakiya -->
+  <section id="imsak" class="screen hidden">
+    <header class="top">
+      <div class="title-row">
+        <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div><div id="imsak-title" class="big-title">إمساكية رمضان</div><div id="imsak-sub" class="muted sub-title"></div></div>
+      </div>
+    </header>
+    <div id="imsak-body" class="imsak-body"></div>
   </section>
 
   <!-- The Qur'an: choose a surah -->

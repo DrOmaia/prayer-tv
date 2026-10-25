@@ -493,3 +493,28 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .fr-left { font-size: 22px; text-align: center; color: var(--muted); }
 .fr-left:empty { display: none; }
 .portrait .fr-left { font-size: 34px; }
+
+/* the moon beside the Hijri date */
+.moon { display: inline-flex; vertical-align: middle; margin-inline-end: 8px; }
+.moon-ic { width: 30px; height: 30px; }
+.moon-dark { fill: var(--line); }
+.moon-lit { fill: #E2B969; }
+.portrait .moon-ic { width: 46px; height: 46px; }
+/* calendar: the seasons */
+.cell.c-ram { background: rgba(123,91,181,.16); border-color: rgba(123,91,181,.45); }
+.cell.c-eid { background: rgba(42,157,143,.18); border-color: rgba(42,157,143,.55); }
+.cell.c-arafah { background: rgba(217,130,43,.22); border-color: rgba(217,130,43,.6); }
+.cell.c-hajj { background: rgba(217,130,43,.1); border-color: rgba(217,130,43,.35); }
+.cell.c-ashura { background: rgba(62,134,201,.15); border-color: rgba(62,134,201,.5); }
+/* Ramadan imsakiya */
+.imsak-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px; flex: 1; min-height: 0; }
+.im-col { display: flex; flex-direction: column; }
+.im-tr { display: grid; grid-template-columns: 70px minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); align-items: center; font-size: 24px; padding: 7px 14px; border-bottom: 1px solid var(--line); direction: rtl; }
+.im-th { font-size: 20px; color: var(--muted); font-weight: 600; }
+.im-tr b { font-weight: 700; }
+.im-today { background: var(--now-tint); border-radius: 12px; border: 2px solid var(--gold); }
+.portrait .imsak-body { grid-template-columns: minmax(0, 1fr); flex: none; }
+.portrait .im-tr { font-size: 32px; padding: 14px 10px; grid-template-columns: 60px minmax(0, 1.9fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); }
+.portrait .im-th { font-size: 26px; }
+.portrait .im-col + .im-col .im-th { display: none; }
+.cell.sel[class*="c-"] { background: var(--now-bg); border-color: var(--now-bg); }

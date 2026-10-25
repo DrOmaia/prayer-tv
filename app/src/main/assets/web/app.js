@@ -512,6 +512,7 @@
     // the seasons: Ramadan, the ten days of Dhul-Hijjah (and Arafah), the two Eids, Friday
     var h = {};
     fHMD.formatToParts(new Date(P.noonOf(r.y, r.m, r.d))).forEach(function (x) { h[x.type] = +x.value; });
+    $('moon').innerHTML = moonSvg(h.day);
     season = { ramadan: h.month === 9, hajj: h.month === 12 && h.day <= 9, arafah: h.month === 12 && (h.day === 8 || h.day === 9),
       eid: (h.month === 10 && h.day <= 3) || (h.month === 12 && h.day >= 10 && h.day <= 13), friday: today.friday };
     ['ramadan', 'hajj', 'eid', 'friday'].forEach(function (k) { stage.classList.toggle('s-' + k, !!season[k]); });
@@ -519,6 +520,42 @@
     $('season-badge').textContent = badge;
     $('season-badge').classList.toggle('hidden', !badge);
     lastFact = '';
+  }
+
+  // the moon on this Hijri day (lit on the right while waxing, on the left while waning)
+  function moonSvg(day) {
+    var p = Math.min(.999, day / 29.53), rx = Math.abs(Math.cos(2 * Math.PI * p)) * 9, wax = p < .5;
+    var outer = wax ? 1 : 0, inner = wax ? (p < .25 ? 0 : 1) : (p > .75 ? 1 : 0);
+    return '<svg viewBox="0 0 24 24" class="moon-ic"><circle cx="12" cy="12" r="9" class="moon-dark"/>' +
+      '<path class="moon-lit" d="M12 3A9 9 0 0 ' + outer + ' 12 21A' + rx.toFixed(2) + ' 9 0 0 ' + inner + ' 12 3Z"/></svg>';
+  }
+
+  // ---------- Ramadan imsakiya: every day of the (current or coming) Ramadan ----------
+  function imsakRender() {
+    var r = P.ymd(Date.now()), start = null, days = [];
+    // the first Ramadan that has not ended yet (this year's while it lasts, then the next one)
+    for (var i = -30; i < 400 && !start; i++) {
+      var d = P.addDays(r.y, r.m, r.d, i), e = P.addDays(d.y, d.m, d.d, 29);
+      if (P.isRamadan(d.y, d.m, d.d) && (i >= 0 || P.isRamadan(e.y, e.m, e.d) || Date.UTC(e.y, e.m - 1, e.d) >= Date.UTC(r.y, r.m - 1, r.d))) start = d;
+      if (start && i < 0) { var e2 = P.addDays(start.y, start.m, start.d, 30); if (Date.UTC(e2.y, e2.m - 1, e2.d) <= Date.UTC(r.y, r.m - 1, r.d)) start = null; }
+    }
+    for (var j = 0; start && j < 31; j++) {
+      var dd = P.addDays(start.y, start.m, start.d, j);
+      if (!P.isRamadan(dd.y, dd.m, dd.d)) break;
+      days.push(dd);
+    }
+    if (!days.length) { $('imsak-body').innerHTML = ''; return; }
+    $('imsak-title').textContent = 'إمساكية ' + fHMY.format(new Date(P.noonOf(days[0].y, days[0].m, days[0].d)));
+    $('imsak-sub').textContent = S.loc.name + ' · ' + P.method().name;
+    var head = '<div class="im-tr im-th"><span>رمضان</span><span>اليوم</span><span>الإمساك</span><span>الفجر</span><span>المغرب</span><span>مدة الصيام</span></div>';
+    var rows = days.map(function (dd, k) {
+      var T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), wd = DAY_NAMES[new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay()];
+      var today = dd.y === r.y && dd.m === r.m && dd.d === r.d;
+      return '<div class="im-tr' + (today ? ' im-today' : '') + '"><span class="gold">' + (k + 1) + '</span><span>' + wd + ' ' + dd.d + '/' + dd.m + '</span><span>' +
+        P.full(T.imsak) + '</span><span>' + P.full(T.at.fajr) + '</span><span><b>' + P.full(T.at.maghrib) + '</b></span><span>' + P.leftHM(T.at.maghrib - T.at.fajr) + '</span></div>';
+    });
+    var half = Math.ceil(rows.length / 2);
+    $('imsak-body').innerHTML = '<div class="im-col">' + head + rows.slice(0, half).join('') + '</div><div class="im-col">' + head + rows.slice(half).join('') + '</div>';
   }
 
   // ---------- night care: the screen dims from two hours after Isha until Fajr, and the page moves a few pixels
@@ -537,7 +574,7 @@
   }
 
   // ---------- every 3 minutes: a reminder (verse, hadith, wisdom, note) then a family message, in turn ----------
-  var CYCLE = ['aya', 'hadith', 'asma', 'aya', 'hikma', 'hadith', 'faida'], lastQ = '';
+  var CYCLE = ['aya', 'hadith', 'asma', 'aya', 'dua', 'hikma', 'hadith', 'faida'], lastQ = '';
   // the family set in the settings (the default family until changed)
   function fam() { return S.family || FAMILY.DEFAULT; }
   function famOrder() {
@@ -582,6 +619,11 @@
     if (kind === 'asma') {
       var day = Math.floor((n * 3 * MIN) / 86400000), nm = ASMA[day % ASMA.length];
       return { type: 'من أسماء الله الحسنى', text: nm[0] + ': ' + nm[1], src: '﴿وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَا﴾ الأعراف 180' };
+    }
+    // a supplication: one each day
+    if (kind === 'dua') {
+      var dd = ADHKAR.dua[Math.floor((n * 3 * MIN) / 86400000) % ADHKAR.dua.length];
+      return { type: 'دعاء اليوم', text: dd.q ? quranText(dd.q) : '«' + dd.x + '»', src: dd.s, quran: !!dd.q };
     }
     var list = REMINDERS[kind];
     return list[(round * per + before) % list.length];
@@ -643,7 +685,7 @@
       $('quote-type').textContent = q.type;
       $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
       $('quote').className = 'q-text' + (q.quran ? ' quran' : '') + (q.fam ? ' fam' : '');
-      $('quote').style.fontSize = q.text.length > 80 ? (q.quran ? '32px' : '26px') : q.text.length > 50 ? (q.quran ? '36px' : '30px') : '';
+      $('quote').style.fontSize = q.text.length > 150 ? (q.quran ? '27px' : '24px') : q.text.length > 80 ? (q.quran ? '32px' : '26px') : q.text.length > 50 ? (q.quran ? '36px' : '30px') : '';
       $('quote-src').textContent = q.src;
       box.classList.toggle('special', !!sp);
       box.classList.remove('fade');
@@ -806,6 +848,18 @@
     var c = document.querySelector('#cal-grid .cell.sel');
     if (c) c.focus();
   }
+  // the season of a day in the calendar: [class, name]
+  function seasonOfDay(ts) {
+    var h = {};
+    fHMD.formatToParts(new Date(ts)).forEach(function (x) { h[x.type] = +x.value; });
+    if (h.month === 9) return ['ram', 'رمضان'];
+    if (h.month === 10 && h.day <= 3) return ['eid', 'عيد الفطر'];
+    if (h.month === 12 && h.day === 9) return ['arafah', 'يوم عرفة'];
+    if (h.month === 12 && h.day <= 8) return ['hajj', 'عشر ذي الحجة'];
+    if (h.month === 12 && h.day <= 13) return ['eid', h.day === 10 ? 'عيد الأضحى' : 'أيام التشريق'];
+    if (h.month === 1 && h.day === 10) return ['ashura', 'عاشوراء'];
+    return null;
+  }
   function calRender() {
     var first = new Date(Date.UTC(cal.vy, cal.vm - 1, 1)).getUTCDay();
     var days = new Date(Date.UTC(cal.vy, cal.vm, 0)).getUTCDate();
@@ -815,7 +869,8 @@
       var ts = P.noonOf(cal.vy, cal.vm, d);
       var cls = 'cell f' + (new Date(Date.UTC(cal.vy, cal.vm - 1, d)).getUTCDay() === 5 ? ' fri' : '') +
         (cal.vy === cal.ty && cal.vm === cal.tm && d === cal.td ? ' today' : '');
-      var hd = fHDay.format(new Date(ts));
+      var hd = fHDay.format(new Date(ts)), sn = seasonOfDay(ts);
+      if (sn) cls += ' c-' + sn[0];
       html += '<button class="' + cls + '" data-d="' + d + '"><span class="cg">' + d + '</span><span class="ch">' + hd + '</span><span class="chd">' + hd.split(' ')[0] + '</span></button>';
     }
     $('cal-grid').innerHTML = html;
@@ -835,7 +890,8 @@
   function calPanel() {
     var T = P.dayTimes(cal.sy, cal.sm, cal.sd, S.offsets), ts = P.noonOf(cal.sy, cal.sm, cal.sd);
     $('cal-greg').textContent = fGFull.format(new Date(ts));
-    $('cal-hdate').textContent = fHFull.format(new Date(ts));
+    var sn = seasonOfDay(ts);
+    $('cal-hdate').textContent = fHFull.format(new Date(ts)) + (sn ? ' · ' + sn[1] : '');
     $('cal-is-today').classList.toggle('hidden', !(cal.sy === cal.ty && cal.sm === cal.tm && cal.sd === cal.td));
     $('cal-rows').innerHTML = ['imsak'].concat(ORDER).map(function (k) {
       var at = k === 'imsak' ? T.imsak : T.at[k], iq = k === 'imsak' ? null : T.iqamah[k];
@@ -1248,6 +1304,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
+    if (name === 'imsak') { imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
     if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
