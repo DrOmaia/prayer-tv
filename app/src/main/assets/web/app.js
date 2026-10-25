@@ -472,10 +472,10 @@
         var m0 = t < today.at.fajr ? yest.at.maghrib : today.at.maghrib, f0 = t < today.at.fajr ? today.at.fajr : tom.at.fajr;
         setAll(c, '.pc-iq', 'ثلث الليل ' + P.full(m0 + (f0 - m0) * 2 / 3)); return;
       }
-      // Imsak: in turn every 5 seconds, the length of the fast (Fajr → Maghrib) and the time left to Maghrib
+      // Imsak: in turn every 5 seconds, the length of the fast (Fajr → Maghrib) and the time left to the next Maghrib
       var alt = Math.floor(t / 5000) % 2, fd = t < today.at.maghrib ? today : tom;
       var fastLen = 'مدة الصيام ' + P.leftHM(fd.at.maghrib - fd.at.fajr);
-      setAll(c, '.pc-iq', k === 'imsak' ? (alt ? fastLen : t < today.at.maghrib ? (today.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(today.at.maghrib - t) : 'قبل الفجر بـ 10 دقائق') :
+      setAll(c, '.pc-iq', k === 'imsak' ? (alt ? fastLen : (fd.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(fd.at.maghrib - t)) :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
     });
 
