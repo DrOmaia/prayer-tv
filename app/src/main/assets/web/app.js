@@ -295,13 +295,21 @@
   // home-screen widgets (phone): times of the coming days and the nearest occasions
   function sendWidget() {
     if (!A || !A.widgetData) return;
+    // from yesterday (the time passed since its Isha); each day with its dates, moon and a short supplication
     var r = P.ymd(Date.now()), days = [];
-    for (var i = 0; i < 10; i++) {
-      var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
-      days.push({ names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }) });
+    var short = ADHKAR.dua.filter(function (x) { return (x.q ? quranText(x.q) : x.x).length <= 80; });
+    for (var i = -1; i < 10; i++) {
+      var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), noon = new Date(P.noonOf(dd.y, dd.m, dd.d)), h = {};
+      fHMD.formatToParts(noon).forEach(function (x) { h[x.type] = +x.value; });
+      var du = short[Math.floor(+noon / 86400000) % short.length];
+      days.push({
+        names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }),
+        ram: !!T.ramadan, hijri: fHFull.format(noon), hday: h.day, greg: fGFull.format(noon).replace('،', ''),
+        dua: (du.q ? quranText(du.q) : '«' + du.x + '»') + ' · ' + du.s
+      });
     }
     var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone() })); } catch (e) {}
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name })); } catch (e) {}
   }
 
   // banner inside the app (the Android side plays the chime)

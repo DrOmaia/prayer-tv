@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- progress from the last prayer to the next one (fills from the right) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="2dp" />
+            <solid android:color="#40FFFFFF" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip android:clipOrientation="horizontal" android:gravity="right">
+            <shape android:shape="rectangle">
+                <corners android:radius="2dp" />
+                <solid android:color="#F2CF8A" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

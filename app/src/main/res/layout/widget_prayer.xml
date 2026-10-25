@@ -1,36 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Today's prayer times: transparent over the wallpaper, white text with a soft shadow -->
+<!-- Today's prayer times on a card whose colour follows the time of day (dawn, day, Asr, sunset, night) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_night"
     android:layoutDirection="rtl"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="10dp">
+    android:orientation="vertical">
 
+    <!-- next prayer and the time left -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:gravity="center_vertical"
         android:layoutDirection="rtl"
         android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/next_name"
-            style="@style/WidgetText"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/next_time"
-            style="@style/WidgetText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="22sp" />
+            <TextView
+                android:id="@+id/city"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.8"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:baselineAligned="true"
+                android:layoutDirection="rtl"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/next_name"
+                    style="@style/WidgetText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/next_time"
+                    style="@style/WidgetText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="17sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- spacer (a widget may only use the allowed view types) -->
         <TextView
@@ -38,55 +63,199 @@
             android:layout_height="wrap_content"
             android:layout_weight="1" />
 
-        <TextView
-            android:id="@+id/left_label"
-            style="@style/WidgetText"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
-            android:text="متبقٍ"
-            android:textSize="14sp" />
+            android:gravity="end"
+            android:orientation="vertical">
 
-        <Chronometer
-            android:id="@+id/countdown"
-            style="@style/WidgetText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#F2CF8A"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            <TextView
+                android:id="@+id/left_label"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.8"
+                android:text="متبقٍّ"
+                android:textSize="12sp" />
+
+            <Chronometer
+                android:id="@+id/countdown"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#F2CF8A"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- progress from the last time to the next, and the time passed since the last one -->
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:indeterminate="false"
+        android:max="1000"
+        android:progressDrawable="@drawable/widget_bar" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:layoutDirection="rtl"
         android:orientation="horizontal">
 
-        <LinearLayout style="@style/WidgetCol">
+        <TextView
+            android:id="@+id/cur_name"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.8"
+            android:textSize="12sp" />
+
+        <Chronometer
+            android:id="@+id/elapsed"
+            style="@style/WidgetText"
+            android:textDirection="ltr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:alpha="0.8"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- the six times; the next one on a light pill -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+        <LinearLayout android:id="@+id/col0" style="@style/WidgetCol">
             <TextView android:id="@+id/n0" style="@style/WidgetName" />
             <TextView android:id="@+id/t0" style="@style/WidgetTime" />
         </LinearLayout>
-        <LinearLayout style="@style/WidgetCol">
+        <LinearLayout android:id="@+id/col1" style="@style/WidgetCol">
             <TextView android:id="@+id/n1" style="@style/WidgetName" />
             <TextView android:id="@+id/t1" style="@style/WidgetTime" />
         </LinearLayout>
-        <LinearLayout style="@style/WidgetCol">
+        <LinearLayout android:id="@+id/col2" style="@style/WidgetCol">
             <TextView android:id="@+id/n2" style="@style/WidgetName" />
             <TextView android:id="@+id/t2" style="@style/WidgetTime" />
         </LinearLayout>
-        <LinearLayout style="@style/WidgetCol">
+        <LinearLayout android:id="@+id/col3" style="@style/WidgetCol">
             <TextView android:id="@+id/n3" style="@style/WidgetName" />
             <TextView android:id="@+id/t3" style="@style/WidgetTime" />
         </LinearLayout>
-        <LinearLayout style="@style/WidgetCol">
+        <LinearLayout android:id="@+id/col4" style="@style/WidgetCol">
             <TextView android:id="@+id/n4" style="@style/WidgetName" />
             <TextView android:id="@+id/t4" style="@style/WidgetTime" />
         </LinearLayout>
-        <LinearLayout style="@style/WidgetCol">
+        <LinearLayout android:id="@+id/col5" style="@style/WidgetCol">
             <TextView android:id="@+id/n5" style="@style/WidgetName" />
             <TextView android:id="@+id/t5" style="@style/WidgetTime" />
         </LinearLayout>
+    </LinearLayout>
+
+    <!-- a line that changes every 8 seconds: the supplication of the day, then the time's dhikr / iftar / an occasion -->
+    <ViewFlipper
+        android:id="@+id/flip"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:autoStart="true"
+        android:flipInterval="8000"
+        android:inAnimation="@android:anim/fade_in"
+        android:outAnimation="@android:anim/fade_out">
+
+        <TextView
+            android:id="@+id/dua"
+            style="@style/WidgetText"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/info_label"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:gravity="center"
+                android:textSize="13sp" />
+
+            <Chronometer
+                android:id="@+id/info_chrono"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:textColor="#F2CF8A"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ViewFlipper>
+
+    <!-- Hijri date with the moon, and the Gregorian date -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_foot"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="7dp">
+
+        <ImageView
+            android:id="@+id/moon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/hijri"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textSize="13sp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/greg"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>

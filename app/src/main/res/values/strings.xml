@@ -3,4 +3,6 @@
     <string name="app_name">مواقيت الصلاة</string>
     <string name="widget_prayer">مواقيت اليوم</string>
     <string name="widget_event">عدّاد المناسبة</string>
+    <string name="widget_ring">الصلاة القادمة (دائرة)</string>
+    <string name="widget_strip">شريط الصلاة القادمة</string>
 </resources>

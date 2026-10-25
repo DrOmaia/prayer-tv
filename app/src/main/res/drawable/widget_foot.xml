@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- date line at the bottom of the widget -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:bottomLeftRadius="24dp" android:bottomRightRadius="24dp" />
+    <solid android:color="#33000000" />
+</shape>
