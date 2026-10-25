@@ -422,3 +422,66 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .night .w-al { color: #F0A35E; }
 .fact.dhikr .fact-x { line-height: 1.6; font-weight: 500; }
 .fact.dhikr .fact-h { font-size: 26px; }
+
+/* ---------- phone (portrait): bigger text everywhere; the home screen in the order of use ---------- */
+.portrait #home > .hero { order: 1; }
+.portrait #home > .prayers { order: 2; }
+.portrait #home > .top { order: 3; }
+.portrait #home > .bottom { order: 4; }
+.portrait #theme-btn { position: absolute; top: 48px; left: 40px; z-index: 2; }
+.portrait .clock { font-size: 250px; }
+.portrait .g-date { font-size: 46px; }
+.portrait .h-date { font-size: 40px; }
+.portrait #season-badge { font-size: 30px; }
+.portrait .next { padding: 40px 36px; }
+.portrait .next-label { font-size: 40px; }
+.portrait .next-name { font-size: 90px; }
+.portrait .countdown { font-size: 140px; }
+.portrait .next-detail { font-size: 36px; }
+.portrait .fact-h { font-size: 34px; }
+.portrait .fact-t { font-size: 46px; }
+.portrait .fact-x { font-size: 40px; }
+.portrait .fact-s { font-size: 30px; }
+.portrait .rcard b { font-size: 40px; }
+.portrait .rcard > div { font-size: 34px; }
+.portrait .rnum { font-size: 72px; }
+.portrait .pc { min-height: 140px; }
+.portrait .pc-name { font-size: 56px; flex: 0 0 290px; }
+.portrait .pc-time { font-size: 70px; }
+.portrait .pc-iq { font-size: 34px; }
+.portrait .wx-stack { flex-direction: column; gap: 14px; }
+.portrait .weather { height: auto; min-height: 110px; padding: 16px 26px; gap: 18px; flex: none; }
+.portrait .w-icon .wi .ic { width: 60px; height: 60px; }
+.portrait .w-city { font-size: 44px; }
+.portrait .w-temp { font-size: 60px; }
+.portrait .w-hl { font-size: 34px; gap: 18px; flex-wrap: wrap; }
+.portrait .w-hl .ws .ic { width: 32px; height: 32px; }
+.portrait .events { height: auto; overflow: visible; gap: 14px; }
+.portrait .ev { height: auto; min-height: 130px; padding: 18px 26px; flex: 1 1 100%; }
+.portrait .ev-n { font-size: 66px; }
+.portrait .ev-t b { font-size: 40px; }
+.portrait .ev-t span { font-size: 32px; }
+.portrait .q-type { font-size: 34px; }
+.portrait .q-text { font-size: 46px; }
+.portrait .q-text.quran { font-size: 54px; }
+.portrait .src { font-size: 30px; }
+.portrait .fr-t { font-size: 42px; }
+/* weather screen */
+.portrait .wx-col { padding: 36px 32px; gap: 30px; }
+.portrait .wx-city { font-size: 50px; }
+.portrait .wx-temp { font-size: 140px; }
+.portrait .wx-desc { font-size: 36px; }
+.portrait .wx-stats { font-size: 36px; flex-wrap: wrap; gap: 30px; }
+.portrait .wx-stats .ws .ic { width: 40px; height: 40px; }
+.portrait .wx-hours { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 24px; }
+.portrait .wx-h { font-size: 32px; }
+.portrait .wx-h b { font-size: 40px; }
+.portrait .wx-h .wi .ic { width: 56px; height: 56px; }
+.portrait .wx-p { font-size: 30px; }
+.portrait .wx-d { grid-template-columns: 220px 70px 110px 110px 100px; font-size: 38px; padding: 10px 0; }
+.portrait .wx-d .wi .ic { width: 52px; height: 52px; }
+/* settings and calendar */
+.portrait .srow { font-size: 38px; }
+.portrait .set-note { font-size: 32px; }
+.portrait .cell .cg { font-size: 38px; }
+.portrait .cell .chd { font-size: 30px; }

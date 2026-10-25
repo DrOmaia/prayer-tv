@@ -38,6 +38,7 @@
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
       keepOn: !!s.keepOn,
+      fontSize: s.fontSize || 'normal', // phone text size
       reciter: s.reciter || 'alafasy',
       nightDim: s.nightDim !== false, // the TV dims at night
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
@@ -83,9 +84,11 @@
   if (DREAM) stage.classList.add('dream');
 
   // ---------- fit any screen: landscape is 1080 units high, portrait 1080 units wide ----------
+  var FONT_SCALE = { small: .9, normal: 1, large: 1.15, xlarge: 1.3 };
   function fit() {
     var w = innerWidth, h = innerHeight, portrait = h > w * 1.05, W, H, k;
-    if (portrait) { W = 1080; k = w / W; H = h / k; }
+    // phone: the font-size setting makes the page narrower in design units, so everything is bigger
+    if (portrait) { W = Math.round(1080 / (FONT_SCALE[S.fontSize] || 1)); k = w / W; H = h / k; }
     else {
       H = 1080; k = h / H; W = w / k;
       if (W < 1920) { W = 1920; k = w / W; H = Math.max(1080, h / k); } // squarer screens (4:3, 16:10): taller, same width
@@ -395,8 +398,9 @@
       // adhkar are read from afar: as big as the box allows
       var dh = head !== 'هل تعلم؟' && head !== 'تصحيح خطأ شائع' && head !== 'فضل هذه الأيام';
       $('fact').classList.toggle('dhikr', dh);
-      $('fact-x').style.fontSize = dh ? (x.length > 600 ? '24px' : x.length > 420 ? '27px' : x.length > 250 ? '31px' : x.length > 120 ? '36px' : '42px') :
-        (x.length > 450 ? '19px' : x.length > 250 ? '21px' : '');
+      var fs = dh ? (x.length > 600 ? 24 : x.length > 420 ? 27 : x.length > 250 ? 31 : x.length > 120 ? 36 : 42) : (x.length > 450 ? 19 : x.length > 250 ? 21 : 0);
+      // the phone shows the box full width: bigger text
+      $('fact-x').style.fontSize = fs ? Math.round(fs * (stage.classList.contains('portrait') ? 1.5 : 1)) + 'px' : '';
       $('fact-s').textContent = item.s;
       box.classList.remove('fade');
     }
@@ -988,7 +992,10 @@
         }
         return '<div class="srow"><span class="sname">' + P.name(k) + '</span>' + st('n') + st('r') + '</div>';
       }).join('');
-    $('set-show').innerHTML = '<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">' +
+    $('set-show').innerHTML = (stage.classList.contains('portrait') ? '<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">' +
+      [['small', 'صغير'], ['normal', 'عادي'], ['large', 'كبير'], ['xlarge', 'كبير جدًا']].map(function (o) {
+        return '<button class="sbtn f' + (S.fontSize === o[0] ? ' on' : '') + '" data-k="fsz-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</span></div>' : '') + '<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">' +
       [['auto', 'تلقائي (داكن ليلًا)'], ['light', 'فاتح'], ['dark', 'داكن']].map(function (o) {
         return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</span></div>' + '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
@@ -1099,6 +1106,7 @@
       else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
       setRender(); return;
     }
+    if (a === 'fsz') { S.fontSize = v; save(); fit(); setRender(); return; }
     if (a === 'ndim') { S.nightDim = !S.nightDim; save(); setRender(); return; }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
     if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
