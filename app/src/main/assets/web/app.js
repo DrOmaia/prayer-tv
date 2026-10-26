@@ -224,10 +224,12 @@
     var al = wAlert(i, w);
     if (i === 0) {
       $('wbig-icon').innerHTML = wIcon(w.code, w.day); $('wbig-temp').textContent = w.t + '°'; tempPaint();
-      $('wb-c0').innerHTML = '<b>' + esc(CITIES[0].name) + '</b>' + (w.hi != null ? ' <span class="muted" dir="ltr">' + w.hi + '° / ' + w.lo + '°</span>' : '') +
+      $('wb-c0').innerHTML = '<b>' + esc(CITIES[0].name) + '</b>' + (w.hi != null ? ' <span class="muted"><span class="ltr">' + w.hi + '° / ' + w.lo + '°</span></span>' : '') +
+        (w.hum != null ? '<span class="muted">· رطوبة <span class="ltr">' + w.hum + '%</span></span>' : '') +
         (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
       $('wbig').classList.toggle('w-alert', !!al);
-    } else $('wb-c1').innerHTML = wIcon(w.code, w.day) + '<b>' + CITIES[1].name + '</b> <span dir="ltr">' + w.t + '°</span>' + (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
+    } else $('wb-c1').innerHTML = wIcon(w.code, w.day) + '<b>' + CITIES[1].name + '</b> <span class="ltr">' + w.t + '°</span>' +
+      (w.hum != null ? '<span class="muted">· رطوبة <span class="ltr">' + w.hum + '%</span></span>' : '') + (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
     $('w' + i + '-btn').classList.toggle('w-alert', !!al);
     $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
       (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');

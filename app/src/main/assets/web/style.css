@@ -671,3 +671,4 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #stage:not(.portrait) .next-main { width: 390px; height: 390px; }
 #stage:not(.portrait) .next-detail { font-size: 22px; }
 .portrait .next-main { width: 580px !important; height: 580px !important; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
