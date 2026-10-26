@@ -531,3 +531,26 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .wx-big { display: none; }
 /* «أقصر صيام …» under the Imsak time: a little smaller so it fits the card */
 #stage:not(.portrait) .pc-iq.pc-iq-s { font-size: 17px; letter-spacing: -.2px; }
+
+/* settings shown only on the phone (widgets) */
+.tv .phone-only { display: none !important; }
+/* date converter */
+.cv-body { padding: 36px 44px; display: flex; flex-direction: column; gap: 34px; align-items: center; }
+.cv-tabs { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.pill.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
+.cv-fields { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; }
+.cv-f { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 22px; }
+.cv-in { width: 150px; height: 70px; text-align: center; font-size: 40px; font-weight: 700; border-radius: 16px; border: 1px solid var(--line); background: var(--card2); color: var(--ink); font-family: inherit; }
+.cv-note { min-height: 30px; font-size: 22px; font-weight: 600; }
+.cv-out { text-align: center; display: flex; flex-direction: column; gap: 8px; }
+.cv-day { font-size: 30px; }
+.cv-big { font-size: 64px; font-weight: 700; line-height: 1.2; }
+.cv-num { font-size: 30px; font-weight: 600; opacity: .8; }
+.cv-when { font-size: 26px; }
+.portrait .cv-body { padding: 36px 24px; }
+.portrait .cv-fields { gap: 26px; }
+.portrait .cv-in { width: 200px; height: 96px; font-size: 52px; }
+.portrait .cv-f, .portrait .cv-note { font-size: 30px; }
+.portrait .cv-big { font-size: 70px; }
+.portrait .cv-day, .portrait .cv-num { font-size: 40px; }
+.portrait .cv-when { font-size: 34px; }

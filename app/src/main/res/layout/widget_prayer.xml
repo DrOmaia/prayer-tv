@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Today's prayer times on a card whose colour follows the time of day (dawn, day, Asr, sunset, night) -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg_night"
+    android:layoutDirection="rtl">
+
+    <!-- background (colour of the time or dark), its transparency is chosen in the app's settings -->
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_night" />
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:layoutDirection="rtl"
     android:orientation="vertical">
 
@@ -103,6 +115,7 @@
         android:progressDrawable="@drawable/widget_bar" />
 
     <LinearLayout
+        android:id="@+id/prog_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
@@ -169,8 +182,9 @@
     <ViewFlipper
         android:id="@+id/flip"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:minHeight="34dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:autoStart="true"
@@ -182,7 +196,7 @@
             android:id="@+id/dua"
             style="@style/WidgetText"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="center"
             android:maxLines="2"
@@ -218,8 +232,15 @@
         </LinearLayout>
     </ViewFlipper>
 
+    <!-- spacer: free height goes here -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
     <!-- Hijri date with the moon, and the Gregorian date -->
     <LinearLayout
+        android:id="@+id/foot"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/widget_foot"
@@ -259,3 +280,4 @@
             android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>
+</FrameLayout>

@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -15,6 +16,11 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.os.Build
 import android.os.SystemClock
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import android.text.style.UnderlineSpan
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -45,7 +51,41 @@ object Widgets {
     private fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(ctx, 3,
         Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
 
-    private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java, EventWidget::class.java)
+    // opens the app on one of its screens (e.g. the date converter)
+    fun openScreen(ctx: Context, screen: String, code: Int): PendingIntent = PendingIntent.getActivity(ctx, code,
+        Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_SCREEN, screen)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+
+    private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java)
+
+    // the look chosen in the app's settings (the same for all widgets): background, transparency, text size,
+    // accent colour and the parts shown on «مواقيت اليوم»
+    private class Style(o: JSONObject?) {
+        val dark = o?.optString("bg") == "dark"
+        val alpha = 255 - 255 * (o?.optInt("clear", 0) ?: 0).coerceIn(0, 100) / 100
+        val scale = when (o?.optString("font")) { "s" -> 0.88f; "l" -> 1.15f; else -> 1f }
+        val accent: Int = Color.parseColor(when (o?.optString("accent")) {
+            "white" -> "#FFFFFF"; "green" -> "#8FE3A8"; "sky" -> "#8FD3FF"; else -> GOLD })
+        val city = o?.optBoolean("city", true) ?: true
+        val prog = o?.optBoolean("prog", true) ?: true
+        val line = o?.optBoolean("line", true) ?: true
+        val date = o?.optBoolean("date", true) ?: true
+    }
+
+    private fun putBg(rv: RemoteViews, sty: Style, res: Int) {
+        rv.setImageViewResource(R.id.bg, res)
+        rv.setInt(R.id.bg, "setImageAlpha", sty.alpha)
+    }
+
+    private fun sizes(rv: RemoteViews, sty: Style, list: List<Pair<Int, Float>>) {
+        if (sty.scale != 1f) list.forEach { (id, sp) -> rv.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * sty.scale) }
+    }
+
+    private fun tint(rv: RemoteViews, id: Int, color: Int) {
+        if (Build.VERSION.SDK_INT >= 31) rv.setColorStateList(id, "setProgressTintList", ColorStateList.valueOf(color))
+    }
 
     fun updateAll(ctx: Context) {
         val am = AppWidgetManager.getInstance(ctx)
@@ -53,18 +93,25 @@ object Widgets {
         val d = data(ctx)
         d?.optString("tz")?.takeIf { it.isNotEmpty() }?.let { TZ = TimeZone.getTimeZone(it) }
         val st = state(d, now)
+        val sty = Style(d?.optJSONObject("style"))
         // refresh at the next prayer time and at midnight; every 10 minutes for the progress bar and ring
         var nextChange = minOf(st?.nextAt ?: Long.MAX_VALUE, nextMidnight(now), now + 30 * 60_000L)
         am.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, prayerViews(ctx, d, st, now))
+            am.updateAppWidget(id, prayerViews(ctx, d, sty, st, now))
             nextChange = minOf(nextChange, now + 10 * 60_000L)
         }
         am.getAppWidgetIds(ComponentName(ctx, RingWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, ringViews(ctx, st, now))
+            am.updateAppWidget(id, ringViews(ctx, sty, st, now))
             nextChange = minOf(nextChange, now + 10 * 60_000L)
         }
         am.getAppWidgetIds(ComponentName(ctx, StripWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, stripViews(ctx, st, now))
+            am.updateAppWidget(id, stripViews(ctx, sty, st, now))
+        }
+        am.getAppWidgetIds(ComponentName(ctx, MonthWidget::class.java)).forEach { id ->
+            am.updateAppWidget(id, monthViews(ctx, d, sty, st, now))
+        }
+        am.getAppWidgetIds(ComponentName(ctx, ConvertWidget::class.java)).forEach { id ->
+            am.updateAppWidget(id, convertViews(ctx, d, sty, st))
         }
         am.getAppWidgetIds(ComponentName(ctx, EventWidget::class.java)).forEach { id ->
             am.updateAppWidget(id, eventViews(ctx, d, now))
@@ -105,6 +152,7 @@ object Widgets {
         R.drawable.widget_bg_sunset, R.drawable.widget_bg_night)
     private val DISC = intArrayOf(R.drawable.widget_disc_fajr, R.drawable.widget_disc_day, R.drawable.widget_disc_asr,
         R.drawable.widget_disc_sunset, R.drawable.widget_disc_night)
+    private fun bgOf(sty: Style, st: State?): Int = if (sty.dark) R.drawable.widget_bg_dark else BG[period(st)]
     private fun period(st: State?): Int = when (st?.next) { 1 -> 0; 2, 3 -> 1; 4 -> 2; 5 -> 3; else -> 4 }
 
     private val NAME_IDS = intArrayOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5)
@@ -112,7 +160,8 @@ object Widgets {
     private val COL_IDS = intArrayOf(R.id.col0, R.id.col1, R.id.col2, R.id.col3, R.id.col4, R.id.col5)
 
     // next prayer, its time and the countdown (the same ids in the three prayer widgets)
-    private fun putNext(rv: RemoteViews, st: State, now: Long) {
+    private fun putNext(rv: RemoteViews, sty: Style, st: State, now: Long) {
+        rv.setTextColor(R.id.countdown, sty.accent)
         rv.setTextViewText(R.id.next_name, st.names.getString(st.next))
         rv.setTextViewText(R.id.next_time, hm(st.nextAt))
         rv.setChronometer(R.id.countdown, SystemClock.elapsedRealtime() + (st.nextAt - now), null, true)
@@ -128,20 +177,33 @@ object Widgets {
         if (day > 0) rv.setImageViewBitmap(R.id.moon, moon(day, (18 * ctx.resources.displayMetrics.density).toInt()))
     }
 
-    private fun prayerViews(ctx: Context, d: JSONObject?, st: State?, now: Long): RemoteViews {
+    private fun prayerViews(ctx: Context, d: JSONObject?, sty: Style, st: State?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_prayer)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
-        rv.setInt(R.id.root, "setBackgroundResource", BG[period(st)])
+        putBg(rv, sty, bgOf(sty, st))
+        sizes(rv, sty, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.left_label to 12f,
+            R.id.countdown to 24f, R.id.cur_name to 12f, R.id.elapsed to 12f, R.id.dua to 13f, R.id.info_label to 13f,
+            R.id.info_chrono to 14f, R.id.hijri to 13f, R.id.greg to 13f) + NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
+        rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
+        rv.setViewVisibility(R.id.progress, if (sty.prog) View.VISIBLE else View.GONE)
+        rv.setViewVisibility(R.id.prog_row, if (sty.prog) View.VISIBLE else View.GONE)
+        rv.setViewVisibility(R.id.flip, if (sty.line) View.VISIBLE else View.GONE)
+        rv.setViewVisibility(R.id.foot, if (sty.date) View.VISIBLE else View.GONE)
+        // the date line's own shade fades with the background
+        rv.setInt(R.id.foot, "setBackgroundResource", if (sty.alpha < 128) 0 else R.drawable.widget_foot)
+        tint(rv, R.id.progress, sty.accent)
+        rv.setTextColor(R.id.info_chrono, sty.accent)
         if (st == null) {
             rv.setTextViewText(R.id.next_name, "افتح التطبيق مرة")
             rv.setTextViewText(R.id.next_time, "")
             return rv
         }
         rv.setTextViewText(R.id.city, d?.optString("city") ?: "")
-        putNext(rv, st, now)
+        putNext(rv, sty, st, now)
         for (k in 0 until 6) {
             rv.setTextViewText(NAME_IDS[k], st.names.getString(k))
             rv.setTextViewText(TIME_IDS[k], hm(st.at.getLong(k)))
+            rv.setTextColor(TIME_IDS[k], if (k == st.next) sty.accent else Color.WHITE)
             rv.setInt(COL_IDS[k], "setBackgroundResource", if (k == st.next) R.drawable.widget_hl else 0)
         }
         // the time passed since the last prayer, like «العشاء +3:04:23»
@@ -198,29 +260,123 @@ object Widgets {
         return null
     }
 
-    private fun ringViews(ctx: Context, st: State?, now: Long): RemoteViews {
+    private fun ringViews(ctx: Context, sty: Style, st: State?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_ring)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
-        rv.setInt(R.id.disc, "setBackgroundResource", DISC[period(st)])
+        putBg(rv, sty, if (sty.dark) R.drawable.widget_disc_dark else DISC[period(st)])
+        sizes(rv, sty, listOf(R.id.next_name to 17f, R.id.countdown to 19f, R.id.next_time to 13f))
+        tint(rv, R.id.progress, sty.accent)
         if (st == null) {
             rv.setTextViewText(R.id.next_name, "افتح التطبيق")
             return rv
         }
-        putNext(rv, st, now)
+        putNext(rv, sty, st, now)
         rv.setProgressBar(R.id.progress, 1000, progress(st, now), false)
         return rv
     }
 
-    private fun stripViews(ctx: Context, st: State?, now: Long): RemoteViews {
+    private fun stripViews(ctx: Context, sty: Style, st: State?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_strip)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
-        rv.setInt(R.id.root, "setBackgroundResource", BG[period(st)])
+        putBg(rv, sty, bgOf(sty, st))
+        sizes(rv, sty, listOf(R.id.hijri to 14f, R.id.next_name to 17f, R.id.next_time to 14f, R.id.countdown to 18f))
         if (st == null) {
             rv.setTextViewText(R.id.hijri, "افتح التطبيق مرة")
             return rv
         }
-        putNext(rv, st, now)
+        putNext(rv, sty, st, now)
         putDate(ctx, rv, st)
+        return rv
+    }
+
+    // ---- the Hijri month (4x4): the page sends the current Hijri month and the next ones, each day with its
+    // Gregorian date, season (ram / eid / arafah / hajj / ashura, or the white days), Monday / Thursday and occasion
+    private val CELL_BG = mapOf("ram" to R.drawable.wm_ram, "eid" to R.drawable.wm_eid, "arafah" to R.drawable.wm_arafah,
+        "hajj" to R.drawable.wm_hajj, "ashura" to R.drawable.wm_ashura, "white" to R.drawable.wm_white)
+    private val CELL_COLOR = mapOf("ram" to "#A88BE8", "eid" to "#4FD1C1", "arafah" to "#F5A066", "hajj" to "#F5C98E",
+        "ashura" to "#7FB0EE", "white" to "#E8E8E8")
+
+    private fun monthViews(ctx: Context, d: JSONObject?, sty: Style, st: State?, now: Long): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_month)
+        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "calendar", 5))
+        putBg(rv, sty, bgOf(sty, st))
+        val months = d?.optJSONArray("months")
+        if (months == null || months.length() == 0) {
+            rv.setTextViewText(R.id.m_title, "افتح التطبيق مرة")
+            return rv
+        }
+        val today = dayNumber(now)
+        var m = months.getJSONObject(months.length() - 1)
+        for (i in 0 until months.length()) {
+            val o = months.optJSONObject(i) ?: continue
+            val c = o.optJSONArray("cells") ?: continue
+            if (c.length() == 0) continue
+            if (today <= dayNumber(c.getJSONObject(c.length() - 1).getLong("ts"))) { m = o; break }
+        }
+        val cells = m.getJSONArray("cells")
+        val first = m.optInt("first")
+        rv.setTextViewText(R.id.m_title, m.optString("title"))
+        rv.setTextViewText(R.id.m_sub, m.optString("sub"))
+        val res = ctx.resources
+        val pkg = ctx.packageName
+        fun id(n: String) = res.getIdentifier(n, "id", pkg)
+        val sizeList = mutableListOf(R.id.m_title to 17f, R.id.m_sub to 12f, R.id.m_legend to 10f)
+        for (i in 0 until 7) sizeList.add(id("wd$i") to 10f)
+        var todayDay = 0
+        for (i in 0 until 42) {
+            val ci = id("c$i"); val hi = id("h$i"); val gi = id("g$i"); val ki = id("k$i")
+            sizeList.add(hi to 15f); sizeList.add(gi to 9f); sizeList.add(ki to 8f)
+            val n = i - first
+            if (n < 0 || n >= cells.length()) { rv.setViewVisibility(ci, View.INVISIBLE); continue }
+            rv.setViewVisibility(ci, View.VISIBLE)
+            val c = cells.getJSONObject(n)
+            val isToday = dayNumber(c.getLong("ts")) == today
+            if (isToday) todayDay = c.optInt("h")
+            val k = c.optString("k")
+            rv.setInt(ci, "setBackgroundResource", CELL_BG[k] ?: if (isToday) R.drawable.wm_today else 0)
+            val h = SpannableString(c.optInt("h").toString())
+            if (isToday) h.setSpan(UnderlineSpan(), 0, h.length, 0)
+            rv.setTextViewText(hi, h)
+            rv.setTextColor(hi, if (isToday) sty.accent else Color.WHITE)
+            rv.setTextViewText(gi, c.optInt("g").toString())
+            // a star on an occasion (accent colour), a dot under Mondays and Thursdays
+            val ev = c.optString("ev").isNotEmpty()
+            rv.setTextViewText(ki, if (ev) "★" else if (c.optBoolean("mt")) "•" else " ")
+            rv.setTextColor(ki, if (ev) sty.accent else Color.WHITE)
+        }
+        for (r in 0 until 6) rv.setViewVisibility(id("r$r"), if (r * 7 < first + cells.length()) View.VISIBLE else View.GONE)
+        sizes(rv, sty, sizeList)
+        // legend: the colours of this month's seasons, then the white days, the dot and the star
+        val lg = SpannableStringBuilder()
+        fun add(mark: String, color: Int, text: String) {
+            if (lg.isNotEmpty()) lg.append("   ")
+            val s0 = lg.length
+            lg.append(mark)
+            lg.setSpan(ForegroundColorSpan(color), s0, lg.length, 0)
+            lg.append(" ").append(text)
+        }
+        m.optJSONArray("seasons")?.let { a ->
+            for (i in 0 until a.length()) {
+                val x = a.optJSONArray(i) ?: continue
+                add("■", Color.parseColor(CELL_COLOR[x.optString(0)] ?: "#FFFFFF"), x.optString(1))
+            }
+        }
+        if (m.optBoolean("white")) add("■", Color.parseColor("#E8E8E8"), "الأيام البيض")
+        add("•", Color.WHITE, "الاثنين والخميس")
+        if (m.optBoolean("events")) add("★", sty.accent, "مناسبة")
+        rv.setTextViewText(R.id.m_legend, lg)
+        if (todayDay > 0) rv.setImageViewBitmap(R.id.moon, moon(todayDay, (18 * ctx.resources.displayMetrics.density).toInt()))
+        return rv
+    }
+
+    // ---- the date converter icon (1x1): today's Hijri day on a small calendar; opens the converter
+    private fun convertViews(ctx: Context, d: JSONObject?, sty: Style, st: State?): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_convert)
+        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "convert", 6))
+        putBg(rv, sty, if (sty.dark) R.drawable.widget_disc_dark else DISC[period(st)])
+        val t = st?.today
+        rv.setTextViewText(R.id.cv_day, t?.optInt("hday", 0)?.takeIf { it > 0 }?.toString() ?: "هـ")
+        rv.setTextColor(R.id.cv_day, sty.accent)
         return rv
     }
 
@@ -310,6 +466,14 @@ class RingWidget : AppWidgetProvider() {
 }
 
 class StripWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+}
+
+class MonthWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+}
+
+class ConvertWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
 }
 

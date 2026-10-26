@@ -39,6 +39,8 @@ class MainActivity : Activity() {
 
     companion object {
         @Volatile var visible = false
+        // a widget can open the app on one of its screens (e.g. the date converter)
+        const val EXTRA_SCREEN = "screen"
     }
 
     private var web: WebView? = null
@@ -108,9 +110,17 @@ class MainActivity : Activity() {
         }
         w.addJavascriptInterface(Bridge(), "Android")
         setContentView(w)
-        w.loadUrl("https://appassets.androidplatform.net/assets/web/index.html")
+        val sc = intent?.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        w.loadUrl("https://appassets.androidplatform.net/assets/web/index.html" + if (sc.isNullOrEmpty()) "" else "#$sc")
         w.requestFocus()
         web = w
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val sc = intent.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        if (!sc.isNullOrEmpty()) web?.evaluateJavascript("window.App && App.open('$sc')", null)
     }
 
     override fun onResume() {

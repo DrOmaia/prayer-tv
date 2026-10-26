@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Hijri month (4x4): Gregorian day under each Hijri day; seasons and the white days coloured,
+     a dot under Mondays and Thursdays, a star on occasions, today outlined -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_night" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layoutDirection="rtl"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/moon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/m_title"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/m_sub"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.8"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <TextView android:id="@+id/wd0" style="@style/MonthWd" android:text="أحد" />
+            <TextView android:id="@+id/wd1" style="@style/MonthWd" android:text="اثنين" />
+            <TextView android:id="@+id/wd2" style="@style/MonthWd" android:text="ثلاثاء" />
+            <TextView android:id="@+id/wd3" style="@style/MonthWd" android:text="أربعاء" />
+            <TextView android:id="@+id/wd4" style="@style/MonthWd" android:text="خميس" />
+            <TextView android:id="@+id/wd5" style="@style/MonthWd" android:text="جمعة" />
+            <TextView android:id="@+id/wd6" style="@style/MonthWd" android:text="سبت" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/r0"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c0" style="@style/MonthCell">
+                <TextView android:id="@+id/h0" style="@style/MonthH" />
+                <TextView android:id="@+id/g0" style="@style/MonthG" />
+                <TextView android:id="@+id/k0" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c1" style="@style/MonthCell">
+                <TextView android:id="@+id/h1" style="@style/MonthH" />
+                <TextView android:id="@+id/g1" style="@style/MonthG" />
+                <TextView android:id="@+id/k1" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c2" style="@style/MonthCell">
+                <TextView android:id="@+id/h2" style="@style/MonthH" />
+                <TextView android:id="@+id/g2" style="@style/MonthG" />
+                <TextView android:id="@+id/k2" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c3" style="@style/MonthCell">
+                <TextView android:id="@+id/h3" style="@style/MonthH" />
+                <TextView android:id="@+id/g3" style="@style/MonthG" />
+                <TextView android:id="@+id/k3" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c4" style="@style/MonthCell">
+                <TextView android:id="@+id/h4" style="@style/MonthH" />
+                <TextView android:id="@+id/g4" style="@style/MonthG" />
+                <TextView android:id="@+id/k4" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c5" style="@style/MonthCell">
+                <TextView android:id="@+id/h5" style="@style/MonthH" />
+                <TextView android:id="@+id/g5" style="@style/MonthG" />
+                <TextView android:id="@+id/k5" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c6" style="@style/MonthCell">
+                <TextView android:id="@+id/h6" style="@style/MonthH" />
+                <TextView android:id="@+id/g6" style="@style/MonthG" />
+                <TextView android:id="@+id/k6" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r1"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c7" style="@style/MonthCell">
+                <TextView android:id="@+id/h7" style="@style/MonthH" />
+                <TextView android:id="@+id/g7" style="@style/MonthG" />
+                <TextView android:id="@+id/k7" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c8" style="@style/MonthCell">
+                <TextView android:id="@+id/h8" style="@style/MonthH" />
+                <TextView android:id="@+id/g8" style="@style/MonthG" />
+                <TextView android:id="@+id/k8" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c9" style="@style/MonthCell">
+                <TextView android:id="@+id/h9" style="@style/MonthH" />
+                <TextView android:id="@+id/g9" style="@style/MonthG" />
+                <TextView android:id="@+id/k9" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c10" style="@style/MonthCell">
+                <TextView android:id="@+id/h10" style="@style/MonthH" />
+                <TextView android:id="@+id/g10" style="@style/MonthG" />
+                <TextView android:id="@+id/k10" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c11" style="@style/MonthCell">
+                <TextView android:id="@+id/h11" style="@style/MonthH" />
+                <TextView android:id="@+id/g11" style="@style/MonthG" />
+                <TextView android:id="@+id/k11" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c12" style="@style/MonthCell">
+                <TextView android:id="@+id/h12" style="@style/MonthH" />
+                <TextView android:id="@+id/g12" style="@style/MonthG" />
+                <TextView android:id="@+id/k12" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c13" style="@style/MonthCell">
+                <TextView android:id="@+id/h13" style="@style/MonthH" />
+                <TextView android:id="@+id/g13" style="@style/MonthG" />
+                <TextView android:id="@+id/k13" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r2"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c14" style="@style/MonthCell">
+                <TextView android:id="@+id/h14" style="@style/MonthH" />
+                <TextView android:id="@+id/g14" style="@style/MonthG" />
+                <TextView android:id="@+id/k14" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c15" style="@style/MonthCell">
+                <TextView android:id="@+id/h15" style="@style/MonthH" />
+                <TextView android:id="@+id/g15" style="@style/MonthG" />
+                <TextView android:id="@+id/k15" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c16" style="@style/MonthCell">
+                <TextView android:id="@+id/h16" style="@style/MonthH" />
+                <TextView android:id="@+id/g16" style="@style/MonthG" />
+                <TextView android:id="@+id/k16" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c17" style="@style/MonthCell">
+                <TextView android:id="@+id/h17" style="@style/MonthH" />
+                <TextView android:id="@+id/g17" style="@style/MonthG" />
+                <TextView android:id="@+id/k17" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c18" style="@style/MonthCell">
+                <TextView android:id="@+id/h18" style="@style/MonthH" />
+                <TextView android:id="@+id/g18" style="@style/MonthG" />
+                <TextView android:id="@+id/k18" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c19" style="@style/MonthCell">
+                <TextView android:id="@+id/h19" style="@style/MonthH" />
+                <TextView android:id="@+id/g19" style="@style/MonthG" />
+                <TextView android:id="@+id/k19" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c20" style="@style/MonthCell">
+                <TextView android:id="@+id/h20" style="@style/MonthH" />
+                <TextView android:id="@+id/g20" style="@style/MonthG" />
+                <TextView android:id="@+id/k20" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r3"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c21" style="@style/MonthCell">
+                <TextView android:id="@+id/h21" style="@style/MonthH" />
+                <TextView android:id="@+id/g21" style="@style/MonthG" />
+                <TextView android:id="@+id/k21" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c22" style="@style/MonthCell">
+                <TextView android:id="@+id/h22" style="@style/MonthH" />
+                <TextView android:id="@+id/g22" style="@style/MonthG" />
+                <TextView android:id="@+id/k22" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c23" style="@style/MonthCell">
+                <TextView android:id="@+id/h23" style="@style/MonthH" />
+                <TextView android:id="@+id/g23" style="@style/MonthG" />
+                <TextView android:id="@+id/k23" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c24" style="@style/MonthCell">
+                <TextView android:id="@+id/h24" style="@style/MonthH" />
+                <TextView android:id="@+id/g24" style="@style/MonthG" />
+                <TextView android:id="@+id/k24" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c25" style="@style/MonthCell">
+                <TextView android:id="@+id/h25" style="@style/MonthH" />
+                <TextView android:id="@+id/g25" style="@style/MonthG" />
+                <TextView android:id="@+id/k25" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c26" style="@style/MonthCell">
+                <TextView android:id="@+id/h26" style="@style/MonthH" />
+                <TextView android:id="@+id/g26" style="@style/MonthG" />
+                <TextView android:id="@+id/k26" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c27" style="@style/MonthCell">
+                <TextView android:id="@+id/h27" style="@style/MonthH" />
+                <TextView android:id="@+id/g27" style="@style/MonthG" />
+                <TextView android:id="@+id/k27" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r4"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c28" style="@style/MonthCell">
+                <TextView android:id="@+id/h28" style="@style/MonthH" />
+                <TextView android:id="@+id/g28" style="@style/MonthG" />
+                <TextView android:id="@+id/k28" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c29" style="@style/MonthCell">
+                <TextView android:id="@+id/h29" style="@style/MonthH" />
+                <TextView android:id="@+id/g29" style="@style/MonthG" />
+                <TextView android:id="@+id/k29" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c30" style="@style/MonthCell">
+                <TextView android:id="@+id/h30" style="@style/MonthH" />
+                <TextView android:id="@+id/g30" style="@style/MonthG" />
+                <TextView android:id="@+id/k30" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c31" style="@style/MonthCell">
+                <TextView android:id="@+id/h31" style="@style/MonthH" />
+                <TextView android:id="@+id/g31" style="@style/MonthG" />
+                <TextView android:id="@+id/k31" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c32" style="@style/MonthCell">
+                <TextView android:id="@+id/h32" style="@style/MonthH" />
+                <TextView android:id="@+id/g32" style="@style/MonthG" />
+                <TextView android:id="@+id/k32" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c33" style="@style/MonthCell">
+                <TextView android:id="@+id/h33" style="@style/MonthH" />
+                <TextView android:id="@+id/g33" style="@style/MonthG" />
+                <TextView android:id="@+id/k33" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c34" style="@style/MonthCell">
+                <TextView android:id="@+id/h34" style="@style/MonthH" />
+                <TextView android:id="@+id/g34" style="@style/MonthG" />
+                <TextView android:id="@+id/k34" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/r5"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal">
+            <LinearLayout android:id="@+id/c35" style="@style/MonthCell">
+                <TextView android:id="@+id/h35" style="@style/MonthH" />
+                <TextView android:id="@+id/g35" style="@style/MonthG" />
+                <TextView android:id="@+id/k35" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c36" style="@style/MonthCell">
+                <TextView android:id="@+id/h36" style="@style/MonthH" />
+                <TextView android:id="@+id/g36" style="@style/MonthG" />
+                <TextView android:id="@+id/k36" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c37" style="@style/MonthCell">
+                <TextView android:id="@+id/h37" style="@style/MonthH" />
+                <TextView android:id="@+id/g37" style="@style/MonthG" />
+                <TextView android:id="@+id/k37" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c38" style="@style/MonthCell">
+                <TextView android:id="@+id/h38" style="@style/MonthH" />
+                <TextView android:id="@+id/g38" style="@style/MonthG" />
+                <TextView android:id="@+id/k38" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c39" style="@style/MonthCell">
+                <TextView android:id="@+id/h39" style="@style/MonthH" />
+                <TextView android:id="@+id/g39" style="@style/MonthG" />
+                <TextView android:id="@+id/k39" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c40" style="@style/MonthCell">
+                <TextView android:id="@+id/h40" style="@style/MonthH" />
+                <TextView android:id="@+id/g40" style="@style/MonthG" />
+                <TextView android:id="@+id/k40" style="@style/MonthK" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/c41" style="@style/MonthCell">
+                <TextView android:id="@+id/h41" style="@style/MonthH" />
+                <TextView android:id="@+id/g41" style="@style/MonthG" />
+                <TextView android:id="@+id/k41" style="@style/MonthK" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/m_legend"
+            style="@style/WidgetText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textSize="10sp" />
+    </LinearLayout>
+</FrameLayout>

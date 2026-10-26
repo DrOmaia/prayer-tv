@@ -10,8 +10,14 @@
         android:id="@+id/disc"
         android:layout_width="132dp"
         android:layout_height="132dp"
-        android:layout_gravity="center"
-        android:background="@drawable/widget_disc_night">
+        android:layout_gravity="center">
+
+        <ImageView
+            android:id="@+id/bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_disc_night" />
 
         <ProgressBar
             android:id="@+id/progress"

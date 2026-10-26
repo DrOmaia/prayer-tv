@@ -46,6 +46,9 @@
       hijriAdj: s.hijriAdj || 0, // days added to the Umm al-Qura Hijri date (−2 … +2)
       fontSize: s.fontSize || 'normal', // phone text size
       reciter: s.reciter || 'alafasy',
+      // phone home-screen widgets: background ('time' colour of the time of day · 'dark'), transparency 0–100,
+      // text size, accent colour and the parts shown on «مواقيت اليوم»
+      widget: Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold', city: true, prog: true, line: true, date: true }, s.widget),
       nightDim: s.nightDim !== false, // the TV dims at night
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
       // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
@@ -324,7 +327,43 @@
       });
     }
     var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name })); } catch (e) {}
+    var months = [];
+    try { months = widgetMonths(r); } catch (e) {}
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months })); } catch (e) {}
+  }
+
+  // the Hijri month widget: this Hijri month and the next two, each day with its Gregorian date, season,
+  // white day, Monday / Thursday and occasion
+  function hOf(y, m, d) {
+    var h = {};
+    fHMD.formatToParts(new Date(P.noonOf(y, m, d))).forEach(function (x) { h[x.type] = +x.value; });
+    return { y: h.year, m: h.month, d: h.day };
+  }
+  function widgetMonths(r) {
+    var evs = {}, out = [];
+    allEvents(r).forEach(function (e) { evs[e.y + '-' + e.m + '-' + e.d] = e.name; });
+    var h0 = hOf(r.y, r.m, r.d), dd = P.addDays(r.y, r.m, r.d, 1 - h0.d);
+    for (var n = 0; n < 3; n++) {
+      var hm = hOf(dd.y, dd.m, dd.d), x = dd, last = dd, cells = [], seasons = [], seen = {}, white = false, events = false;
+      for (var i = 0; i < 31; i++) {
+        var hx = hOf(x.y, x.m, x.d);
+        if (hx.m !== hm.m) break;
+        var ts = P.noonOf(x.y, x.m, x.d), sn = seasonOfDay(ts), dow = new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay();
+        var k = sn ? sn[0] : hx.d >= 13 && hx.d <= 15 ? 'white' : '', ev = evs[x.y + '-' + x.m + '-' + x.d] || '';
+        if (sn && !seen[sn[1]]) { seen[sn[1]] = 1; seasons.push(sn); }
+        if (k === 'white') white = true;
+        if (ev) events = true;
+        cells.push({ h: hx.d, g: x.d, ts: ts, k: k, mt: !sn && (dow === 1 || dow === 4), ev: ev });
+        last = x;
+        x = P.addDays(x.y, x.m, x.d, 1);
+      }
+      var sub = dd.m === last.m ? G_MONTHS[dd.m - 1] + ' ' + dd.y : dd.y === last.y ? G_MONTHS[dd.m - 1] + ' – ' + G_MONTHS[last.m - 1] + ' ' + dd.y :
+        G_MONTHS[dd.m - 1] + ' ' + dd.y + ' – ' + G_MONTHS[last.m - 1] + ' ' + last.y;
+      out.push({ title: H_MONTHS[hm.m - 1] + ' ' + hm.y + ' هـ', sub: sub, first: new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay(),
+        cells: cells, seasons: seasons, white: white, events: events });
+      dd = x;
+    }
+    return out;
   }
 
   // banner inside the app (the Android side plays the chime)
@@ -556,6 +595,7 @@
       '<path class="moon-lit" d="M12 3A9 9 0 0 ' + outer + ' 12 21A' + rx.toFixed(2) + ' 9 0 0 ' + inner + ' 12 3Z"/></svg>';
   }
 
+  var H_MONTHS = ['محرّم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
   var G_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
   // the shortest fast (Fajr → Maghrib) of the current Hijri year; worked out once a day
   var shortCache = {};
@@ -1122,6 +1162,21 @@
         return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</span></div>' + '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
       (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? 'يظهر' : 'مخفي') + '</button></div>';
+    // phone widgets: one look for all of them
+    var W = S.widget;
+    function wRow(name, key, opts) {
+      return '<div class="srow snd-row"><span class="sname">' + name + '</span><span class="snd-opts">' + opts.map(function (o) {
+        return '<button class="sbtn f' + (String(W[key]) === String(o[0]) ? ' on' : '') + '" data-k="wg-' + key + '-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</span></div>';
+    }
+    $('set-widget').innerHTML = wRow('الخلفية', 'bg', [['time', 'لون حسب الوقت'], ['dark', 'داكن']]) +
+      wRow('الشفافية', 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
+      wRow('حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']]) +
+      wRow('لون التمييز', 'accent', [['gold', 'ذهبي'], ['white', 'أبيض'], ['green', 'أخضر'], ['sky', 'سماوي']]) +
+      '<div class="srow snd-row"><span class="sname">يظهر في «مواقيت اليوم»</span><span class="snd-opts">' +
+      [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
+        return '<button class="sbtn f' + (W[o[0]] ? ' on' : '') + '" data-k="wg-' + o[0] + '-t">' + o[1] + '</button>';
+      }).join('') + '</span></div>';
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
@@ -1168,6 +1223,68 @@
       if (el) el.focus();
     }
   }
+  // ---------- date converter: Gregorian ↔ Hijri on the Umm al-Qura calendar (the official Saudi calendar,
+  // the same as the rest of the app, with the ± day adjustment of the settings); valid 1356–1500 AH ----------
+  var cv = { from: 'g', y: 0, m: 0, d: 0 }, CV_G = [1937, 2077], CV_H = [1356, 1500];
+  function cvToday() {
+    var r = P.ymd(Date.now()), h = hOf(r.y, r.m, r.d), x = cv.from === 'g' ? r : h;
+    cv.y = x.y; cv.m = x.m; cv.d = x.d;
+  }
+  // Hijri → Gregorian: estimate from today, then look for the day nearby
+  function hToG(y, m, d) {
+    var r = P.ymd(Date.now()), h0 = hOf(r.y, r.m, r.d);
+    var est = Math.round(((y - h0.y) * 12 + (m - h0.m)) * 29.530589 + (d - h0.d));
+    for (var k = 0; k <= 25; k++) for (var sg = -1; sg <= 1; sg += 2) {
+      var dd = P.addDays(r.y, r.m, r.d, est + k * sg), h = hOf(dd.y, dd.m, dd.d);
+      if (h.y === y && h.m === m && h.d === d) return dd;
+    }
+    return null;
+  }
+  function cvClamp() {
+    var R = cv.from === 'g' ? CV_G : CV_H;
+    cv.m = cv.m < 1 ? 12 : cv.m > 12 ? 1 : cv.m;
+    cv.y = Math.max(R[0], Math.min(R[1], cv.y || R[0]));
+    var dim = cv.from === 'g' ? new Date(Date.UTC(cv.y, cv.m, 0)).getUTCDate() : 30;
+    cv.d = cv.d < 1 ? dim : cv.d > dim ? (cv.d === dim + 1 ? 1 : dim) : cv.d;
+  }
+  function cvStep(k) {
+    var f = k[0], dlt = k[1] === '+' ? 1 : -1;
+    cv[f] += dlt; cvClamp(); cvRender(); var b = document.querySelector('[data-cv="' + k + '"]'); if (b) b.focus();
+  }
+  function cvRender() {
+    cvClamp();
+    var g = null, h = null, bad = '';
+    if (cv.from === 'g') { g = { y: cv.y, m: cv.m, d: cv.d }; h = hOf(g.y, g.m, g.d); }
+    else {
+      g = hToG(cv.y, cv.m, cv.d);
+      if (g) h = { y: cv.y, m: cv.m, d: cv.d };
+      else bad = 'شهر ' + H_MONTHS[cv.m - 1] + ' ' + cv.y + ' هـ تسعة وعشرون يومًا';
+    }
+    $('cv-g').classList.toggle('on', cv.from === 'g');
+    $('cv-h').classList.toggle('on', cv.from === 'h');
+    var names = cv.from === 'g' ? G_MONTHS : H_MONTHS;
+    $('cv-fields').innerHTML = [['d', 'اليوم', cv.d, ''], ['m', 'الشهر', cv.m, names[cv.m - 1]], ['y', 'السنة', cv.y, cv.from === 'g' ? 'م' : 'هـ']].map(function (x) {
+      return '<div class="cv-f"><span class="muted">' + x[1] + '</span>' +
+        '<button class="sbtn f" data-cv="' + x[0] + '+" aria-label="زائد">+</button>' +
+        '<input id="cv-' + x[0] + '" class="cv-in f" inputmode="numeric" value="' + x[2] + '">' +
+        '<button class="sbtn f" data-cv="' + x[0] + '-" aria-label="ناقص">−</button><span class="cv-note">' + x[3] + '</span></div>';
+    }).join('');
+    if (!g || !h) { $('cv-out').innerHTML = '<div class="cv-day muted">' + bad + '</div>'; return; }
+    var r = P.ymd(Date.now()), n = daysTo(g, r), dow = new Date(Date.UTC(g.y, g.m - 1, g.d)).getUTCDay();
+    var when = n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === -1 ? 'أمس' : n === 2 ? 'بعد غد' : n === -2 ? 'قبل يومين' :
+      (n > 0 ? 'بعد ' : 'قبل ') + countWord(Math.abs(n), '', '', 'أيام', 'يومًا');
+    var big = cv.from === 'g' ? h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + ' هـ' : g.d + ' ' + G_MONTHS[g.m - 1] + ' ' + g.y + ' م';
+    var num = cv.from === 'g' ? h.y + '/' + h.m + '/' + h.d : g.d + '/' + g.m + '/' + g.y;
+    var sn = seasonOfDay(P.noonOf(g.y, g.m, g.d));
+    $('cv-out').innerHTML = '<div class="cv-day">' + DAY_NAMES[dow] + '</div><div class="cv-big">' + big + '</div>' +
+      '<div class="cv-num" dir="ltr">' + num + '</div><div class="muted cv-when">' + when + (sn ? ' · ' + sn[1] : '') + '</div>';
+  }
+  function cvInput(el) {
+    var f = el.id.slice(3), v = parseInt(String(el.value).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }), 10);
+    if (!isNaN(v)) cv[f] = v;
+    cvRender();
+  }
+
   // ---------- update from the settings: the latest release is downloaded and the installer opens ----------
   var upd = { latest: '', state: '', pct: 0, timer: null, asked: false };
   function myVersion() { try { return A && A.version ? 'v' + String(A.version()).split('.').pop() : ''; } catch (e) { return ''; } }
@@ -1268,6 +1385,11 @@
       setRender(); return;
     }
     if (a === 'fsz') { S.fontSize = v; save(); fit(); setRender(); return; }
+    if (a === 'wg') {
+      var W = S.widget, f = v, val = p[2];
+      if (val === 't') W[f] = !W[f]; else W[f] = f === 'clear' ? +val : val;
+      save(); sendWidget(); setRender(); return;
+    }
     if (a === 'hadj') {
       S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
       P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
@@ -1387,6 +1509,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) { b.classList.toggle('on', b.dataset.tab === name); });
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
+    if (name === 'convert') { cvToday(); cvRender(); focusFirst($('cv-g')); return; }
     if (name === 'imsak') { imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
     if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
@@ -1491,6 +1614,7 @@
       return;
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
+    if (el.dataset.cv) { cvStep(el.dataset.cv); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
@@ -1508,6 +1632,15 @@
       case 'fam-to': famTo = famOrder()[(famOrder().indexOf(famTo) + 1) % famOrder().length]; setRender(); $('fam-to').focus(); break;
       case 'fam-add': addFamMsg(); break;
       case 'upd-btn': updStart(); break;
+      case 'cv-g': case 'cv-h':
+        // keep the same day when switching: the result becomes the input
+        var cg = cv.from === 'g' ? { y: cv.y, m: cv.m, d: cv.d } : hToG(cv.y, cv.m, cv.d), want = el.id.slice(3);
+        if (want !== cv.from) {
+          cv.from = want;
+          if (cg) { var cx = want === 'g' ? cg : hOf(cg.y, cg.m, cg.d); cv.y = cx.y; cv.m = cx.m; cv.d = cx.d; } else cvToday();
+        }
+        cvRender(); el.focus(); break;
+      case 'cv-today': cvToday(); cvRender(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;
     }
@@ -1528,9 +1661,13 @@
   onSwipe($('cal-grid'), function () { calMonth(1); }, function () { calMonth(-1); });
   onSwipe(document.querySelector('.kahf-text'), kNext, kPrev);
 
+  document.addEventListener('change', function (e) { if (e.target.classList && e.target.classList.contains('cv-in')) cvInput(e.target); });
+
   // called by Android
   window.App = {
     back: back,
+    // a widget opens a screen (the date converter, the calendar)
+    open: function (name) { if (/^(convert|calendar)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
     onResume: function () {
       appsCache = null;
       if (screen === 'home') renderShortcuts();
@@ -1548,4 +1685,5 @@
   loadWeather();
   setInterval(loadWeather, 30 * MIN);
   focusFirst();
+  if (/^#(convert|calendar)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

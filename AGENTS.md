@@ -19,7 +19,7 @@ Arabic only, right-to-left, 24-hour clock, Tajawal font. Light design by day; da
 Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, verses on screen; Al-Kahf button on Friday), occasion countdowns
 (own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
 3 min), «هل تعلم؟» (every 3 min, 350 items incl. «تصحيح خطأ شائع» and Shafi'i fiqh), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
-over other apps, open on boot, screensaver, phone notifications and home-screen widgets.
+over other apps, open on boot, screensaver, phone notifications and home-screen widgets (prayer times, ring, strip, Hijri month, date-converter icon, occasion; look set in the phone settings), Gregorian ↔ Hijri date converter (Umm al-Qura), update from settings.
 User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
 
 ## 3. Files

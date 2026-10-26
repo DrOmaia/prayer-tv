@@ -82,6 +82,7 @@
         <button id="cal-prev" class="round f" aria-label="الشهر السابق"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
         <button id="cal-next" class="round f" aria-label="الشهر التالي"><svg viewBox="0 0 24 24" class="ic"><path d="M15 6l-6 6 6 6"/></svg></button>
         <button class="pill f" data-go="imsak">إمساكية رمضان</button>
+        <button class="pill f" data-go="convert">تحويل التاريخ</button>
         <button id="cal-today" class="gold-btn f"><svg viewBox="0 0 24 24" class="ic"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>العودة إلى اليوم</button>
       </div>
     </header>
@@ -124,6 +125,25 @@
         <button id="k-play" class="round huge gold-bg f" aria-label="تشغيل / إيقاف"><svg id="k-ic-pause" viewBox="0 0 24 24" class="ic fill"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg id="k-ic-play" viewBox="0 0 24 24" class="ic fill hidden"><path d="M7 5v14l12-7z"/></svg></button>
         <button id="k-next-btn" class="round big f" aria-label="الآية التالية"><svg viewBox="0 0 24 24" class="ic fill"><path d="M6 5h2v14H6zM9.5 12L19 5v14z"/></svg></button>
       </div>
+    </div>
+  </section>
+
+  <!-- Date converter: Gregorian ↔ Hijri (Umm al-Qura) -->
+  <section id="convert" class="screen hidden">
+    <header class="top">
+      <div class="title-row">
+        <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div><div class="big-title">تحويل التاريخ</div><div class="muted sub-title">تقويم أم القرى · من 1356 إلى 1500 هـ</div></div>
+      </div>
+    </header>
+    <div class="card cv-body">
+      <div class="cv-tabs">
+        <button id="cv-g" class="pill f">من ميلادي إلى هجري</button>
+        <button id="cv-h" class="pill f">من هجري إلى ميلادي</button>
+        <button id="cv-today" class="pill f">اليوم</button>
+      </div>
+      <div id="cv-fields" class="cv-fields"></div>
+      <div id="cv-out" class="cv-out"></div>
     </div>
   </section>
 
@@ -203,6 +223,11 @@
         <div class="set-h set-h2">مدة الإقامة بعد الأذان (دقائق)</div>
         <div id="set-iq"></div>
         <div id="set-show"></div>
+        <div class="phone-only">
+          <div class="set-h set-h2">الويدجت على الشاشة الرئيسية</div>
+          <div class="muted set-note">لكل الويدجتات: «مواقيت اليوم»، الدائرة، الشريط، الشهر الهجري، محوّل التاريخ</div>
+          <div id="set-widget"></div>
+        </div>
         <div class="set-h set-h2">تحديث التطبيق</div>
         <div class="srow"><span id="upd-msg" class="sname"></span><button id="upd-btn" class="sbtn al f">تحديث</button></div>
         <div id="set-version" class="muted set-note"></div>
