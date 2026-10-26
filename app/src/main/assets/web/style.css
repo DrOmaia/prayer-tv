@@ -518,3 +518,14 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .im-th { font-size: 26px; }
 .portrait .im-col + .im-col .im-th { display: none; }
 .cell.sel[class*="c-"] { background: var(--now-bg); border-color: var(--now-bg); }
+
+/* the city's temperature in large figures (top right), colour by temperature; the two small cards a little smaller */
+.wx-big { display: flex; align-items: center; gap: 14px; height: 130px; padding: 0 22px; border-radius: 22px; background: var(--card2); border: 1px solid var(--line); color: var(--ink); flex-shrink: 0; }
+.wb-icon .wi .ic { width: 72px; height: 72px; stroke-width: 1.5; }
+.wb-temp { font-size: 118px; font-weight: 700; line-height: 1; direction: ltr; letter-spacing: -2px; transition: color .6s; }
+#stage:not(.portrait) .top .weather { height: 58px; padding: 0 12px; gap: 8px; }
+#stage:not(.portrait) .top .w-icon .wi .ic { width: 32px; height: 32px; }
+#stage:not(.portrait) .top .w-city { font-size: 21px; }
+#stage:not(.portrait) .top .w-temp { font-size: 28px; }
+#stage:not(.portrait) .top .w-hl { font-size: 17px; gap: 6px; }
+.portrait .wx-big { display: none; }

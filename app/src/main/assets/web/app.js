@@ -190,10 +190,25 @@
     if (Math.max(w.t, w.hi || 0) >= 45) return 'حرارة شديدة';
     return '';
   }
+  // a smooth colour scale: blue (cold) → teal → green (mild) → amber → orange → red (40° and above)
+  var T_STOPS = [[5, [59, 130, 246]], [15, [27, 160, 180]], [24, [52, 168, 90]], [30, [218, 160, 28]], [36, [232, 110, 40]], [41, [214, 48, 48]]];
+  function tempColor(t) {
+    if (t <= T_STOPS[0][0]) return 'rgb(' + T_STOPS[0][1] + ')';
+    for (var k = 1; k < T_STOPS.length; k++) {
+      var a = T_STOPS[k - 1], b = T_STOPS[k];
+      if (t <= b[0]) {
+        var f = (t - a[0]) / (b[0] - a[0]);
+        return 'rgb(' + a[1].map(function (v, j) { return Math.round(v + (b[1][j] - v) * f); }) + ')';
+      }
+    }
+    return 'rgb(' + T_STOPS[T_STOPS.length - 1][1] + ')';
+  }
   function showWeather(i, w) {
     WX[i] = w;
     $('w' + i + '-icon').innerHTML = wIcon(w.code, w.day);
     $('w' + i + '-temp').textContent = w.t + '°';
+    // the city's temperature in large figures on the top bar, coloured by how hot it is
+    if (i === 0) { $('wbig-icon').innerHTML = wIcon(w.code, w.day); $('wbig-temp').textContent = w.t + '°'; $('wbig-temp').style.color = tempColor(w.t); }
     var al = wAlert(i, w);
     $('w' + i + '-btn').classList.toggle('w-alert', !!al);
     $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
