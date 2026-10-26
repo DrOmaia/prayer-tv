@@ -13,7 +13,7 @@
     fHDay = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO)));
     fHMY = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO)));
     fGMY = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
-    fHMD = hijriShift(new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'numeric', day: 'numeric' }, TZO)));
+    fHMD = hijriShift(new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ year: 'numeric', month: 'numeric', day: 'numeric' }, TZO)));
   }
   // Hijri dates follow the ±days adjustment of the settings
   function hijriShift(f) {
@@ -495,11 +495,14 @@
         var m0 = t < today.at.fajr ? yest.at.maghrib : today.at.maghrib, f0 = t < today.at.fajr ? today.at.fajr : tom.at.fajr;
         setAll(c, '.pc-iq', 'ثلث الليل ' + P.full(m0 + (f0 - m0) * 2 / 3)); return;
       }
-      // Imsak: in turn every 5 seconds, the length of the fast (Fajr → Maghrib) and the time left to the next Maghrib
-      var alt = Math.floor(t / 5000) % 2, fd = t < today.at.maghrib ? today : tom;
+      // Imsak: in turn every 5 seconds, the time left to the next Maghrib, the length of the fast (Fajr → Maghrib)
+      // and the shortest fast of this Hijri year with its date
+      var alt = Math.floor(t / 5000) % 3, fd = t < today.at.maghrib ? today : tom, sh = alt === 2 && shortestFast(P.ymd(t));
       var fastLen = 'مدة الصيام ' + P.leftHM(fd.at.maghrib - fd.at.fajr);
-      setAll(c, '.pc-iq', k === 'imsak' ? (alt ? fastLen : (fd.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(fd.at.maghrib - t)) :
+      setAll(c, '.pc-iq', k === 'imsak' ? (sh ? 'أقصر صيام ' + P.leftHM(sh.len) + ' · ' + sh.d + '/' + sh.m :
+        alt === 1 ? fastLen : (fd.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(fd.at.maghrib - t)) :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
+      Array.prototype.forEach.call(c.querySelectorAll('.pc-iq'), function (e) { e.classList.toggle('pc-iq-s', k === 'imsak' && !!sh); });
     });
 
     // Ramadan: time left to iftar and to suhoor (imsak)
@@ -551,6 +554,23 @@
     var outer = wax ? 1 : 0, inner = wax ? (p < .25 ? 0 : 1) : (p > .75 ? 1 : 0);
     return '<svg viewBox="0 0 24 24" class="moon-ic"><circle cx="12" cy="12" r="9" class="moon-dark"/>' +
       '<path class="moon-lit" d="M12 3A9 9 0 0 ' + outer + ' 12 21A' + rx.toFixed(2) + ' 9 0 0 ' + inner + ' 12 3Z"/></svg>';
+  }
+
+  // the shortest fast (Fajr → Maghrib) of the current Hijri year; worked out once a day
+  var shortCache = {};
+  function shortestFast(r) {
+    var key = [r.y, r.m, r.d, S.loc.lat, S.loc.lon, S.hijriAdj, JSON.stringify(S.offsets)].join('|');
+    if (shortCache.key === key) return shortCache.v;
+    function hYear(dd) { var y = 0; fHMD.formatToParts(new Date(P.noonOf(dd.y, dd.m, dd.d))).forEach(function (x) { if (x.type === 'year') y = +x.value; }); return y; }
+    var y0 = hYear(r), best = null;
+    for (var i = -360; i <= 360; i++) {
+      var dd = P.addDays(r.y, r.m, r.d, i);
+      if (hYear(dd) !== y0) continue;
+      var T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), len = T.at.maghrib - T.at.fajr;
+      if (!best || len < best.len) best = { len: len, d: dd.d, m: dd.m };
+    }
+    shortCache = { key: key, v: best };
+    return best;
   }
 
   // ---------- Ramadan imsakiya: every day of the (current or coming) Ramadan ----------

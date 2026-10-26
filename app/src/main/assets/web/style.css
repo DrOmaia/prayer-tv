@@ -529,3 +529,5 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #stage:not(.portrait) .top .w-temp { font-size: 28px; }
 #stage:not(.portrait) .top .w-hl { font-size: 17px; gap: 6px; }
 .portrait .wx-big { display: none; }
+/* «أقصر صيام …» under the Imsak time: a little smaller so it fits the card */
+#stage:not(.portrait) .pc-iq.pc-iq-s { font-size: 19px; }
