@@ -712,3 +712,4 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #stage:not(.portrait) .tm-body:not(.editing) .tm-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tm-card { text-align: right; }
 .tm-num, .tm-line, .tm-more, .tm-dua { text-align: right; }
+.portrait .tm-wg { order: 1; }

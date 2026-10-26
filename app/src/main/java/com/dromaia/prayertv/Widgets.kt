@@ -74,6 +74,15 @@ object Widgets {
         val a = data(ctx)?.optJSONArray("timers") ?: return emptyList()
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { it.optString("id") to it.optString("name") }
     }
+    // the timer widgets on the home screen and the timer each shows (for the app's timers tab)
+    fun placedTimers(ctx: Context): String {
+        val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
+        val out = JSONArray()
+        AppWidgetManager.getInstance(ctx).getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
+            out.put(JSONObject().put("id", id).put("timer", prefs.getString("timer_$id", "") ?: ""))
+        }
+        return out.toString()
+    }
     fun setTimer(ctx: Context, widgetId: Int, timerId: String) {
         ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("timer_$widgetId", timerId).apply()
         updateAll(ctx)
@@ -133,6 +142,10 @@ object Widgets {
         return sp
     }
 
+    private fun inDays(n: Int): String = when (n) {
+        0 -> "اليوم"; 1 -> "غدًا"; 2 -> "بعد يومين"; in 3..10 -> "بعد $n أيام"; else -> "بعد $n يومًا"
+    }
+
     private fun timerViews(ctx: Context, d: JSONObject?, sty: Style, widgetId: Int, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_timer)
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "timers", 7))
@@ -150,11 +163,31 @@ object Widgets {
         rv.setInt(R.id.bg, "setColorFilter", bg)
         rv.setInt(R.id.bg, "setImageAlpha", maxOf(sty.alpha, 60))
         val at = x.optLong("at")
+        // text size and lines chosen in the app's timers tab
+        val wg = d?.optJSONObject("timerWg")
+        val k = when (wg?.optString("font")) { "s" -> 0.8f; "l" -> 1.25f; "xl" -> 1.5f; else -> 1f }
+        rv.setTextViewTextSize(R.id.tm_count, TypedValue.COMPLEX_UNIT_SP, 30f * k)
+        rv.setTextViewTextSize(R.id.tm_line, TypedValue.COMPLEX_UNIT_SP, 14f * k)
+        rv.setTextViewTextSize(R.id.tm_more, TypedValue.COMPLEX_UNIT_SP, 13f * k)
         rv.setTextViewText(R.id.tm_count, bigNumbers(timerText(at, x.optString("unit"), now)))
         val date = x.optString("date")
         rv.setTextViewText(R.id.tm_line, (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else "")
+        rv.setViewVisibility(R.id.tm_line, if (wg?.optBoolean("name", true) != false) View.VISIBLE else View.GONE)
+        // extra lines: Hijri date, the next anniversary and round number (days counted here), a prayer for the departed
+        val more = mutableListOf<String>()
+        x.optString("hijri").takeIf { it.isNotEmpty() }?.let { more.add(it) }
+        for (key in arrayOf("anniv", "ms")) {
+            val o = x.optJSONObject(key) ?: continue
+            val left = (dayNumber(o.optLong("at")) - dayNumber(now)).toInt()
+            if (left < 0) continue
+            more.add(o.optString("t") + " " + inDays(left) + " · " + o.optString("date"))
+        }
+        x.optString("dua").takeIf { it.isNotEmpty() }?.let { more.add(it) }
+        rv.setTextViewText(R.id.tm_more, more.joinToString("\n"))
+        rv.setViewVisibility(R.id.tm_more, if (more.isEmpty()) View.GONE else View.VISIBLE)
         rv.setTextColor(R.id.tm_count, ink)
         rv.setTextColor(R.id.tm_line, ink)
+        rv.setTextColor(R.id.tm_more, ink)
         return rv
     }
 

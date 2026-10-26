@@ -27,13 +27,10 @@
         <TextView
             android:id="@+id/tm_count"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:autoSizeMaxTextSize="40sp"
-            android:autoSizeMinTextSize="14sp"
-            android:autoSizeTextType="uniform"
+            android:layout_height="wrap_content"
             android:gravity="center"
-            android:maxLines="1"
+            android:includeFontPadding="false"
+            android:maxLines="2"
             android:textColor="#FFFFFF"
             android:textSize="34sp"
             android:textStyle="bold" />
@@ -48,5 +45,17 @@
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tm_more"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:alpha="0.9"
+            android:ellipsize="end"
+            android:gravity="start"
+            android:maxLines="4"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

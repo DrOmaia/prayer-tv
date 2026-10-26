@@ -221,6 +221,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun widgetError(): String = Widgets.error(this@MainActivity)
 
+        // the timer widgets on the home screen: which are there, and the timer each shows
+        @JavascriptInterface
+        fun timerWidgets(): String = Widgets.placedTimers(this@MainActivity)
+
+        @JavascriptInterface
+        fun setTimerWidget(id: Int, timerId: String) = Widgets.setTimer(this@MainActivity, id, timerId)
+
         // the phone's own location (for «تحديد تلقائي»): approximate is enough for the city
         @JavascriptInterface
         fun locOk(): Boolean = checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED

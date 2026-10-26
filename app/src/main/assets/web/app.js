@@ -45,6 +45,9 @@
       keepOn: !!s.keepOn,
       hijriAdj: s.hijriAdj || 0, // days added to the Umm al-Qura Hijri date (−2 … +2)
       fontSize: s.fontSize || 'normal', // phone text size
+      zoom: s.zoom || 0, // phone: the size set by pinching (0 = from fontSize)
+      // the timer widgets: text size and the lines they show
+      timerWg: Object.assign({ font: 'm', name: true, hijri: false, anniv: true, ms: false, dua: true }, s.timerWg),
       reciter: s.reciter || 'alafasy',
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
@@ -108,10 +111,11 @@
 
   // ---------- fit any screen: landscape is 1080 units high, portrait 1080 units wide ----------
   var FONT_SCALE = { small: .9, normal: 1, large: 1.15, xlarge: 1.3 };
+  function zoomOf() { return S.zoom || FONT_SCALE[S.fontSize] || 1; }
   function fit() {
     var w = innerWidth, h = innerHeight, portrait = h > w * 1.05, W, H, k;
     // phone: the font-size setting makes the page narrower in design units, so everything is bigger
-    if (portrait) { W = Math.round(1080 / (FONT_SCALE[S.fontSize] || 1)); k = w / W; H = h / k; }
+    if (portrait) { W = Math.round(1080 / zoomOf()); k = w / W; H = h / k; }
     else {
       H = 1080; k = h / H; W = w / k;
       if (W < 1920) { W = 1920; k = w / W; H = Math.max(1080, h / k); } // squarer screens (4:3, 16:10): taller, same width
@@ -361,8 +365,14 @@
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
     try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months,
-      timers: S.timers.map(function (x) { return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
-        date: x.showDate ? x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '' }; }) })); } catch (e) {}
+      timerWg: { font: S.timerWg.font, name: S.timerWg.name },
+      timers: S.timers.map(function (x) {
+        var now = Date.now(), past = tAt(x) <= now, W = S.timerWg, an = past && !x.rip && W.anniv ? tAnnivObj(x) : null, ms = past && !x.rip && W.ms ? tMsObj(x, now) : null;
+        return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
+          date: x.showDate ? x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '',
+          hijri: W.hijri ? tHijri(x, past) : '', dua: W.dua && x.rip ? '«' + RIP[x.rip][0] + '» ' + RIP[x.rip][1] : '',
+          anniv: an ? { t: an.t, at: an.at, date: an.date } : null, ms: ms ? { t: ms.t, at: ms.at, date: ms.date } : null };
+      }) })); } catch (e) {}
   }
 
   // the Hijri month widget: this Hijri month and the next two, each day with its Gregorian date, season,
@@ -1226,7 +1236,7 @@
       '<button class="sbtn f" data-k="hadj-p" aria-label="يوم بعد">+</button><span class="sbtn al muted" style="border:none;background:none">يوم</span></div>';
     $('set-show').innerHTML = (stage.classList.contains('portrait') ? '<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">' +
       [['small', 'صغير'], ['normal', 'عادي'], ['large', 'كبير'], ['xlarge', 'كبير جدًا']].map(function (o) {
-        return '<button class="sbtn f' + (S.fontSize === o[0] ? ' on' : '') + '" data-k="fsz-' + o[0] + '">' + o[1] + '</button>';
+        return '<button class="sbtn f' + (Math.abs(zoomOf() - FONT_SCALE[o[0]]) < .04 ? ' on' : '') + '" data-k="fsz-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</span></div>' : '') + '<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">' +
       [['auto', 'تلقائي (داكن ليلًا)'], ['light', 'فاتح'], ['dark', 'داكن']].map(function (o) {
         return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
@@ -1456,20 +1466,27 @@
     return out;
   }
   // the next anniversary of a past date: «تكتمل 43 سنة بعد 131 يومًا · 6 مارس»
-  function tAnniv(x) {
+  function tAnnivObj(x) {
     var r = P.ymd(Date.now()), y = r.y;
     if (x.m < r.m || (x.m === r.m && x.d < r.d)) y++;
     var n = y - x.y;
-    if (n < 1) return '';
+    if (n < 1) return null;
     var d = x.m === 2 && x.d === 29 && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? 1 : x.d, m = d === 1 && x.d === 29 ? 3 : x.m;
-    var left = daysTo({ y: y, m: m, d: d }, r);
-    return (left === 0 ? 'اليوم تكتمل ' + tYears(n) : 'تكتمل ' + tYears(n) + ' ' + tIn(left) + ' · ' + d + ' ' + G_MONTHS[m - 1]);
+    return { t: 'تكتمل ' + tYears(n), at: P.noonOf(y, m, d), date: d + ' ' + G_MONTHS[m - 1], left: daysTo({ y: y, m: m, d: d }, r) };
+  }
+  function tAnniv(x) {
+    var o = tAnnivObj(x);
+    return !o ? '' : o.left === 0 ? 'اليوم ' + o.t : o.t + ' ' + tIn(o.left) + ' · ' + o.date;
   }
   // the next round number in the timer's own unit: «يبلغ 6,000,000 دقيقة بعد 248 يومًا»
   var T_STEP = { minutes: [1e6, MIN, 'دقيقة'], hours: [1e4, HR, 'ساعة'], days: [1e3, 864e5, 'يوم'], timer: [1e3, 864e5, 'يوم'], weeks: [100, 7 * 864e5, 'أسبوع'] };
   function tMilestone(x, now) {
+    var o = tMsObj(x, now);
+    return o ? o.t + ' ' + tIn(o.left) + ' · ' + o.date : '';
+  }
+  function tMsObj(x, now) {
     var at = tAt(x), st = T_STEP[x.unit];
-    if (at > now) return '';
+    if (at > now) return null;
     var when, label;
     if (x.unit === 'months') {
       var n = +tParts(x, now)[0][0], next = (Math.floor(n / 50) + 1) * 50, dt = new Date(Date.UTC(x.y, x.m - 1 + next, x.d));
@@ -1477,9 +1494,9 @@
     } else if (st) {
       var cur = Math.floor((now - at) / st[1]), nx = (Math.floor(cur / st[0]) + 1) * st[0];
       when = at + nx * st[1]; label = tNum(nx) + ' ' + st[2];
-    } else return '';
-    var w = P.ymd(when), left = daysTo(w, P.ymd(now));
-    return 'يبلغ ' + label + ' ' + tIn(left) + ' · ' + w.d + '/' + w.m + '/' + w.y;
+    } else return null;
+    var w = P.ymd(when);
+    return { t: 'يبلغ ' + label, at: when, date: w.d + '/' + w.m + '/' + w.y, left: daysTo(w, P.ymd(now)) };
   }
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   var tEdit = null; // the timer being edited (a copy), or null
@@ -1496,6 +1513,7 @@
         (x.rip ? '<span class="tm-dua">«' + RIP[x.rip][0] + '» <small>' + RIP[x.rip][1] + '</small></span>' : '') + '</button>';
     }).join('');
     tEditRender();
+    twRender();
   }
   function tTick() {
     if (screen !== 'timers') return;
@@ -1532,6 +1550,33 @@
       '<div class="tm-actions"><button class="gold-btn f" data-tk="save">حفظ</button><button class="pill f" data-tk="cancel">إلغاء</button>' +
       (x.isNew ? '' : '<button class="pill f" data-tk="del">حذف</button>') + '</div>' +
       '<div class="muted set-note">لإضافته على الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد»، ثم اختر اسمه.</div>';
+  }
+  var TW_LINES = [['name', 'الاسم والتاريخ'], ['hijri', 'التاريخ الهجري'], ['anniv', 'الذكرى القادمة'], ['ms', 'الرقم المميّز'], ['dua', 'الدعاء للراحل']];
+  function twRender() {
+    var box = $('timer-wg'); if (!box) return;
+    var W = S.timerWg, placed = [];
+    try { placed = A && A.timerWidgets ? JSON.parse(A.timerWidgets()) : []; } catch (e) {}
+    box.innerHTML = '<div class="set-h">الويدجت على الشاشة الرئيسية</div>' +
+      '<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">' + [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']].map(function (o) {
+        return '<button class="sbtn f' + (W.font === o[0] ? ' on' : '') + '" data-tw="font-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</span></div>' +
+      '<div class="srow snd-row"><span class="sname">يظهر تحت العدّ</span><span class="snd-opts">' + TW_LINES.map(function (o) {
+        return '<button class="sbtn f' + (W[o[0]] ? ' on' : '') + '" data-tw="line-' + o[0] + '">' + o[1] + '</button>';
+      }).join('') + '</span></div>' +
+      (placed.length ? placed.map(function (p, i) {
+        return '<div class="srow"><span class="sname">الويدجت ' + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
+          S.timers.map(function (x) { return '<option value="' + x.id + '"' + (x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
+          (S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
+      }).join('') : '') +
+      '<div class="muted set-note">' + (placed.length ? 'كل تغيير هنا يظهر على الويدجت مباشرة.' :
+        'لإضافة ويدجت: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد (منذ / حتى)»، ثم اختر اسمه. وبعدها تتحكّم به من هنا.') + '</div>';
+  }
+  function twAction(k) {
+    var p = k.split('-');
+    if (p[0] === 'font') S.timerWg.font = p[1];
+    else if (p[0] === 'line') S.timerWg[p[1]] = !S.timerWg[p[1]];
+    save(); sendWidget(); twRender();
+    var b = document.querySelector('[data-tw="' + k + '"]'); if (b) b.focus();
   }
   function tReadForm() {
     if (!tEdit) return;
@@ -1702,7 +1747,7 @@
       else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
       setRender(); return;
     }
-    if (a === 'fsz') { S.fontSize = v; save(); fit(); setRender(); return; }
+    if (a === 'fsz') { S.fontSize = v; S.zoom = 0; save(); fit(); setRender(); return; }
     if (a === 'wg') {
       var W = S.widget, f = v, val = p[2];
       if (val === 't') W[f] = !W[f]; else W[f] = f === 'clear' ? +val : val;
@@ -1903,6 +1948,11 @@
     if (k === 'Escape' || k === 'Backspace' || k === 'GoBack') { e.preventDefault(); back(); }
     if (k === 'MediaPlayPause' && screen === 'kahf') kToggle();
   });
+  // a timer widget on the home screen shows the timer chosen here
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    if (el.dataset && el.dataset.twid && A && A.setTimerWidget && el.value) { try { A.setTimerWidget(+el.dataset.twid, el.value); } catch (x) {} }
+  });
   document.addEventListener('focusin', function (e) {
     var c = e.target;
     if (c.classList && c.classList.contains('cell')) { cal.sy = cal.vy; cal.sm = cal.vm; cal.sd = +c.dataset.d; calMark(); calPanel(); }
@@ -1939,6 +1989,7 @@
     if (el.dataset.sec) { setToggle(el); return; }
     if (el.dataset.tm) { tEdit = Object.assign({}, S.timers[+el.dataset.tm]); tEditRender(); $('timer-edit').scrollIntoView({ block: 'start' }); return; }
     if (el.dataset.tk) { tAction(el.dataset.tk); return; }
+    if (el.dataset.tw) { twAction(el.dataset.tw); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
@@ -1973,6 +2024,26 @@
       case 'fm-add': addMember(); break;
     }
   });
+
+  // pinch with two fingers (phone, upright): everything larger or smaller; the size is kept
+  (function () {
+    var d0 = 0, z0 = 1, raf = 0;
+    function dist(e) { var a = e.touches[0], b = e.touches[1]; return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2 && stage.classList.contains('portrait')) { d0 = dist(e); z0 = zoomOf(); }
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 2 || !d0) return;
+      e.preventDefault();
+      var z = Math.max(.8, Math.min(1.6, z0 * dist(e) / d0));
+      if (Math.abs(z - zoomOf()) < .01) return;
+      S.zoom = Math.round(z * 100) / 100;
+      if (!raf) raf = requestAnimationFrame(function () { raf = 0; fit(); });
+    }, { passive: false });
+    document.addEventListener('touchend', function (e) {
+      if (d0 && e.touches.length < 2) { d0 = 0; save(); if (screen === 'settings') setRender(); }
+    }, { passive: true });
+  })();
 
   // swipe (phone): months in the calendar, verses in Surah Al-Kahf. Right-to-left layout: swipe right = next
   function onSwipe(el, next, prev) {
