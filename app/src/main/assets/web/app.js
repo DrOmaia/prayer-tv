@@ -48,8 +48,8 @@
       reciter: s.reciter || 'alafasy',
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
-      timers: s.timers || [
-        { id: 't1', name: 'وفاة الوالد أبي أسامة', y: 2023, m: 4, d: 18, h: -1, mi: 0, unit: 'months', color: 'white', showDate: false },
+      timers: (s.timers && s.timers.map(function (x) { return x.rip === undefined ? Object.assign({ rip: x.id === 't1' ? 'm' : '' }, x) : x; })) || [
+        { id: 't1', name: 'وفاة الوالد أبي أسامة', y: 2023, m: 4, d: 18, h: -1, mi: 0, unit: 'months', color: 'white', showDate: false, rip: 'm' },
         { id: 't2', name: 'أمية', y: 1984, m: 3, d: 6, h: 12, mi: 0, unit: 'timer', color: 'navy', showDate: true },
         { id: 't3', name: 'الزواج', y: 2010, m: 6, d: 11, h: -1, mi: 0, unit: 'timer', color: 'white', showDate: true },
         { id: 't4', name: 'العودة للدوام', y: 2027, m: 8, d: 20, h: -1, mi: 0, unit: 'days', color: 'white', showDate: false },
@@ -1441,14 +1441,60 @@
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function tInk(c) { return c === 'white' ? '#3A3A3A' : '#FFFFFF'; }
+  var RIP = { m: ['اللهم اغفر له وارحمه، وعافه واعفُ عنه', 'رواه مسلم'], f: ['اللهم اغفر لها وارحمها، وعافها واعفُ عنها', 'رواه مسلم'] };
+  function tYears(n) { return n === 1 ? 'سنة' : n === 2 ? 'سنتان' : n <= 10 ? n + ' سنوات' : n + ' سنة'; }
+  function tIn(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : 'بعد ' + countWord(n, 'يوم', 'يومين', 'أيام', 'يومًا'); }
+  function tNum(n) { return n.toLocaleString('en-US'); }
+  // the Hijri date, and the time since it in Hijri years and months
+  function tHijri(x, past) {
+    var h = hOf(x.y, x.m, x.d), out = h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + ' هـ';
+    if (!past) return out;
+    var r = P.ymd(Date.now()), t = hOf(r.y, r.m, r.d), yy = t.y - h.y, mm = t.m - h.m;
+    if (t.d < h.d) mm--;
+    if (mm < 0) { yy--; mm += 12; }
+    if (yy >= 1) out += ' · بالهجري ' + tYears(yy) + (mm ? ' و' + countWord(mm, 'شهر', 'شهران', 'أشهر', 'شهرًا') : '');
+    return out;
+  }
+  // the next anniversary of a past date: «تكتمل 43 سنة بعد 131 يومًا · 6 مارس»
+  function tAnniv(x) {
+    var r = P.ymd(Date.now()), y = r.y;
+    if (x.m < r.m || (x.m === r.m && x.d < r.d)) y++;
+    var n = y - x.y;
+    if (n < 1) return '';
+    var d = x.m === 2 && x.d === 29 && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? 1 : x.d, m = d === 1 && x.d === 29 ? 3 : x.m;
+    var left = daysTo({ y: y, m: m, d: d }, r);
+    return (left === 0 ? 'اليوم تكتمل ' + tYears(n) : 'تكتمل ' + tYears(n) + ' ' + tIn(left) + ' · ' + d + ' ' + G_MONTHS[m - 1]);
+  }
+  // the next round number in the timer's own unit: «يبلغ 6,000,000 دقيقة بعد 248 يومًا»
+  var T_STEP = { minutes: [1e6, MIN, 'دقيقة'], hours: [1e4, HR, 'ساعة'], days: [1e3, 864e5, 'يوم'], timer: [1e3, 864e5, 'يوم'], weeks: [100, 7 * 864e5, 'أسبوع'] };
+  function tMilestone(x, now) {
+    var at = tAt(x), st = T_STEP[x.unit];
+    if (at > now) return '';
+    var when, label;
+    if (x.unit === 'months') {
+      var n = +tParts(x, now)[0][0], next = (Math.floor(n / 50) + 1) * 50, dt = new Date(Date.UTC(x.y, x.m - 1 + next, x.d));
+      when = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 12); label = tNum(next) + ' شهر';
+    } else if (st) {
+      var cur = Math.floor((now - at) / st[1]), nx = (Math.floor(cur / st[0]) + 1) * st[0];
+      when = at + nx * st[1]; label = tNum(nx) + ' ' + st[2];
+    } else return '';
+    var w = P.ymd(when), left = daysTo(w, P.ymd(now));
+    return 'يبلغ ' + label + ' ' + tIn(left) + ' · ' + w.d + '/' + w.m + '/' + w.y;
+  }
+  function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   var tEdit = null; // the timer being edited (a copy), or null
   function timersRender() {
     var now = Date.now();
     $('timers-list').innerHTML = S.timers.map(function (x, i) {
-      return '<button class="tm-card f" data-tm="' + i + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
-        '<span class="tm-num">' + tParts(x, now).map(function (p) { return '<b>' + p[0] + '</b><small>' + p[1] + '</small>'; }).join(' ') + '</span>' +
-        '<span class="tm-line">' + esc(tLine(x, now)) + '</span></button>';
-    }).join('') + '<button id="tm-add" class="pill f">+ عدّاد جديد</button>';
+      var past = tAt(x) <= now, more = [];
+      if (x.showDate) more.push(tHijri(x, past));
+      if (past && !x.rip) { var an = tAnniv(x), ms = tMilestone(x, now); if (an) more.push(an); if (ms) more.push(ms); }
+      return '<button class="tm-card f' + (x.rip ? ' tm-rip' : '') + (x.color === 'white' ? ' tm-light' : '') + '" data-tm="' + i + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
+        '<span class="tm-num">' + tCount(x, now) + '</span>' +
+        '<span class="tm-line">' + esc(tLine(x, now)) + '</span>' +
+        more.map(function (t) { return '<span class="tm-more">' + esc(t) + '</span>'; }).join('') +
+        (x.rip ? '<span class="tm-dua">«' + RIP[x.rip][0] + '» <small>' + RIP[x.rip][1] + '</small></span>' : '') + '</button>';
+    }).join('');
     tEditRender();
   }
   function tTick() {
@@ -1456,12 +1502,14 @@
     var now = Date.now();
     Array.prototype.forEach.call(document.querySelectorAll('#timers-list .tm-card'), function (c) {
       var x = S.timers[+c.dataset.tm]; if (!x) return;
-      var html = tParts(x, now).map(function (p) { return '<b>' + p[0] + '</b><small>' + p[1] + '</small>'; }).join(' ');
+      var html = tCount(x, now);
       var n = c.querySelector('.tm-num'); if (n.innerHTML !== html) n.innerHTML = html;
     });
   }
   function tEditRender() {
     var box = $('timer-edit');
+    // the list takes the whole width; the editor opens beside it (above it on the phone)
+    document.querySelector('#timers .tm-body').classList.toggle('editing', !!tEdit);
     if (!tEdit) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
     var x = tEdit;
@@ -1476,6 +1524,9 @@
       }).join('') + '</span></div>' +
       '<div class="srow snd-row"><span class="sname">اللون</span><span class="snd-opts">' + T_COLOR_NAMES.map(function (c) {
         return '<button class="sbtn f tm-sw' + (x.color === c[0] ? ' on' : '') + '" data-tk="color-' + c[0] + '"><i style="background:' + T_COLORS[c[0]] + '"></i>' + c[1] + '</button>';
+      }).join('') + '</span></div>' +
+      '<div class="srow snd-row"><span class="sname">دعاء للراحل</span><span class="snd-opts">' + [['', 'بلا'], ['m', 'له'], ['f', 'لها']].map(function (o) {
+        return '<button class="sbtn f' + ((x.rip || '') === o[0] ? ' on' : '') + '" data-tk="rip-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</span></div>' +
       '<div class="srow"><span class="sname">إظهار التاريخ تحت العدّ</span><button class="sbtn al f' + (x.showDate ? ' on' : '') + '" data-tk="showdate">' + (x.showDate ? 'يظهر' : 'مخفي') + '</button></div>' +
       '<div class="tm-actions"><button class="gold-btn f" data-tk="save">حفظ</button><button class="pill f" data-tk="cancel">إلغاء</button>' +
@@ -1495,6 +1546,7 @@
     var p = k.split('-');
     if (p[0] === 'unit') tEdit.unit = p[1];
     else if (p[0] === 'color') tEdit.color = p[1];
+    else if (p[0] === 'rip') tEdit.rip = p[1] || '';
     else if (k === 'showdate') tEdit.showDate = !tEdit.showDate;
     else if (k === 'notime') { tEdit.h = -1; tEdit.mi = 0; }
     else if (k === 'cancel') { tEdit = null; timersRender(); return; }
@@ -1915,7 +1967,7 @@
       case 'cv-today': cvToday(); cvRender(); break;
       case 'tm-add':
         var r0 = P.ymd(Date.now());
-        tEdit = { id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, isNew: true };
+        tEdit = { id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, rip: '', isNew: true };
         tEditRender(); $('timer-edit').scrollIntoView({ block: 'start' }); $('tm-name').focus(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;
