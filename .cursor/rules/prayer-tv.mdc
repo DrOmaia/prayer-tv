@@ -77,6 +77,17 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
   number over a newer one, so never just point him to an old APK.)
 - Before a big change, tell him which version is the current `stable`.
 
+## 7. Design changes (look and layout)
+- Before a design change, read `.claude/skills/taste-skill/SKILL.md` (and `references/app-screens.md` for
+  settings, calendar, weather and other working screens): craft guidance on type, spacing, colour and checking
+  your own work with screenshots. Copied from github.com/Leonxlnx/taste-skill (MIT).
+- **The app's identity wins over that skill wherever they disagree.** Keep: the Islamic night design (navy /
+  purple, gold, star pattern, mosque drawing, next prayer in a glowing circle, one strip of times with gold
+  diamonds), the same layout by day in calm sand and gold (no white), Arabic RTL with the Tajawal font, and text
+  readable from a sofa 3–4 m from the TV (about 24px or more on the 1920×1080 stage).
+- Take from it what fits: fewer sizes, less clutter, no needless boxes or labels, one accent colour,
+  screenshots of TV (light and dark) and phone after every change.
+
 ## 6. Checklist for every change
 1. Read the relevant code first; find how the feature works today. Ask if unclear (section 1).
 2. Make the minimal change.
