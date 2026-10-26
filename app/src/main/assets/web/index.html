@@ -201,61 +201,113 @@
         <div><div class="big-title">الإعدادات</div><div id="set-sub" class="muted sub-title">الرياض · أم القرى</div></div>
       </div>
     </header>
+    <!-- each section opens with its title (+ / −); one open at a time -->
     <div class="set-body">
       <div class="card set-col">
-        <div class="tv-only">
-        <div class="set-h">اختصارات التطبيقات</div>
-        <div class="muted set-note">تظهر في الشاشة الرئيسية بهذا الترتيب</div>
-        <div id="set-shortcuts"></div>
-        <button id="set-add" class="pill f">+ إضافة اختصار</button>
-        <div class="set-h set-h2">عام</div>
-        <div id="set-general"></div>
+        <div class="set-sec tv-only" id="sec-apps">
+          <button class="set-tg f" data-sec="apps"><span class="set-tt">اختصارات التطبيقات</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">تظهر في الشاشة الرئيسية بهذا الترتيب</div>
+            <div id="set-shortcuts"></div>
+            <button id="set-add" class="pill f">+ إضافة اختصار</button>
+          </div>
         </div>
-        <div id="set-phone"></div>
-        <div class="set-h set-first">المدينة وطريقة الحساب</div>
-        <div id="set-loc"></div>
-        <div class="set-h set-h2">مواقيت الأذان والتنبيه</div>
-        <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
-        <div id="set-sound"></div>
-        <div id="set-prayers"></div>
-        <div id="set-isha"></div>
-        <div id="set-hijri"></div>
-        <div class="set-h set-h2">مدة الإقامة بعد الأذان (دقائق)</div>
-        <div id="set-iq"></div>
-        <div id="set-show"></div>
-        <div class="phone-only">
-          <div class="set-h set-h2">الويدجت على الشاشة الرئيسية</div>
-          <div class="muted set-note">لكل الويدجتات: «مواقيت اليوم»، الدائرة، الشريط، الشهر الهجري، محوّل التاريخ</div>
-          <div id="set-widget"></div>
+        <div class="set-sec tv-only" id="sec-general">
+          <button class="set-tg f" data-sec="general"><span class="set-tt">عام</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-general"></div>
+          </div>
         </div>
-        <div class="set-h set-h2">تحديث التطبيق</div>
-        <div class="srow"><span id="upd-msg" class="sname"></span><button id="upd-btn" class="sbtn al f">تحديث</button></div>
-        <div id="set-version" class="muted set-note"></div>
+        <div class="set-sec phone-only" id="sec-phone">
+          <button class="set-tg f" data-sec="phone"><span class="set-tt">تنبيهات الجوال</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-phone"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-loc">
+          <button class="set-tg f" data-sec="loc"><span class="set-tt">المدينة وطريقة الحساب</span><span id="sum-loc" class="set-sum"></span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-loc"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-adhan">
+          <button class="set-tg f" data-sec="adhan"><span class="set-tt">مواقيت الأذان والتنبيه</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">تصحيح بالدقيقة لمطابقة مسجد الحي، وتشغيل أو إيقاف التنبيه لكل صلاة</div>
+            <div id="set-sound"></div>
+            <div id="set-prayers"></div>
+            <div id="set-isha"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-hijri">
+          <button class="set-tg f" data-sec="hijri"><span class="set-tt">التاريخ الهجري</span><span id="sum-hijri" class="set-sum"></span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-hijri"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-iq">
+          <button class="set-tg f" data-sec="iq"><span class="set-tt">مدة الإقامة بعد الأذان (دقائق)</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-iq"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-look">
+          <button class="set-tg f" data-sec="look"><span class="set-tt">المظهر والعرض</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div id="set-show"></div>
+          </div>
+        </div>
+        <div class="set-sec phone-only" id="sec-widget">
+          <button class="set-tg f" data-sec="widget"><span class="set-tt">الويدجت على الشاشة الرئيسية</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">لكل الويدجتات: «مواقيت اليوم»، الدائرة، الشريط، الشهر الهجري، محوّل التاريخ</div>
+            <div id="set-widget"></div>
+          </div>
+        </div>
+        <div class="set-sec" id="sec-update">
+          <button class="set-tg f" data-sec="update"><span class="set-tt">تحديث التطبيق</span><span id="sum-update" class="set-sum"></span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="srow"><span id="upd-msg" class="sname"></span><button id="upd-btn" class="sbtn al f">تحديث</button></div>
+            <div id="set-version" class="muted set-note"></div>
+          </div>
+        </div>
       </div>
       <div class="card set-col">
-        <div class="set-h">عدّادات المناسبات</div>
-        <div class="muted set-note">تختفي بعد مرور تاريخها. المناسبات بنفس حرف «البطاقة» تتقلب معًا في بطاقة واحدة</div>
-        <div id="set-events"></div>
-        <div class="ev-add">
-          <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
-          <div id="ev-date" class="ev-date"></div>
-          <button id="ev-add" class="pill f">+ إضافة</button>
+        <div class="set-sec" id="sec-events">
+          <button class="set-tg f" data-sec="events"><span class="set-tt">عدّادات المناسبات</span><span id="sum-events" class="set-sum"></span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">تختفي بعد مرور تاريخها. المناسبات بنفس حرف «البطاقة» تتقلب معًا في بطاقة واحدة</div>
+            <div id="set-events"></div>
+            <div class="ev-add">
+              <input id="ev-name" class="inp f" type="text" maxlength="30" placeholder="اسم المناسبة، مثل: إجازة الصيف">
+              <div id="ev-date" class="ev-date"></div>
+              <button id="ev-add" class="pill f">+ إضافة</button>
+            </div>
+          </div>
         </div>
-        <div class="set-h set-h2">العائلة</div>
-        <div class="muted set-note">الأسماء وأعياد الميلاد: تظهر لهم الرسائل والتهاني، ويمكن لأي عائلة وضع أسمائها</div>
-        <div id="set-family"></div>
-        <div class="ev-add">
-          <input id="fm-name" class="inp f" type="text" maxlength="20" placeholder="الاسم">
-          <div class="ev-date"><button id="fm-kind" class="pill f"></button></div>
-          <div id="fm-date" class="ev-date"></div>
-          <button id="fm-add" class="pill f">+ إضافة فرد</button>
+        <div class="set-sec" id="sec-family">
+          <button class="set-tg f" data-sec="family"><span class="set-tt">العائلة</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">الأسماء وأعياد الميلاد: تظهر لهم الرسائل والتهاني، ويمكن لأي عائلة وضع أسمائها</div>
+            <div id="set-family"></div>
+            <div class="ev-add">
+              <input id="fm-name" class="inp f" type="text" maxlength="20" placeholder="الاسم">
+              <div class="ev-date"><button id="fm-kind" class="pill f"></button></div>
+              <div id="fm-date" class="ev-date"></div>
+              <button id="fm-add" class="pill f">+ إضافة فرد</button>
+            </div>
+          </div>
         </div>
-        <div class="set-h set-h2">رسائل العائلة</div>
-        <div class="muted set-note">تظهر بالتناوب مع التذكير، مع رسائل جاهزة لكل واحد منهم</div>
-        <div id="set-fam"></div>
-        <div class="ev-add">
-          <input id="fam-text" class="inp f" type="text" maxlength="120" placeholder="اكتب رسالتك هنا">
-          <div class="ev-date"><button id="fam-to" class="pill f"></button><button id="fam-add" class="pill f">+ إضافة الرسالة</button></div>
+        <div class="set-sec" id="sec-fammsg">
+          <button class="set-tg f" data-sec="fammsg"><span class="set-tt">رسائل العائلة</span><span class="set-pm">+</span></button>
+          <div class="set-sb">
+            <div class="muted set-note">تظهر بالتناوب مع التذكير، مع رسائل جاهزة لكل واحد منهم</div>
+            <div id="set-fam"></div>
+            <div class="ev-add">
+              <input id="fam-text" class="inp f" type="text" maxlength="120" placeholder="اكتب رسالتك هنا">
+              <div class="ev-date"><button id="fam-to" class="pill f"></button><button id="fam-add" class="pill f">+ إضافة الرسالة</button></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

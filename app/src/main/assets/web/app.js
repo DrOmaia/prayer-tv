@@ -1111,7 +1111,7 @@
           '<button class="sbtn al f' + (S.alerts[k] ? ' on' : '') + '" data-k="a-' + k + '">' + (S.alerts[k] ? 'التنبيه يعمل' : 'التنبيه متوقف') + '</button>') +
         '</div>';
     }).join('');
-    var sc = shortcutApps();
+    var sc = TV ? shortcutApps() : [];
     $('set-shortcuts').innerHTML = sc.length ? sc.map(function (a, i) {
       return '<div class="srow">' + (a.icon ? '<img src="' + a.icon + '" alt="">' : '') + '<span class="sname">' + esc(a.label) + '</span>' +
         '<button class="sbtn f" data-k="u-' + i + '" aria-label="إلى الأعلى">▲</button>' +
@@ -1216,6 +1216,10 @@
         '</b><button class="sbtn f" data-k="evd-' + f[0] + 'p" aria-label="زائد">+</button></span>';
     }).join('');
     $('set-version').textContent = A ? 'الإصدار ' + A.version() : '';
+    $('sum-loc').textContent = S.loc.name + ' · ' + P.method().name;
+    $('sum-hijri').textContent = fHFull.format(Date.now());
+    $('sum-update').textContent = myVersion();
+    $('sum-events').textContent = allEvents(r).length ? daysText(allEvents(r)[0].left) + ': ' + allEvents(r)[0].name : '';
     updMsg();
     updLatest();
     if (keep) {
@@ -1320,6 +1324,17 @@
       }
       updMsg();
     }, 1000);
+  }
+
+  // settings sections: the title opens its section and closes the others
+  function setToggle(btn) {
+    var sec = btn.parentNode, open = !sec.classList.contains('open');
+    Array.prototype.forEach.call(document.querySelectorAll('#settings .set-sec'), function (x) {
+      x.classList.toggle('open', x === sec && open);
+      x.querySelector('.set-pm').textContent = x === sec && open ? '−' : '+';
+    });
+    btn.focus();
+    if (open && btn.scrollIntoView) btn.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
   // ---------- the city: automatic (from the internet connection) or chosen by search (Open-Meteo geocoding) ----------
@@ -1615,6 +1630,7 @@
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     if (el.dataset.cv) { cvStep(el.dataset.cv); return; }
+    if (el.dataset.sec) { setToggle(el); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
