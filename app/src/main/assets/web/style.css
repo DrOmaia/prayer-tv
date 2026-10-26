@@ -18,9 +18,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* 1920×1080 stage, scaled to the screen */
 #stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); }
-.day { --now-tint: #E9DFCB; --pc-bg: #F1EDE6; --ink: #1C1E21; --muted: #5F5A52; --card: rgba(255,255,255,.42); --card2: rgba(255,255,255,.5); --tile: #FFFFFF; --line: #DBD3C5; --shadow: rgba(70,60,45,.08); --gold: #87642A; --on-gold: #FFFFFF; --now-bg: #1C1E21; --now-fg: #FFFFFF; --now-sub: #D9D2C5; --now-badge: #E9DDC2; --faint: #B3ABA0;
-  background-color: #E7E2D9;
-  background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%), radial-gradient(ellipse 700px 500px at 90% 95%, rgba(255,255,255,.25), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(140,128,115,.10) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(140,128,115,.06) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(150,138,124,.08) 66.5%, rgba(0,0,0,0) 67.3%), linear-gradient(96deg, rgba(0,0,0,0) 14%, rgba(150,138,124,.06) 14.6%, rgba(0,0,0,0) 15.8%), linear-gradient(170deg, rgba(0,0,0,0) 82%, rgba(140,128,115,.07) 82.4%, rgba(0,0,0,0) 83.2%); }
+/* day: calm sand and gold (no white), the night's star pattern */
+.day { --now-tint: rgba(142,102,36,.08); --pc-bg: #E6DDCB; --ink: #2A2418; --muted: #5E513C; --card: rgba(236,228,212,.7); --card2: #E6DDCB; --tile: #E6DDCB; --line: #C9B894; --shadow: rgba(60,45,20,.10); --gold: #8E6624; --on-gold: #FFF8EA; --now-bg: #2A2418; --now-fg: #F6EFE2; --now-sub: #D3C6AE; --now-badge: #E6D7B8; --faint: #8F8270;
+  background-color: #D9CEB8;
+  background-image: radial-gradient(ellipse 760px 520px at 52% 34%, rgba(160,116,42,.12), rgba(160,116,42,0) 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%238A6A2F' stroke-opacity='.10' stroke-width='1.2'%3E%3Cpath d='M48 14l10 24 24 10-24 10-10 24-10-24-24-10 24-10z'/%3E%3Cpath d='M24 24h48v48H24z' transform='rotate%2845 48 48%29'/%3E%3Cpath d='M24 24h48v48H24z'/%3E%3Ccircle cx='48' cy='48' r='9'/%3E%3Cpath d='M0 0l14 14M96 0L82 14M0 96l14-14M96 96L82 82'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #DED4C0 0%, #D6CAB2 100%);
+  background-size: auto, 96px 96px, auto; }
 .night { --now-tint: #2D2A24; --pc-bg: #212327; --ink: #EDE9E2; --muted: #A9A296; --card: rgba(255,255,255,.05); --card2: rgba(255,255,255,.07); --tile: rgba(255,255,255,.09); --line: rgba(255,255,255,.12); --shadow: rgba(0,0,0,.3); --gold: #D2AE6A; --on-gold: #16181B; --now-bg: #EDE9E2; --now-fg: #16181B; --now-sub: #4A463F; --now-badge: #16181B; --faint: #5E5A53;
   background-color: #16181B;
   background-image: radial-gradient(ellipse 900px 600px at 15% 5%, rgba(255,255,255,.05), rgba(255,255,255,0) 70%), linear-gradient(118deg, rgba(0,0,0,0) 38%, rgba(255,255,255,.05) 38.6%, rgba(0,0,0,0) 39.4%), linear-gradient(124deg, rgba(0,0,0,0) 41%, rgba(255,255,255,.03) 41.8%, rgba(0,0,0,0) 43%), linear-gradient(152deg, rgba(0,0,0,0) 66%, rgba(255,255,255,.04) 66.5%, rgba(0,0,0,0) 67.3%); }
@@ -388,6 +392,43 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .night.portrait .countdown { font-size: 100px; }
 .night.portrait .next-name { font-size: 76px; }
 .night.portrait .fact { padding: 20px 0 0; border-top: 1px solid var(--line); }
+
+/* ---------- day: the same design (circle, mosque, one strip) in calm sand and gold ---------- */
+.day #home { z-index: 0; }
+.day #home::before { content: ''; position: absolute; left: 30px; top: 190px; width: 620px; height: 410px; z-index: -1; opacity: .5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 420'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E4D7BD'/%3E%3Cstop offset='1' stop-color='%23D3C2A0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='url%28%23g%29' stroke='%238E6624' stroke-opacity='.5' stroke-width='2'%3E%3Cpath d='M110 420V150h44v270z'/%3E%3Cpath d='M104 150l28-78 28 78z'/%3E%3Cpath d='M100 210h64v12h-64z'/%3E%3Cpath d='M132 72v-22'/%3E%3Cpath d='M190 420V300q0-110 130-150 130 40 130 150v120z'/%3E%3Cpath d='M320 150v-46'/%3E%3Cpath d='M480 420V190h36v230z'/%3E%3Cpath d='M475 190l23-62 23 62z'/%3E%3Cpath d='M470 250h56v10h-56z'/%3E%3Cpath d='M40 420v-60q0-40 50-56 50 16 50 56v60z'/%3E%3Cpath d='M530 420v-70q0-36 46-50 46 14 46 50v70z'/%3E%3Cpath d='M290 420v-80q0-30 30-40 30 10 30 40v80z' fill='%23C8B48E'/%3E%3C/g%3E%3Cg fill='%238E6624' fill-opacity='.8'%3E%3Cpath d='M327 86a14 14 0 1 1-6-26 11 11 0 1 0 6 26z'/%3E%3Cpath d='M137 46a10 10 0 1 1-4-19 8 8 0 1 0 4 19z'/%3E%3C/g%3E%3C/svg%3E") no-repeat center bottom / contain; }
+.day.portrait #home::before { display: none; }
+/* next prayer: a glowing circle, «هل تعلم؟» beside it over the mosque */
+.day .next { background: transparent; border: none; box-shadow: none; padding: 0; align-items: center; grid-template-columns: 350px minmax(0, 1fr); }
+.day .next.no-fact { grid-template-columns: 350px; justify-content: center; }
+.day .next-main { width: 350px; height: 350px; border-radius: 50%; align-items: center; text-align: center; gap: 2px;
+  background: radial-gradient(circle at 50% 40%, #F1E9D8 0%, #E6DBC4 62%, #DCCCAD 100%); border: 2px solid rgba(142,102,36,.6);
+  box-shadow: 0 0 0 12px rgba(142,102,36,.07), 0 0 60px 10px rgba(160,116,42,.22), inset 0 0 40px rgba(160,116,42,.12); }
+.day .next-label { font-size: 22px; }
+.day .next-name { font-size: 54px; color: var(--gold); }
+.day .countdown { font-size: 70px; text-align: center; color: #6E4F1A; }
+.day .next-detail { font-size: 18px; }
+.day .fact { border-right: none; padding: 0 40px 0 24px; text-shadow: none; }
+/* prayer times: one strip with gold dividers; the next prayer in gold with a glow */
+.day .prayers { gap: 0; background: rgba(240,232,216,.45); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; margin: 0 -72px; padding: 0 72px; }
+.day .pc { border: none; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+.day .pc-in { align-items: center; text-align: center; }
+.day .pc-time { text-align: center; }
+.day .pc.pc-now { background: rgba(142,102,36,.06); }
+.day .pc.next-p { border: none; background: radial-gradient(ellipse 70% 45% at 50% 100%, rgba(160,116,42,.26), rgba(160,116,42,0) 75%); }
+.day .pc.next-p .pc-name, .day .pc.next-p .pc-time { color: var(--gold); text-shadow: none; }
+.day:not(.portrait) .pc:not(:last-child)::after { content: ''; position: absolute; left: 0; top: 18%; bottom: 18%; width: 1px; background: linear-gradient(rgba(142,102,36,0), rgba(142,102,36,.6), rgba(142,102,36,0)); }
+.day:not(.portrait) .pc:not(:last-child)::before { content: ''; position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; margin-top: -7px; transform: rotate(45deg); border: 2px solid var(--gold); background: #E3D7BF; z-index: 2; }
+.day.portrait .prayers { margin: 0; padding: 0; background: transparent; border: none; gap: 0; }
+.day.portrait .pc { border-bottom: 1px solid var(--line); }
+.day.portrait .pc-in { align-items: center; }
+.day .pc-bar { height: 4px; }
+.day.portrait .next { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 28px; }
+.day.portrait .next-main { width: 520px; height: 520px; }
+.day.portrait .countdown { font-size: 100px; }
+.day.portrait .next-name { font-size: 76px; }
+.day.portrait .fact { padding: 20px 0 0; border-top: 1px solid var(--line); }
+
 
 /* the Qur'an: list of surahs */
 .q-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 120px; gap: 18px; padding: 12px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; align-content: start; }
