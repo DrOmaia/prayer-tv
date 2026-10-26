@@ -1,46 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Date converter icon (1x1): today's Hijri day on a small round tile; opens the converter -->
+<!-- Date converter icon (1x1): today's Hijri day on a small tile; opens the converter -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layoutDirection="rtl">
+    android:layoutDirection="rtl"
+    android:padding="4dp">
 
-    <FrameLayout
-        android:layout_width="58dp"
-        android:layout_height="58dp"
-        android:layout_gravity="center">
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_night" />
 
-        <ImageView
-            android:id="@+id/bg"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitXY"
-            android:src="@drawable/widget_disc_night" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="vertical">
+        <TextView
+            android:id="@+id/cv_day"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="هـ"
+            android:textColor="#F2CF8A"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/cv_day"
-                style="@style/WidgetText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:textColor="#F2CF8A"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                style="@style/WidgetText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:text="هـ ⇄ م"
-                android:textSize="10sp" />
-        </LinearLayout>
-    </FrameLayout>
+        <TextView
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="تحويل"
+            android:textSize="11sp" />
+    </LinearLayout>
 </FrameLayout>

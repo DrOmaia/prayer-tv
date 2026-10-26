@@ -1215,7 +1215,9 @@
       return '<span>' + f[1] + ' <button class="sbtn f" data-k="evd-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + evDraft[f[0]] +
         '</b><button class="sbtn f" data-k="evd-' + f[0] + 'p" aria-label="زائد">+</button></span>';
     }).join('');
-    $('set-version').textContent = A ? 'الإصدار ' + A.version() : '';
+    var wErr = '';
+    try { wErr = A && A.widgetError ? A.widgetError() : ''; } catch (e) {}
+    $('set-version').textContent = (A ? 'الإصدار ' + A.version() : '') + (wErr ? ' · آخر خطأ في الويدجت: ' + wErr : '');
     $('sum-loc').textContent = S.loc.name + ' · ' + P.method().name;
     $('sum-hijri').textContent = fHFull.format(Date.now());
     $('sum-update').textContent = myVersion();
@@ -1251,12 +1253,62 @@
     var dim = cv.from === 'g' ? new Date(Date.UTC(cv.y, cv.m, 0)).getUTCDate() : 30;
     cv.d = cv.d < 1 ? dim : cv.d > dim ? (cv.d === dim + 1 ? 1 : dim) : cv.d;
   }
-  function cvStep(k) {
-    var f = k[0], dlt = k[1] === '+' ? 1 : -1;
-    cv[f] += dlt; cvClamp(); cvRender(); var b = document.querySelector('[data-cv="' + k + '"]'); if (b) b.focus();
+  // the three wheels (day · month · year): scroll them (or Up / Down on the remote); the value in the middle band is chosen
+  var cvSig = '', cvTimer = {};
+  function cvValues(f) {
+    var R = cv.from === 'g' ? CV_G : CV_H, out = [], k;
+    if (f === 'd') { var dim = cv.from === 'g' ? new Date(Date.UTC(cv.y, cv.m, 0)).getUTCDate() : 30; for (k = 1; k <= dim; k++) out.push(k); }
+    else if (f === 'm') for (k = 1; k <= 12; k++) out.push(k);
+    else for (k = R[0]; k <= R[1]; k++) out.push(k);
+    return out;
   }
-  function cvRender() {
+  function cvLabel(f, v) { return f === 'm' ? v + ' · ' + (cv.from === 'g' ? G_MONTHS : H_MONTHS)[v - 1] : String(v); }
+  function cvBuild() {
+    var keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.wf : '';
+    $('cv-fields').innerHTML = [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']].map(function (x) {
+      return '<div class="cv-f cv-f-' + x[0] + '"><span class="muted">' + x[1] + '</span><div class="cv-wrap">' +
+        '<div class="cv-wheel f" tabindex="0" data-wf="' + x[0] + '"><div class="cv-pad"></div>' +
+        cvValues(x[0]).map(function (v) { return '<div class="cv-it" data-v="' + v + '">' + cvLabel(x[0], v) + '</div>'; }).join('') +
+        '<div class="cv-pad"></div></div></div></div>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.cv-wheel'), function (w) {
+      cvPlace(w);
+      w.addEventListener('scroll', function () {
+        cvMark(w);
+        clearTimeout(cvTimer[w.dataset.wf]);
+        cvTimer[w.dataset.wf] = setTimeout(function () { cvSettle(w); }, 140);
+      }, { passive: true });
+    });
+    if (keep) { var k = document.querySelector('.cv-wheel[data-wf="' + keep + '"]'); if (k) k.focus(); }
+  }
+  function cvItemH(w) { var it = w.querySelector('.cv-it'); return it ? it.offsetHeight : 1; }
+  function cvPlace(w) {
+    var vals = cvValues(w.dataset.wf), i = Math.max(0, vals.indexOf(cv[w.dataset.wf]));
+    w.scrollTop = i * cvItemH(w);
+    cvMark(w);
+  }
+  function cvMark(w) {
+    var i = Math.round(w.scrollTop / cvItemH(w));
+    Array.prototype.forEach.call(w.querySelectorAll('.cv-it'), function (it, k) { it.classList.toggle('sel', k === i); });
+  }
+  function cvSettle(w) {
+    var vals = cvValues(w.dataset.wf), i = Math.max(0, Math.min(vals.length - 1, Math.round(w.scrollTop / cvItemH(w))));
+    if (cv[w.dataset.wf] === vals[i]) return;
+    cv[w.dataset.wf] = vals[i];
+    cvRender(false);
+  }
+  // remote: Up / Down on a wheel
+  function cvKey(w, dir) {
+    var vals = cvValues(w.dataset.wf), i = vals.indexOf(cv[w.dataset.wf]) + dir;
+    if (i < 0 || i >= vals.length) return;
+    cv[w.dataset.wf] = vals[i];
+    cvRender(false);
+    cvPlace(w);
+  }
+  function cvRender(rebuild) {
     cvClamp();
+    var sig = cv.from + '|' + cvValues('d').length;
+    if (rebuild !== false || sig !== cvSig) { cvSig = sig; cvBuild(); }
     var g = null, h = null, bad = '';
     if (cv.from === 'g') { g = { y: cv.y, m: cv.m, d: cv.d }; h = hOf(g.y, g.m, g.d); }
     else {
@@ -1266,13 +1318,6 @@
     }
     $('cv-g').classList.toggle('on', cv.from === 'g');
     $('cv-h').classList.toggle('on', cv.from === 'h');
-    var names = cv.from === 'g' ? G_MONTHS : H_MONTHS;
-    $('cv-fields').innerHTML = [['d', 'اليوم', cv.d, ''], ['m', 'الشهر', cv.m, names[cv.m - 1]], ['y', 'السنة', cv.y, cv.from === 'g' ? 'م' : 'هـ']].map(function (x) {
-      return '<div class="cv-f"><span class="muted">' + x[1] + '</span>' +
-        '<button class="sbtn f" data-cv="' + x[0] + '+" aria-label="زائد">+</button>' +
-        '<input id="cv-' + x[0] + '" class="cv-in f" inputmode="numeric" value="' + x[2] + '">' +
-        '<button class="sbtn f" data-cv="' + x[0] + '-" aria-label="ناقص">−</button><span class="cv-note">' + x[3] + '</span></div>';
-    }).join('');
     if (!g || !h) { $('cv-out').innerHTML = '<div class="cv-day muted">' + bad + '</div>'; return; }
     var r = P.ymd(Date.now()), n = daysTo(g, r), dow = new Date(Date.UTC(g.y, g.m - 1, g.d)).getUTCDay();
     var when = n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === -1 ? 'أمس' : n === 2 ? 'بعد غد' : n === -2 ? 'قبل يومين' :
@@ -1282,11 +1327,6 @@
     var sn = seasonOfDay(P.noonOf(g.y, g.m, g.d));
     $('cv-out').innerHTML = '<div class="cv-day">' + DAY_NAMES[dow] + '</div><div class="cv-big">' + big + '</div>' +
       '<div class="cv-num" dir="ltr">' + num + '</div><div class="muted cv-when">' + when + (sn ? ' · ' + sn[1] : '') + '</div>';
-  }
-  function cvInput(el) {
-    var f = el.id.slice(3), v = parseInt(String(el.value).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }), 10);
-    if (!isNaN(v)) cv[f] = v;
-    cvRender();
   }
 
   // ---------- update from the settings: the latest release is downloaded and the installer opens ----------
@@ -1587,6 +1627,8 @@
     var typing = document.activeElement && document.activeElement.tagName === 'INPUT';
     if (k === 'Enter' && document.activeElement && document.activeElement.id === 'loc-q') { e.preventDefault(); locSearch(); return; }
     if (typing && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'Escape' && k !== 'GoBack') return;
+    var ae = document.activeElement;
+    if (ae && ae.classList && ae.classList.contains('cv-wheel') && (k === 'ArrowUp' || k === 'ArrowDown')) { e.preventDefault(); cvKey(ae, k === 'ArrowUp' ? -1 : 1); return; }
     var dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (dirs[k]) { e.preventDefault(); move(dirs[k]); return; }
     if (k === 'Enter' || k === ' ') {
@@ -1629,7 +1671,6 @@
       return;
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
-    if (el.dataset.cv) { cvStep(el.dataset.cv); return; }
     if (el.dataset.sec) { setToggle(el); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
@@ -1676,8 +1717,6 @@
   }
   onSwipe($('cal-grid'), function () { calMonth(1); }, function () { calMonth(-1); });
   onSwipe(document.querySelector('.kahf-text'), kNext, kPrev);
-
-  document.addEventListener('change', function (e) { if (e.target.classList && e.target.classList.contains('cv-in')) cvInput(e.target); });
 
   // called by Android
   window.App = {

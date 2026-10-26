@@ -43,6 +43,14 @@ object Widgets {
         updateAll(ctx)
     }
 
+    private fun lastError(ctx: Context, text: String) {
+        ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("widgetError", text.take(300)).apply()
+    }
+    fun error(ctx: Context): String = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("widgetError", "") ?: ""
+
+    // a provider's own update: never let an error reach the launcher
+    fun safeUpdate(ctx: Context) { try { updateAll(ctx) } catch (e: Exception) { lastError(ctx, e.toString()) } }
+
     private fun data(ctx: Context): JSONObject? =
         ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString(KEY, null)?.let {
             try { JSONObject(it) } catch (_: Exception) { null }
@@ -96,26 +104,20 @@ object Widgets {
         val sty = Style(d?.optJSONObject("style"))
         // refresh at the next prayer time and at midnight; every 10 minutes for the progress bar and ring
         var nextChange = minOf(st?.nextAt ?: Long.MAX_VALUE, nextMidnight(now), now + 30 * 60_000L)
-        am.getAppWidgetIds(ComponentName(ctx, PrayerWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, prayerViews(ctx, d, sty, st, now))
-            nextChange = minOf(nextChange, now + 10 * 60_000L)
+        // each widget on its own: a failure in one never stops the others (the last error is kept for the settings)
+        fun each(cls: Class<*>, build: () -> RemoteViews): Boolean {
+            val ids = am.getAppWidgetIds(ComponentName(ctx, cls))
+            ids.forEach { id ->
+                try { am.updateAppWidget(id, build()) } catch (e: Exception) { lastError(ctx, cls.simpleName + ": " + e) }
+            }
+            return ids.isNotEmpty()
         }
-        am.getAppWidgetIds(ComponentName(ctx, RingWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, ringViews(ctx, sty, st, now))
-            nextChange = minOf(nextChange, now + 10 * 60_000L)
-        }
-        am.getAppWidgetIds(ComponentName(ctx, StripWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, stripViews(ctx, sty, st, now))
-        }
-        am.getAppWidgetIds(ComponentName(ctx, MonthWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, monthViews(ctx, d, sty, st, now))
-        }
-        am.getAppWidgetIds(ComponentName(ctx, ConvertWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, convertViews(ctx, d, sty, st))
-        }
-        am.getAppWidgetIds(ComponentName(ctx, EventWidget::class.java)).forEach { id ->
-            am.updateAppWidget(id, eventViews(ctx, d, now))
-        }
+        if (each(PrayerWidget::class.java) { prayerViews(ctx, d, sty, st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
+        if (each(RingWidget::class.java) { ringViews(ctx, sty, st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
+        each(StripWidget::class.java) { stripViews(ctx, sty, st, now) }
+        each(MonthWidget::class.java) { monthViews(ctx, d, sty, st, now) }
+        each(ConvertWidget::class.java) { convertViews(ctx, sty, st) }
+        each(EventWidget::class.java) { eventViews(ctx, d, now) }
         // refresh again only while there is a widget on the home screen
         if (PROVIDERS.any { am.getAppWidgetIds(ComponentName(ctx, it)).isNotEmpty() }) arm(ctx, nextChange)
     }
@@ -370,10 +372,10 @@ object Widgets {
     }
 
     // ---- the date converter icon (1x1): today's Hijri day on a small calendar; opens the converter
-    private fun convertViews(ctx: Context, d: JSONObject?, sty: Style, st: State?): RemoteViews {
+    private fun convertViews(ctx: Context, sty: Style, st: State?): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_convert)
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "convert", 6))
-        putBg(rv, sty, if (sty.dark) R.drawable.widget_disc_dark else DISC[period(st)])
+        putBg(rv, sty, bgOf(sty, st))
         val t = st?.today
         rv.setTextViewText(R.id.cv_day, t?.optInt("hday", 0)?.takeIf { it > 0 }?.toString() ?: "هـ")
         rv.setTextColor(R.id.cv_day, sty.accent)
@@ -454,29 +456,29 @@ object Widgets {
 }
 
 class PrayerWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
     override fun onReceive(ctx: Context, intent: Intent) {
         super.onReceive(ctx, intent)
-        if (intent.action == Widgets.ACTION) Widgets.updateAll(ctx)
+        if (intent.action == Widgets.ACTION) Widgets.safeUpdate(ctx)
     }
 }
 
 class RingWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 
 class StripWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 
 class MonthWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 
 class ConvertWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 
 class EventWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.updateAll(ctx)
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }

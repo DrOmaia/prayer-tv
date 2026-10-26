@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon: «تحويل التاريخ» and «التقويم» (each can be dragged to the home screen as its own icon) -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher"
+        android:shortcutId="convert"
+        android:shortcutLongLabel="@string/widget_convert"
+        android:shortcutShortLabel="@string/widget_convert">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.dromaia.prayertv.MainActivity"
+            android:targetPackage="com.dromaia.prayertv">
+            <extra android:name="screen" android:value="convert" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher"
+        android:shortcutId="calendar"
+        android:shortcutLongLabel="@string/shortcut_calendar"
+        android:shortcutShortLabel="@string/shortcut_calendar">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.dromaia.prayertv.MainActivity"
+            android:targetPackage="com.dromaia.prayertv">
+            <extra android:name="screen" android:value="calendar" />
+        </intent>
+    </shortcut>
+</shortcuts>

@@ -215,6 +215,9 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun widgetData(json: String) = Widgets.save(this@MainActivity, json)
 
+        @JavascriptInterface
+        fun widgetError(): String = Widgets.error(this@MainActivity)
+
         // update from settings: download the latest release with the system's download manager, then open the installer
         @JavascriptInterface
         fun updateStart(): String {
