@@ -169,6 +169,6 @@
       }
     },
     dayTimes: dayTimes, setIsha: setIsha, setIqamah: setIqamah, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
-    pad: pad, addDays: addDays, isRamadan: isRamadan
+    pad: pad, addDays: addDays, isRamadan: isRamadan, offH: offH
   };
 })();

@@ -47,6 +47,18 @@
       fontSize: s.fontSize || 'normal', // phone text size
       reciter: s.reciter || 'alafasy',
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
+      // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
+      timers: s.timers || [
+        { id: 't1', name: 'وفاة الوالد أبي أسامة', y: 2023, m: 4, d: 18, h: -1, mi: 0, unit: 'months', color: 'white', showDate: false },
+        { id: 't2', name: 'أمية', y: 1984, m: 3, d: 6, h: 12, mi: 0, unit: 'timer', color: 'navy', showDate: true },
+        { id: 't3', name: 'الزواج', y: 2010, m: 6, d: 11, h: -1, mi: 0, unit: 'timer', color: 'white', showDate: true },
+        { id: 't4', name: 'العودة للدوام', y: 2027, m: 8, d: 20, h: -1, mi: 0, unit: 'days', color: 'white', showDate: false },
+        { id: 't5', name: 'رند', y: 1988, m: 5, d: 11, h: -1, mi: 0, unit: 'timer', color: 'pink', showDate: true },
+        { id: 't6', name: 'حسان', y: 2011, m: 7, d: 26, h: 13, mi: 0, unit: 'timer', color: 'navy', showDate: true },
+        { id: 't7', name: 'سلمى', y: 2014, m: 3, d: 20, h: 14, mi: 0, unit: 'timer', color: 'pink', showDate: true },
+        { id: 't8', name: 'عبود', y: 2016, m: 2, d: 2, h: 11, mi: 0, unit: 'minutes', color: 'navy', showDate: true },
+        { id: 't9', name: 'إجازة الصيف', y: 2027, m: 5, d: 18, h: 14, mi: 0, unit: 'timer', color: 'white', showDate: true }
+      ],
       // phone home-screen widgets: background ('time' colour of the time of day · 'dark'), transparency 0–100,
       // text size, accent colour and the parts shown on «مواقيت اليوم»
       widget: Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold', city: true, prog: true, line: true, date: true }, s.widget),
@@ -348,7 +360,9 @@
     var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months })); } catch (e) {}
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months,
+      timers: S.timers.map(function (x) { return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
+        date: x.showDate ? x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '' }; }) })); } catch (e) {}
   }
 
   // the Hijri month widget: this Hijri month and the next two, each day with its Gregorian date, season,
@@ -838,6 +852,7 @@
   }
   function tick() {
     var t = Date.now(), r = P.ymd(t);
+    tTick();
     var today = dayOf(r.y, r.m, r.d), tm = P.addDays(r.y, r.m, r.d, 1), tom = dayOf(tm.y, tm.m, tm.d);
     var ym = P.addDays(r.y, r.m, r.d, -1), yest = dayOf(ym.y, ym.m, ym.d);
     var key = r.y + '-' + r.m + '-' + r.d;
@@ -1384,6 +1399,117 @@
       '<div class="cv-num" dir="ltr">' + num + '</div><div class="muted cv-when">' + when + (sn ? ' · ' + sn[1] : '') + '</div>';
   }
 
+  // ---------- timers: the time since (or until) a date, in the unit chosen; also as home-screen widgets ----------
+  var T_UNITS = [['timer', 'مؤقّت'], ['minutes', 'دقائق'], ['hours', 'ساعات'], ['days', 'أيام'], ['workdays', 'أيام عمل'], ['weeks', 'أسابيع'], ['months', 'أشهر']];
+  var T_COLORS = { white: '#FFFFFF', navy: '#1E2A78', pink: '#C2185B', green: '#2E7D5B', gold: '#A8792A', black: '#16181B' };
+  var T_COLOR_NAMES = [['white', 'أبيض'], ['navy', 'كحلي'], ['pink', 'فوشيا'], ['green', 'أخضر'], ['gold', 'ذهبي'], ['black', 'أسود']];
+  function tAt(x) { return Date.UTC(x.y, x.m - 1, x.d, x.h >= 0 ? x.h : 0, x.h >= 0 ? x.mi : 0) - P.offH(Date.UTC(x.y, x.m - 1, x.d, 12)) * HR; }
+  // the counted parts: [[number, unit word], …] (Arabic number agreement)
+  function tW(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? few : many; }
+  function tParts(x, now) {
+    var at = tAt(x), from = Math.min(at, now), to = Math.max(at, now), ms = to - from, out = [];
+    var DAY = 86400000;
+    if (x.unit === 'minutes') return [[Math.floor(ms / MIN), tW(Math.floor(ms / MIN), 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')]];
+    if (x.unit === 'hours') return [[Math.floor(ms / HR), tW(Math.floor(ms / HR), 'ساعة', 'ساعتان', 'ساعات', 'ساعة')]];
+    if (x.unit === 'days') { var dd = Math.floor(ms / DAY); return [[dd, tW(dd, 'يوم', 'يومان', 'أيام', 'يومًا')]]; }
+    if (x.unit === 'weeks') { var ww = Math.floor(ms / DAY / 7); return [[ww, tW(ww, 'أسبوع', 'أسبوعان', 'أسابيع', 'أسبوعًا')]]; }
+    if (x.unit === 'workdays') {
+      // Sunday to Thursday (the Saudi working week), the days between
+      var a = new Date(from + P.offH(from) * HR), b = new Date(to + P.offH(to) * HR), n = 0;
+      var da = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate()), db = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
+      var days = Math.round((db - da) / DAY), wk = Math.floor(days / 7); n = wk * 5;
+      for (var k = 1; k <= days % 7; k++) { var dw = new Date(da + (wk * 7 + k) * DAY).getUTCDay(); if (dw !== 5 && dw !== 6) n++; }
+      return [[n, tW(n, 'يوم عمل', 'يوما عمل', 'أيام عمل', 'يوم عمل')]];
+    }
+    // whole months / years by the calendar, then what is left
+    var f = new Date(from + P.offH(from) * HR), t = new Date(to + P.offH(to) * HR);
+    var months = (t.getUTCFullYear() - f.getUTCFullYear()) * 12 + t.getUTCMonth() - f.getUTCMonth();
+    var addM = function (m) { var d = new Date(f.getTime()); d.setUTCMonth(d.getUTCMonth() + m); return d; };
+    if (addM(months) > t) months--;
+    if (x.unit === 'months') return [[months, tW(months, 'شهر', 'شهران', 'أشهر', 'شهرًا')]];
+    var years = Math.floor(months / 12), rest = t - addM(years * 12);
+    var D = Math.floor(rest / DAY), H = Math.floor(rest % DAY / HR), M = Math.floor(rest % HR / MIN);
+    if (years) out.push([years, tW(years, 'سنة', 'سنتان', 'سنوات', 'سنة')]);
+    if (years || D) out.push([D, tW(D, 'يوم', 'يومان', 'أيام', 'يومًا')]);
+    out.push([H, tW(H, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')]);
+    out.push([M, tW(M, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')]);
+    return out;
+  }
+  function tLine(x, now) {
+    var past = tAt(x) <= now;
+    return (past ? 'منذ ' : 'حتى ') + x.name + (x.showDate ? ' · ' + x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function tInk(c) { return c === 'white' ? '#3A3A3A' : '#FFFFFF'; }
+  var tEdit = null; // the timer being edited (a copy), or null
+  function timersRender() {
+    var now = Date.now();
+    $('timers-list').innerHTML = S.timers.map(function (x, i) {
+      return '<button class="tm-card f" data-tm="' + i + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
+        '<span class="tm-num">' + tParts(x, now).map(function (p) { return '<b>' + p[0] + '</b><small>' + p[1] + '</small>'; }).join(' ') + '</span>' +
+        '<span class="tm-line">' + esc(tLine(x, now)) + '</span></button>';
+    }).join('') + '<button id="tm-add" class="pill f">+ عدّاد جديد</button>';
+    tEditRender();
+  }
+  function tTick() {
+    if (screen !== 'timers') return;
+    var now = Date.now();
+    Array.prototype.forEach.call(document.querySelectorAll('#timers-list .tm-card'), function (c) {
+      var x = S.timers[+c.dataset.tm]; if (!x) return;
+      var html = tParts(x, now).map(function (p) { return '<b>' + p[0] + '</b><small>' + p[1] + '</small>'; }).join(' ');
+      var n = c.querySelector('.tm-num'); if (n.innerHTML !== html) n.innerHTML = html;
+    });
+  }
+  function tEditRender() {
+    var box = $('timer-edit');
+    if (!tEdit) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    var x = tEdit;
+    var date = x.y + '-' + pad2(x.m) + '-' + pad2(x.d), time = x.h >= 0 ? pad2(x.h) + ':' + pad2(x.mi) : '';
+    box.innerHTML = '<div class="set-h">' + (x.isNew ? 'عدّاد جديد' : 'تعديل العدّاد') + '</div>' +
+      '<input id="tm-name" class="inp f" maxlength="30" placeholder="الاسم، مثل: إجازة الصيف" value="' + esc(x.name) + '">' +
+      '<div class="srow"><span class="sname">التاريخ</span><input id="tm-date" class="inp f" type="date" value="' + date + '"></div>' +
+      '<div class="srow"><span class="sname">الوقت <span class="muted">(اختياري)</span></span><input id="tm-time" class="inp f" type="time" value="' + time + '">' +
+      (time ? '<button class="sbtn f" data-tk="notime">بلا وقت</button>' : '') + '</div>' +
+      '<div class="srow snd-row"><span class="sname">الوحدة</span><span class="snd-opts">' + T_UNITS.map(function (u) {
+        return '<button class="sbtn f' + (x.unit === u[0] ? ' on' : '') + '" data-tk="unit-' + u[0] + '">' + u[1] + '</button>';
+      }).join('') + '</span></div>' +
+      '<div class="srow snd-row"><span class="sname">اللون</span><span class="snd-opts">' + T_COLOR_NAMES.map(function (c) {
+        return '<button class="sbtn f tm-sw' + (x.color === c[0] ? ' on' : '') + '" data-tk="color-' + c[0] + '"><i style="background:' + T_COLORS[c[0]] + '"></i>' + c[1] + '</button>';
+      }).join('') + '</span></div>' +
+      '<div class="srow"><span class="sname">إظهار التاريخ تحت العدّ</span><button class="sbtn al f' + (x.showDate ? ' on' : '') + '" data-tk="showdate">' + (x.showDate ? 'يظهر' : 'مخفي') + '</button></div>' +
+      '<div class="tm-actions"><button class="gold-btn f" data-tk="save">حفظ</button><button class="pill f" data-tk="cancel">إلغاء</button>' +
+      (x.isNew ? '' : '<button class="pill f" data-tk="del">حذف</button>') + '</div>' +
+      '<div class="muted set-note">لإضافته على الشاشة الرئيسية: اضغط مطولًا على الشاشة ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد»، ثم اختر اسمه.</div>';
+  }
+  function tReadForm() {
+    if (!tEdit) return;
+    tEdit.name = ($('tm-name').value || '').trim();
+    var d = ($('tm-date').value || '').split('-');
+    if (d.length === 3) { tEdit.y = +d[0]; tEdit.m = +d[1]; tEdit.d = +d[2]; }
+    var tm = ($('tm-time').value || '').split(':');
+    if (tm.length >= 2 && tm[0] !== '') { tEdit.h = +tm[0]; tEdit.mi = +tm[1]; }
+  }
+  function tAction(k) {
+    tReadForm();
+    var p = k.split('-');
+    if (p[0] === 'unit') tEdit.unit = p[1];
+    else if (p[0] === 'color') tEdit.color = p[1];
+    else if (k === 'showdate') tEdit.showDate = !tEdit.showDate;
+    else if (k === 'notime') { tEdit.h = -1; tEdit.mi = 0; }
+    else if (k === 'cancel') { tEdit = null; timersRender(); return; }
+    else if (k === 'del') { S.timers = S.timers.filter(function (x) { return x.id !== tEdit.id; }); save(); sendWidget(); tEdit = null; timersRender(); return; }
+    else if (k === 'save') {
+      if (!tEdit.name) { $('tm-name').focus(); return; }
+      var x = Object.assign({}, tEdit); delete x.isNew;
+      var i = S.timers.map(function (t) { return t.id; }).indexOf(x.id);
+      if (i >= 0) S.timers[i] = x; else S.timers.push(x);
+      save(); sendWidget(); tEdit = null; timersRender(); return;
+    }
+    tEditRender();
+    var b = document.querySelector('[data-tk="' + k + '"]'); if (b) b.focus();
+  }
+
   // ---------- update from the settings: the latest release is downloaded and the installer opens ----------
   var upd = { latest: '', state: '', pct: 0, timer: null, asked: false };
   function myVersion() { try { return A && A.version ? 'v' + String(A.version()).split('.').pop() : ''; } catch (e) { return ''; } }
@@ -1650,6 +1776,7 @@
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
     if (name === 'convert') { cvToday(); cvRender(); focusFirst($('cv-g')); return; }
+    if (name === 'timers') { tEdit = null; timersRender(); focusFirst(document.querySelector('#timers .f')); return; }
     if (name === 'month') { monthRender(); focusFirst(document.querySelector('#month .f')); return; }
     if (name === 'imsak') { imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
@@ -1758,6 +1885,8 @@
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     if (el.dataset.sec) { setToggle(el); return; }
+    if (el.dataset.tm) { tEdit = Object.assign({}, S.timers[+el.dataset.tm]); tEditRender(); $('timer-edit').scrollIntoView({ block: 'start' }); return; }
+    if (el.dataset.tk) { tAction(el.dataset.tk); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
@@ -1784,6 +1913,10 @@
         }
         cvRender(); el.focus(); break;
       case 'cv-today': cvToday(); cvRender(); break;
+      case 'tm-add':
+        var r0 = P.ymd(Date.now());
+        tEdit = { id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, isNew: true };
+        tEditRender(); $('timer-edit').scrollIntoView({ block: 'start' }); $('tm-name').focus(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;
     }
@@ -1808,7 +1941,7 @@
   window.App = {
     back: back,
     // a widget opens a screen (the date converter, the calendar)
-    open: function (name) { if (/^(convert|calendar)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
+    open: function (name) { if (/^(convert|calendar|timers)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
     onResume: function () {
       appsCache = null;
       if (screen === 'home') renderShortcuts();
@@ -1828,5 +1961,5 @@
   loadWeather();
   setInterval(loadWeather, 30 * MIN);
   focusFirst();
-  if (/^#(convert|calendar)$/.test(location.hash)) window.App.open(location.hash.slice(1));
+  if (/^#(convert|calendar|timers)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

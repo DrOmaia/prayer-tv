@@ -19,6 +19,7 @@ import android.os.SystemClock
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.text.style.UnderlineSpan
 import android.util.TypedValue
 import android.view.View
@@ -66,7 +67,96 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
-        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java)
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java)
+
+    // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
+    fun timers(ctx: Context): List<Pair<String, String>> {
+        val a = data(ctx)?.optJSONArray("timers") ?: return emptyList()
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { it.optString("id") to it.optString("name") }
+    }
+    fun setTimer(ctx: Context, widgetId: Int, timerId: String) {
+        ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("timer_$widgetId", timerId).apply()
+        updateAll(ctx)
+    }
+
+    private fun tw(n: Long, one: String, two: String, few: String, many: String) =
+        "$n " + when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> few; else -> many }
+
+    // the count in the unit chosen (the same words as the app's screen)
+    private fun timerText(at: Long, unit: String, now: Long): String {
+        val from = minOf(at, now); val to = maxOf(at, now); val ms = to - from
+        val day = 86_400_000L
+        when (unit) {
+            "minutes" -> return tw(ms / 60_000L, "دقيقة", "دقيقتان", "دقائق", "دقيقة")
+            "hours" -> return tw(ms / 3_600_000L, "ساعة", "ساعتان", "ساعات", "ساعة")
+            "days" -> return tw(ms / day, "يوم", "يومان", "أيام", "يومًا")
+            "weeks" -> return tw(ms / day / 7, "أسبوع", "أسبوعان", "أسابيع", "أسبوعًا")
+            "workdays" -> {
+                val da = dayNumber(from); val days = dayNumber(to) - da
+                var n = days / 7 * 5
+                for (k in 1L..(days % 7)) {
+                    // day number 0 was a Thursday (1 Jan 1970): Friday and Saturday are the weekend
+                    val dw = Math.floorMod(da + days / 7 * 7 + k + 4, 7L) // 0 = Sunday
+                    if (dw != 5L && dw != 6L) n++
+                }
+                return tw(n, "يوم عمل", "يوما عمل", "أيام عمل", "يوم عمل")
+            }
+        }
+        val f = Calendar.getInstance(TZ).apply { timeInMillis = from }
+        val t = Calendar.getInstance(TZ).apply { timeInMillis = to }
+        var months = (t.get(Calendar.YEAR) - f.get(Calendar.YEAR)) * 12 + t.get(Calendar.MONTH) - f.get(Calendar.MONTH)
+        fun addM(m: Int) = (f.clone() as Calendar).apply { add(Calendar.MONTH, m) }.timeInMillis
+        if (addM(months) > to) months--
+        if (unit == "months") return tw(months.toLong(), "شهر", "شهران", "أشهر", "شهرًا")
+        val years = months / 12
+        val rest = to - addM(years * 12)
+        val d = rest / day; val h = rest % day / 3_600_000L; val m = rest % 3_600_000L / 60_000L
+        val parts = mutableListOf<String>()
+        if (years > 0) parts.add(tw(years.toLong(), "سنة", "سنتان", "سنوات", "سنة"))
+        if (years > 0 || d > 0) parts.add(tw(d, "يوم", "يومان", "أيام", "يومًا"))
+        parts.add(tw(h, "ساعة", "ساعتان", "ساعات", "ساعة"))
+        parts.add(tw(m, "دقيقة", "دقيقتان", "دقائق", "دقيقة"))
+        return parts.joinToString("  ")
+    }
+
+    // numbers large, unit words smaller
+    private fun bigNumbers(text: String): CharSequence {
+        val sp = SpannableString(text)
+        var i = 0
+        while (i < text.length) {
+            if (!text[i].isDigit()) {
+                val j = i
+                while (i < text.length && !text[i].isDigit()) i++
+                sp.setSpan(RelativeSizeSpan(0.5f), j, i, 0)
+            } else i++
+        }
+        return sp
+    }
+
+    private fun timerViews(ctx: Context, d: JSONObject?, sty: Style, widgetId: Int, now: Long): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_timer)
+        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "timers", 7))
+        val tid = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("timer_$widgetId", "")
+        val a = d?.optJSONArray("timers")
+        val x = (0 until (a?.length() ?: 0)).mapNotNull { a?.optJSONObject(it) }.firstOrNull { it.optString("id") == tid }
+        if (x == null) {
+            rv.setInt(R.id.bg, "setColorFilter", Color.parseColor("#1E2A78"))
+            rv.setTextViewText(R.id.tm_count, "عدّاد")
+            rv.setTextViewText(R.id.tm_line, "اضغط مطولًا ← الإعدادات لاختياره")
+            return rv
+        }
+        val bg = try { Color.parseColor(x.optString("color")) } catch (_: Exception) { Color.parseColor("#1E2A78") }
+        val ink = try { Color.parseColor(x.optString("ink")) } catch (_: Exception) { Color.WHITE }
+        rv.setInt(R.id.bg, "setColorFilter", bg)
+        rv.setInt(R.id.bg, "setImageAlpha", maxOf(sty.alpha, 60))
+        val at = x.optLong("at")
+        rv.setTextViewText(R.id.tm_count, bigNumbers(timerText(at, x.optString("unit"), now)))
+        val date = x.optString("date")
+        rv.setTextViewText(R.id.tm_line, (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else "")
+        rv.setTextColor(R.id.tm_count, ink)
+        rv.setTextColor(R.id.tm_line, ink)
+        return rv
+    }
 
     // the look chosen in the app's settings (the same for all widgets): background, transparency, text size,
     // accent colour and the parts shown on «مواقيت اليوم»
@@ -118,6 +208,11 @@ object Widgets {
         each(MonthWidget::class.java) { monthViews(ctx, d, sty, st, now) }
         each(ConvertWidget::class.java) { convertViews(ctx, sty, st) }
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
+        // timers count minutes: refresh at the next minute while one is on the home screen
+        am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
+            try { am.updateAppWidget(id, timerViews(ctx, d, sty, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
+            nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
+        }
         // refresh again only while there is a widget on the home screen
         if (PROVIDERS.any { am.getAppWidgetIds(ComponentName(ctx, it)).isNotEmpty() }) arm(ctx, nextChange)
     }
@@ -497,6 +592,10 @@ class RingWidget : AppWidgetProvider() {
 }
 
 class StripWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
+}
+
+class TimerWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 
