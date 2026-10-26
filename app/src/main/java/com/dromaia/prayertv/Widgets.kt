@@ -184,7 +184,8 @@ object Widgets {
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
         putBg(rv, sty, bgOf(sty, st))
         sizes(rv, sty, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.left_label to 12f,
-            R.id.countdown to 24f, R.id.cur_name to 15f, R.id.elapsed to 21f, R.id.dua to 13f, R.id.info_label to 13f,
+            R.id.countdown to 24f, R.id.cur_name to 15f, R.id.elapsed to 21f,
+            R.id.ev0n to 13f, R.id.ev1n to 13f, R.id.ev2n to 13f, R.id.ev0d to 13f, R.id.ev1d to 13f, R.id.ev2d to 13f, R.id.dua to 13f, R.id.info_label to 13f,
             R.id.info_chrono to 14f, R.id.hijri to 13f, R.id.greg to 13f) + NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
         rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.progress, if (sty.prog) View.VISIBLE else View.GONE)
@@ -216,6 +217,7 @@ object Widgets {
             rv.setChronometerCountDown(R.id.elapsed, false)
             rv.setViewVisibility(R.id.elapsed, View.VISIBLE)
         } else rv.setViewVisibility(R.id.elapsed, View.GONE)
+        putEvents(rv, d, sty, now)
         rv.setTextViewText(R.id.dua, st.today.optString("dua"))
         putInfo(rv, d, st, now)
         putDate(ctx, rv, st)
@@ -241,6 +243,33 @@ object Widgets {
             rv.setChronometerCountDown(R.id.info_chrono, true)
             rv.setViewVisibility(R.id.info_chrono, View.VISIBLE)
         } else rv.setViewVisibility(R.id.info_chrono, View.GONE)
+    }
+
+    // the coming occasions in the middle of the top line: name, then the days left (up to three, in turn)
+    private val EV_N = intArrayOf(R.id.ev0n, R.id.ev1n, R.id.ev2n)
+    private val EV_D = intArrayOf(R.id.ev0d, R.id.ev1d, R.id.ev2d)
+    private fun daysLeft(left: Int): String = when (left) {
+        0 -> "اليوم"; 1 -> "غدًا"; 2 -> "بعد يومين"; in 3..10 -> "بعد $left أيام"; else -> "بعد $left يومًا"
+    }
+    private fun putEvents(rv: RemoteViews, d: JSONObject?, sty: Style, now: Long) {
+        val list = mutableListOf<Pair<String, String>>()
+        val events = d?.optJSONArray("events")
+        val today = dayNumber(now)
+        if (events != null) for (i in 0 until events.length()) {
+            val e = events.optJSONObject(i) ?: continue
+            val left = (dayNumber(e.optLong("at")) - today).toInt()
+            if (left < 0) continue
+            list.add(e.optString("name") to daysLeft(left))
+            if (list.size == 3) break
+        }
+        rv.setViewVisibility(R.id.ev_flip, if (list.isEmpty()) View.INVISIBLE else View.VISIBLE)
+        if (list.isEmpty()) return
+        for (k in 0 until 3) {
+            val (n, l) = list[k % list.size]
+            rv.setTextViewText(EV_N[k], n)
+            rv.setTextViewText(EV_D[k], l)
+            rv.setTextColor(EV_N[k], sty.accent)
+        }
     }
 
     private fun nearestEvent(d: JSONObject?, now: Long): String? {
