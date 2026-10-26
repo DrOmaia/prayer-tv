@@ -184,7 +184,7 @@ object Widgets {
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
         putBg(rv, sty, bgOf(sty, st))
         sizes(rv, sty, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.left_label to 12f,
-            R.id.countdown to 24f, R.id.cur_name to 12f, R.id.elapsed to 12f, R.id.dua to 13f, R.id.info_label to 13f,
+            R.id.countdown to 24f, R.id.cur_name to 15f, R.id.elapsed to 21f, R.id.dua to 13f, R.id.info_label to 13f,
             R.id.info_chrono to 14f, R.id.hijri to 13f, R.id.greg to 13f) + NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
         rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.progress, if (sty.prog) View.VISIBLE else View.GONE)

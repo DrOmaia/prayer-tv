@@ -672,3 +672,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #stage:not(.portrait) .next-detail { font-size: 22px; }
 .portrait .next-main { width: 580px !important; height: 580px !important; }
 .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+/* the month's prayer times */
+.month-body { overflow-y: auto; scrollbar-width: none; }
+.mt-tr { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, .7fr) repeat(6, minmax(0, 1fr)); align-items: center; font-size: 23px; padding: 5px 12px; border-bottom: 1px solid var(--line); direction: rtl; font-variant-numeric: tabular-nums; }
+.mt-th { font-size: 20px; color: var(--muted); font-weight: 600; }
+.mt-fri { color: var(--gold); }
+.portrait .mt-tr { font-size: 27px; padding: 14px 6px; grid-template-columns: minmax(0, 1.9fr) minmax(0, .6fr) repeat(6, minmax(0, 1fr)); }
+.portrait .mt-th { font-size: 22px; }
+.portrait .im-col + .im-col .mt-th { display: none; }

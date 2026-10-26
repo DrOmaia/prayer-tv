@@ -10,6 +10,9 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -217,6 +220,45 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun widgetError(): String = Widgets.error(this@MainActivity)
+
+        // the phone's own location (for «تحديد تلقائي»): approximate is enough for the city
+        @JavascriptInterface
+        fun locOk(): Boolean = checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        @JavascriptInterface
+        fun askLoc() {
+            runOnUiThread { requestPermissions(arrayOf(android.Manifest.permission.ACCESS_COARSE_LOCATION), 2) }
+        }
+
+        // the newest known position; when it is old (or none), ask for a fresh one for the next call
+        @SuppressLint("MissingPermission")
+        @JavascriptInterface
+        fun location(): String {
+            if (!locOk()) return ""
+            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            var best: Location? = null
+            for (p in lm.getProviders(true)) {
+                val l = try { lm.getLastKnownLocation(p) } catch (_: Exception) { null } ?: continue
+                if (best == null || l.time > best.time) best = l
+            }
+            if (best == null || System.currentTimeMillis() - best.time > 20 * 60_000L) {
+                runOnUiThread {
+                    try {
+                        val prov = if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) LocationManager.NETWORK_PROVIDER else LocationManager.PASSIVE_PROVIDER
+                        @Suppress("DEPRECATION")
+                        lm.requestSingleUpdate(prov, object : LocationListener {
+                            override fun onLocationChanged(location: Location) {}
+                            override fun onProviderEnabled(provider: String) {}
+                            override fun onProviderDisabled(provider: String) {}
+                            @Deprecated("Deprecated in Java")
+                            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                        }, mainLooper)
+                    } catch (_: Exception) {}
+                }
+            }
+            val b = best ?: return ""
+            return JSONObject().put("lat", b.latitude).put("lon", b.longitude).put("at", b.time).toString()
+        }
 
         // update from settings: download the latest release with the system's download manager, then open the installer
         @JavascriptInterface

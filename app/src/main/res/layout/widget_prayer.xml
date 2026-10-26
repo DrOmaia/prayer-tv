@@ -129,8 +129,9 @@
             style="@style/WidgetText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:alpha="0.8"
-            android:textSize="12sp" />
+            android:layout_gravity="center_vertical"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <Chronometer
             android:id="@+id/elapsed"
@@ -138,9 +139,9 @@
             android:textDirection="ltr"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:alpha="0.8"
-            android:textSize="12sp" />
+            android:layout_marginStart="8dp"
+            android:textSize="21sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- the six times; the next one on a light pill -->
@@ -182,9 +183,8 @@
     <ViewFlipper
         android:id="@+id/flip"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:minHeight="34dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:autoStart="true"
@@ -196,10 +196,10 @@
             android:id="@+id/dua"
             style="@style/WidgetText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:ellipsize="end"
             android:gravity="center"
-            android:maxLines="2"
+            android:maxLines="1"
             android:textSize="13sp" />
 
         <LinearLayout
@@ -215,7 +215,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="2"
+                android:maxLines="1"
                 android:gravity="center"
                 android:textSize="13sp" />
 
@@ -231,12 +231,6 @@
                 android:visibility="gone" />
         </LinearLayout>
     </ViewFlipper>
-
-    <!-- spacer: free height goes here -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
 
     <!-- Hijri date with the moon, and the Gregorian date -->
     <LinearLayout

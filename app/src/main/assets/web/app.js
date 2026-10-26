@@ -46,6 +46,7 @@
       hijriAdj: s.hijriAdj || 0, // days added to the Umm al-Qura Hijri date (−2 … +2)
       fontSize: s.fontSize || 'normal', // phone text size
       reciter: s.reciter || 'alafasy',
+      gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // phone home-screen widgets: background ('time' colour of the time of day · 'dark'), transparency 0–100,
       // text size, accent colour and the parts shown on «مواقيت اليوم»
       widget: Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold', city: true, prog: true, line: true, date: true }, s.widget),
@@ -332,7 +333,8 @@
     if (!A || !A.widgetData) return;
     // from yesterday (the time passed since its Isha); each day with its dates, moon and a short supplication
     var r = P.ymd(Date.now()), days = [];
-    var short = ADHKAR.dua.filter(function (x) { return (x.q ? quranText(x.q) : x.x).length <= 80; });
+    // one line on the widget: only the short supplications (with their source)
+    var short = ADHKAR.dua.filter(function (x) { return ((x.q ? quranText(x.q) : '«' + x.x + '»') + x.s).replace(/[\u064B-\u0652\u0670\u06D6-\u06ED]/g, '').length <= 54; });
     for (var i = -1; i < 10; i++) {
       var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), noon = new Date(P.noonOf(dd.y, dd.m, dd.d)), h = {};
       fHMD.formatToParts(noon).forEach(function (x) { h[x.type] = +x.value; });
@@ -674,6 +676,21 @@
     });
     var half = Math.ceil(rows.length / 2);
     $('imsak-body').innerHTML = '<div class="im-col">' + head + rows.slice(0, half).join('') + '</div><div class="im-col">' + head + rows.slice(half).join('') + '</div>';
+  }
+
+  // ---------- the month's prayer times (the month shown in the calendar), today marked ----------
+  function monthRender() {
+    var r = P.ymd(Date.now()), y = cal.vy || r.y, m = cal.vm || r.m, n = new Date(Date.UTC(y, m, 0)).getUTCDate(), rows = [];
+    $('month-title').textContent = 'مواقيت ' + fGMY.format(new Date(P.noonOf(y, m, 1)));
+    $('month-sub').textContent = S.loc.name + ' · ' + P.method().name;
+    var head = '<div class="mt-tr mt-th"><span>اليوم</span><span>هجري</span>' + ORDER.map(function (k) { return '<span>' + P.name(k) + '</span>'; }).join('') + '</div>';
+    for (var d = 1; d <= n; d++) {
+      var T = P.dayTimes(y, m, d, S.offsets), dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(), today = y === r.y && m === r.m && d === r.d;
+      rows.push('<div class="mt-tr' + (today ? ' im-today' : '') + (dow === 5 ? ' mt-fri' : '') + '"><span>' + DAY_NAMES[dow] + ' ' + d + '</span><span class="muted">' +
+        hOf(y, m, d).d + '</span>' + ORDER.map(function (k) { return '<span>' + P.full(T.at[k]) + '</span>'; }).join('') + '</div>');
+    }
+    var half = Math.ceil(rows.length / 2);
+    $('month-body').innerHTML = '<div class="im-col">' + head + rows.slice(0, half).join('') + '</div><div class="im-col">' + head + rows.slice(half).join('') + '</div>';
   }
 
   // ---------- night care: the screen dims from two hours after Isha until Fajr, and the page moves a few pixels
@@ -1126,7 +1143,7 @@
     var r = P.ymd(Date.now()), T = P.dayTimes(r.y, r.m, r.d, S.offsets);
     $('set-loc').innerHTML =
       '<div class="srow"><span class="sname">' + esc(S.loc.name) + (S.loc.country ? ' <span class="muted">· ' + esc(S.loc.country) + '</span>' : '') +
-        '<br><span class="muted set-note">طريقة الحساب: ' + P.method().name + '</span></span>' +
+        '<br><span class="muted set-note">طريقة الحساب: ' + P.method().name + (S.loc.mode === 'auto' ? ' · ' + (S.loc.gps ? 'من موقع الجوال' : 'من اتصال الإنترنت') : '') + '</span></span>' +
         '<button class="sbtn al f' + (S.loc.mode === 'auto' ? ' on' : '') + '" data-k="loc-auto">' + (S.loc.mode === 'auto' ? 'تلقائي' : 'تحديد تلقائي') + '</button></div>' +
       '<div class="srow"><input id="loc-q" class="inp f" placeholder="ابحث عن مدينة، مثل: جدة أو عمّان" value="' + esc(locQ) + '"><button id="loc-find" class="sbtn f">بحث</button></div>' +
       (locMsg ? '<div class="muted set-note">' + locMsg + '</div>' : '') +
@@ -1440,7 +1457,7 @@
       .then(function (r) { return r.json(); }).then(function (j) { return j.results || []; });
   }
   function fromGeo(g, mode) {
-    return { mode: mode, name: g.name, country: g.country || '', lat: g.latitude, lon: g.longitude, tz: g.timezone, cc: (g.country_code || '').toUpperCase() };
+    return { mode: mode, gps: false, name: g.name, country: g.country || '', lat: g.latitude, lon: g.longitude, tz: g.timezone, cc: (g.country_code || '').toUpperCase() };
   }
   function locSearch() {
     var q = ($('loc-q').value || '').trim();
@@ -1454,8 +1471,38 @@
       var f = document.querySelector('[data-k="loc-0"]'); if (f) f.focus();
     }).catch(function () { locMsg = 'تعذّر البحث، تأكد من اتصال الإنترنت'; setRender(); });
   }
+  // automatic on the phone: the phone's own location (asks once for permission); its Arabic city name and
+  // time zone from the internet. If there is no position yet, the city of the internet connection meanwhile.
+  var gpsTry = 0;
+  function locateAuto(ask) {
+    if (A && !TV && A.location) {
+      var j = null;
+      try {
+        // the permission is asked once (and again when «تحديد تلقائي» is pressed)
+        if (!A.locOk()) { if (ask || !S.gpsAsked) { S.gpsAsked = true; save(); A.askLoc(); } }
+        else j = JSON.parse(A.location() || 'null');
+      } catch (e) {}
+      if (j && j.lat) {
+        gpsTry = 0;
+        Promise.all([
+          fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + j.lat + '&longitude=' + j.lon + '&localityLanguage=ar').then(function (r) { return r.json(); }).catch(function () { return {}; }),
+          fetch('https://api.open-meteo.com/v1/forecast?latitude=' + j.lat + '&longitude=' + j.lon + '&timezone=auto&current=temperature_2m').then(function (r) { return r.json(); })
+        ]).then(function (res) {
+          var g = res[0] || {}, tz = res[1] && res[1].timezone;
+          if (!tz) throw 0;
+          var loc = { mode: 'auto', gps: true, name: g.city || g.locality || g.principalSubdivision || S.loc.name, country: g.countryName || '', lat: +j.lat, lon: +j.lon, tz: tz, cc: (g.countryCode || '').toUpperCase() };
+          if (S.loc.mode === 'auto') { locMsg = ''; applyLoc(loc); sendSchedule(); }
+        }).catch(function () { locateIp(); });
+        return;
+      }
+      // no position yet: try again shortly (the phone is looking for one), the internet's city meanwhile
+      if (gpsTry++ < 3) setTimeout(function () { if (S.loc.mode === 'auto') locateAuto(); }, 8000);
+    }
+    locateIp();
+  }
   // automatic: the city of the internet connection, its Arabic name from the geocoding service
-  function locateAuto() {
+  function locateIp() {
+    if (S.loc.gps && S.loc.mode === 'auto') return; // keep the last position of the phone
     fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) { return r.json(); }).then(function (j) {
       var lat = +j.latitude, lon = +j.longitude;
       if (!j.timezone || isNaN(lat)) throw 0;
@@ -1473,7 +1520,7 @@
   function setAction(k) {
     var p = k.split('-'), a = p[0], v = p[1];
     if (a === 'loc') {
-      if (v === 'auto') { S.loc = Object.assign({}, S.loc, { mode: 'auto' }); save(); locMsg = 'جارٍ تحديد المدينة…'; locateAuto(); }
+      if (v === 'auto') { S.loc = Object.assign({}, S.loc, { mode: 'auto' }); save(); locMsg = 'جارٍ تحديد المدينة…'; gpsTry = 0; locateAuto(true); }
       else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
       setRender(); return;
     }
@@ -1603,6 +1650,7 @@
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
     if (name === 'convert') { cvToday(); cvRender(); focusFirst($('cv-g')); return; }
+    if (name === 'month') { monthRender(); focusFirst(document.querySelector('#month .f')); return; }
     if (name === 'imsak') { imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
     if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
@@ -1766,6 +1814,8 @@
       if (screen === 'home') renderShortcuts();
       if (screen === 'settings') setRender();
       sendSchedule();
+      // phone travelling: the automatic city follows the phone's location
+      if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
     }
   };
 
