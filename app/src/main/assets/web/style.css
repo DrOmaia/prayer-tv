@@ -630,3 +630,44 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .cv-it { font-size: 40px; }
 .portrait .cv-it.sel { font-size: 50px; }
 .portrait .cv-fields { gap: 18px; flex-wrap: nowrap; }
+
+/* ---------- design reviewers' notes ---------- */
+/* one weather card on the TV: the city big (calm colour) with its high / low, Irbid on the line under it */
+#stage:not(.portrait) .wx-stack { display: none; }
+#stage:not(.portrait) .wx-big { width: auto; min-width: 440px; justify-content: flex-start; gap: 16px; padding: 0 24px; }
+.wb-temp { font-size: 84px; }
+.wb-side { display: flex; flex-direction: column; gap: 8px; text-align: right; }
+.wb-l { display: flex; align-items: center; gap: 8px; font-size: 26px; white-space: nowrap; }
+.wb-l b { font-weight: 700; }
+.wb-l .wi .ic { width: 30px; height: 30px; }
+.wb-l .w-al { font-size: 22px; }
+.wx-big.w-alert { border-color: #D9822B; }
+/* text that must be read from the sofa: at least about 24px on the TV */
+#stage:not(.portrait) .pc-iq { font-size: 26px; }
+#stage:not(.portrait) .pc-iq.pc-iq-s { font-size: 18px; }
+#stage:not(.portrait) .next-detail { font-size: 24px; }
+#stage:not(.portrait) .city2 { font-size: 26px; }
+#stage:not(.portrait) .ev-n { font-size: 48px; }
+#stage:not(.portrait) .ev-t b { font-size: 25px; }
+#stage:not(.portrait) .ev-t span { font-size: 22px; }
+/* the next prayer's countdown in words; the clock a little smaller than before */
+.countdown.words { display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.cd-pre { font-size: .36em; font-weight: 500; opacity: .8; }
+.cd-main { font-size: .9em; font-weight: 700; white-space: nowrap; }
+.cd-sub { font-size: .55em; font-weight: 600; white-space: nowrap; min-height: 1.15em; }
+#stage:not(.portrait) .clock { font-size: 156px; }
+#stage:not(.portrait) .has-ramadan .clock { font-size: 124px; }
+/* the remote's focus ring hides after 10 seconds without a key */
+.idle .f:focus { box-shadow: none; transform: none; }
+/* phone: «هل تعلم؟» under the prayer times, as its own card */
+.portrait #home > .fact { order: 2; border: 1px solid var(--line); border-radius: 24px; background: var(--card); padding: 30px 32px; text-align: center; }
+/* calendar: the chosen day in gold */
+.cell.sel, .cell.sel[class*="c-"] { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+.cell.sel .ch, .cell.sel .chd { color: var(--on-gold); opacity: .85; }
+.cell.sel.fri .cg { color: var(--on-gold); }
+/* the circle a little bigger so the countdown in words and the adhan / iqamah line fit inside */
+#stage:not(.portrait) .next { grid-template-columns: 390px minmax(0, 1fr); }
+#stage:not(.portrait) .next.no-fact { grid-template-columns: 390px; }
+#stage:not(.portrait) .next-main { width: 390px; height: 390px; }
+#stage:not(.portrait) .next-detail { font-size: 22px; }
+.portrait .next-main { width: 580px !important; height: 580px !important; }

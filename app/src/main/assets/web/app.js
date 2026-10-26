@@ -104,6 +104,10 @@
       if (W < 1920) { W = 1920; k = w / W; H = Math.max(1080, h / k); } // squarer screens (4:3, 16:10): taller, same width
     }
     stage.classList.toggle('portrait', portrait);
+    var fact = $('fact'), want = portrait ? $('home') : document.querySelector('#home .next');
+    if (fact && want && fact.parentNode !== want) {
+      if (portrait) $('home').insertBefore(fact, $('city2').nextSibling); else want.appendChild(fact);
+    }
     stage.style.width = W + 'px';
     stage.style.height = H + 'px';
     stage.style.transform = 'translate(' + (w - W * k) / 2 + 'px,' + (h - H * k) / 2 + 'px) scale(' + k + ')';
@@ -206,13 +210,24 @@
     }
     return 'rgb(' + T_STOPS[T_STOPS.length - 1][1] + ')';
   }
+  // the big temperature: its colour follows the heat, softened toward the text colour so it stays calm
+  function tempPaint() {
+    if (!WX[0]) return;
+    var c = tempColor(WX[0].t).match(/\d+/g).map(Number), ink = night ? [244, 239, 230] : [42, 36, 24], f = .35;
+    $('wbig-temp').style.color = 'rgb(' + c.map(function (v, j) { return Math.round(v + (ink[j] - v) * f); }) + ')';
+  }
   function showWeather(i, w) {
     WX[i] = w;
     $('w' + i + '-icon').innerHTML = wIcon(w.code, w.day);
     $('w' + i + '-temp').textContent = w.t + '°';
     // the city's temperature in large figures on the top bar, coloured by how hot it is
-    if (i === 0) { $('wbig-icon').innerHTML = wIcon(w.code, w.day); $('wbig-temp').textContent = w.t + '°'; $('wbig-temp').style.color = tempColor(w.t); }
     var al = wAlert(i, w);
+    if (i === 0) {
+      $('wbig-icon').innerHTML = wIcon(w.code, w.day); $('wbig-temp').textContent = w.t + '°'; tempPaint();
+      $('wb-c0').innerHTML = '<b>' + esc(CITIES[0].name) + '</b>' + (w.hi != null ? ' <span class="muted" dir="ltr">' + w.hi + '° / ' + w.lo + '°</span>' : '') +
+        (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
+      $('wbig').classList.toggle('w-alert', !!al);
+    } else $('wb-c1').innerHTML = wIcon(w.code, w.day) + '<b>' + CITIES[1].name + '</b> <span dir="ltr">' + w.t + '°</span>' + (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
     $('w' + i + '-btn').classList.toggle('w-alert', !!al);
     $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
       (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');
@@ -395,6 +410,23 @@
     cards[k] = c;
   });
 
+  // the next prayer's countdown in words, so it is not read as a clock time: «بعد 9 ساعات» «و16 دقيقة»
+  function unitWord(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many; }
+  function putWords(el, ms) {
+    var sec = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60, main, sub = '';
+    var H = function (n) { return unitWord(n, 'ساعة', 'ساعتين', 'ساعات', 'ساعة'); };
+    var M = function (n) { return unitWord(n, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة'); };
+    var X = function (n) { return unitWord(n, 'ثانية', 'ثانيتين', 'ثوانٍ', 'ثانية'); };
+    if (h) { main = H(h); if (m) sub = 'و' + M(m); }
+    else if (m) { main = M(m); if (x) sub = 'و' + X(x); }
+    else main = X(x);
+    var html = '<span class="cd-pre">بعد</span><span class="cd-main">' + main + '</span><span class="cd-sub">' + sub + '</span>';
+    if (el.dataset.v === html) return;
+    el.dataset.v = html;
+    el.dir = 'rtl';
+    el.classList.add('words');
+    el.innerHTML = html;
+  }
   // countdowns: each digit in a box of the same width, so the numbers do not shift as they change
   function putDigits(el, text) {
     if (el.dataset.v === text) return;
@@ -492,26 +524,26 @@
     if (!nextK) nextK = 'fajr';
     var nd = tomorrow ? tom : today, nextTs = nd.at[nextK];
 
-    var label, name, cd, detail;
+    var label, name, cd, cdMs, detail;
     if (iq) {
       label = 'متبقٍّ على الإقامة';
       name = 'صلاة ' + P.name(iq, today.friday);
-      cd = P.left(today.iqamah[iq] - t);
+      cd = P.left(today.iqamah[iq] - t); cdMs = today.iqamah[iq] - t;
       detail = 'الأذان ' + P.full(today.at[iq]) + ' · الإقامة ' + P.full(today.iqamah[iq]);
     } else if (nextK === 'sunrise') {
       label = 'متبقٍّ على الشروق';
       name = 'الشروق';
-      cd = P.left(nextTs - t);
+      cd = P.left(nextTs - t); cdMs = nextTs - t;
       detail = 'الشروق ' + P.full(nextTs);
     } else {
       label = nd.ramadan && nextK === 'maghrib' ? 'متبقٍّ على الإفطار' : 'الصلاة القادمة';
       name = P.name(nextK, nd.friday);
-      cd = P.left(nextTs - t);
+      cd = P.left(nextTs - t); cdMs = nextTs - t;
       detail = 'الأذان ' + P.full(nextTs) + (nd.iqamah[nextK] ? ' · الإقامة ' + P.full(nd.iqamah[nextK]) : '');
     }
     $('next-label').textContent = label;
     $('next-name').textContent = name;
-    putDigits($('countdown'), cd);
+    putWords($('countdown'), cdMs);
     $('next-detail').textContent = detail;
 
     // a thin gold bar under the next time fills up from the previous time until it comes
@@ -793,7 +825,9 @@
     if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); renderEvents(r); }
     // dark from two hours after Isha until Fajr
     var n = S.theme === 'dark' || (S.theme === 'auto' && (t >= today.at.isha + 2 * HR || t < today.at.fajr));
-    if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); }
+    if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); tempPaint(); }
+    // the remote's focus ring hides after 10 seconds without a key
+    stage.classList.toggle('idle', TV && Date.now() - lastKeyAt > 10000);
     $('clock').textContent = P.full(t);
     showReminder(t);
     fridayMorning = today.friday && t >= today.at.sunrise && t < today.at.dhuhr;
@@ -970,6 +1004,8 @@
     Array.prototype.forEach.call(document.querySelectorAll('#cal-grid .cell'), function (c) {
       c.classList.toggle('sel', cal.vy === cal.sy && cal.vm === cal.sm && +c.dataset.d === cal.sd);
     });
+    var atToday = cal.vy === cal.ty && cal.vm === cal.tm && cal.sy === cal.ty && cal.sm === cal.tm && cal.sd === cal.td;
+    $('cal-today').classList.toggle('hidden', atToday);
   }
   function calPanel() {
     var T = P.dayTimes(cal.sy, cal.sm, cal.sd, S.offsets), ts = P.noonOf(cal.sy, cal.sm, cal.sd);
