@@ -2,7 +2,9 @@ package com.dromaia.prayertv
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.DownloadManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -11,6 +13,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Base64
@@ -30,6 +33,7 @@ import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 class MainActivity : Activity() {
 
@@ -137,6 +141,10 @@ class MainActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
+    private var updateId = -1L
+    private val UPDATE_URL = "https://github.com/DrOmaia/prayer-tv/releases/latest/download/prayer-tv.apk"
+    private val APK_TYPE = "application/vnd.android.package-archive"
+
     inner class Bridge {
         @JavascriptInterface
         fun apps(): String {
@@ -196,6 +204,59 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun widgetData(json: String) = Widgets.save(this@MainActivity, json)
+
+        // update from settings: download the latest release with the system's download manager, then open the installer
+        @JavascriptInterface
+        fun updateStart(): String {
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                runOnUiThread {
+                    try { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } catch (_: Exception) {}
+                }
+                return "perm"
+            }
+            return try {
+                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "prayer-tv.apk").delete() }
+                val req = DownloadManager.Request(Uri.parse(UPDATE_URL))
+                    .setTitle("مواقيت الصلاة — آخر نسخة")
+                    .setMimeType(APK_TYPE)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                    .setDestinationInExternalFilesDir(this@MainActivity, Environment.DIRECTORY_DOWNLOADS, "prayer-tv.apk")
+                updateId = dm.enqueue(req)
+                "ok"
+            } catch (_: Exception) { "fail" }
+        }
+
+        @JavascriptInterface
+        fun updateStatus(): String {
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            try {
+                dm.query(DownloadManager.Query().setFilterById(updateId))?.use { c ->
+                    if (!c.moveToFirst()) return """{"state":"fail"}"""
+                    val st = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    val got = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    return when (st) {
+                        DownloadManager.STATUS_SUCCESSFUL -> """{"state":"done"}"""
+                        DownloadManager.STATUS_FAILED -> """{"state":"fail"}"""
+                        else -> """{"state":"run","pct":${if (total > 0) got * 100 / total else 0}}"""
+                    }
+                }
+            } catch (_: Exception) {}
+            return """{"state":"fail"}"""
+        }
+
+        @JavascriptInterface
+        fun updateInstall() {
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val uri = dm.getUriForDownloadedFile(updateId) ?: return
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, APK_TYPE)
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {}
+            }
+        }
 
         @JavascriptInterface
         fun isTv(): Boolean = Device.isTv(this@MainActivity)

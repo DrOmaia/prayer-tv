@@ -499,7 +499,7 @@
       // and the shortest fast of this Hijri year with its date
       var alt = Math.floor(t / 5000) % 3, fd = t < today.at.maghrib ? today : tom, sh = alt === 2 && shortestFast(P.ymd(t));
       var fastLen = 'مدة الصيام ' + P.leftHM(fd.at.maghrib - fd.at.fajr);
-      setAll(c, '.pc-iq', k === 'imsak' ? (sh ? 'أقصر صيام ' + P.leftHM(sh.len) + ' · ' + sh.d + '/' + sh.m :
+      setAll(c, '.pc-iq', k === 'imsak' ? (sh ? 'أقصر صيام ' + sh.d + ' ' + G_MONTHS[sh.m - 1] + ' · ' + P.leftHM(sh.len) :
         alt === 1 ? fastLen : (fd.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(fd.at.maghrib - t)) :
         day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
       Array.prototype.forEach.call(c.querySelectorAll('.pc-iq'), function (e) { e.classList.toggle('pc-iq-s', k === 'imsak' && !!sh); });
@@ -556,6 +556,7 @@
       '<path class="moon-lit" d="M12 3A9 9 0 0 ' + outer + ' 12 21A' + rx.toFixed(2) + ' 9 0 0 ' + inner + ' 12 3Z"/></svg>';
   }
 
+  var G_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
   // the shortest fast (Fajr → Maghrib) of the current Hijri year; worked out once a day
   var shortCache = {};
   function shortestFast(r) {
@@ -1160,11 +1161,50 @@
         '</b><button class="sbtn f" data-k="evd-' + f[0] + 'p" aria-label="زائد">+</button></span>';
     }).join('');
     $('set-version').textContent = A ? 'الإصدار ' + A.version() : '';
+    updMsg();
+    updLatest();
     if (keep) {
       var el = document.querySelector('#settings [data-k="' + keep + '"]');
       if (el) el.focus();
     }
   }
+  // ---------- update from the settings: the latest release is downloaded and the installer opens ----------
+  var upd = { latest: '', state: '', pct: 0, timer: null, asked: false };
+  function myVersion() { try { return A && A.version ? 'v' + String(A.version()).split('.').pop() : ''; } catch (e) { return ''; } }
+  function updMsg() {
+    var mine = myVersion();
+    var ver = mine ? 'عندك ' + mine + (upd.latest ? (upd.latest === mine ? ' · وهي الأحدث' : ' · الأحدث ' + upd.latest) : '') : 'dromaia.github.io/tv';
+    var msg = { run: 'جارٍ التحميل… ' + upd.pct + '%', done: 'اكتمل التحميل، اضغط «تثبيت» في الصفحة التالية',
+      fail: 'تعذّر التحميل، تأكد من الإنترنت وحاول مرة أخرى',
+      perm: 'اسمح لـ«مواقيت الصلاة» بتثبيت التطبيقات (مصادر غير معروفة) ثم اضغط مرة أخرى' }[upd.state];
+    $('upd-msg').innerHTML = ver + (msg ? ' <span class="muted">· ' + msg + '</span>' : '');
+  }
+  function updLatest() {
+    if (upd.asked) return;
+    upd.asked = true;
+    fetch('https://api.github.com/repos/DrOmaia/prayer-tv/releases/latest').then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.tag_name) { upd.latest = j.tag_name; updMsg(); } }).catch(function () { upd.asked = false; });
+  }
+  function updStart() {
+    if (!A || !A.updateStart) { window.open('https://dromaia.github.io/tv'); return; }
+    if (upd.state === 'run') return;
+    var r = A.updateStart();
+    upd.state = r === 'ok' ? 'run' : r; upd.pct = 0; updMsg();
+    if (r !== 'ok') return;
+    clearInterval(upd.timer);
+    upd.timer = setInterval(function () {
+      var st = {};
+      try { st = JSON.parse(A.updateStatus()); } catch (e) {}
+      if (st.state === 'run') upd.pct = st.pct || 0;
+      else {
+        clearInterval(upd.timer);
+        upd.state = st.state === 'done' ? 'done' : 'fail';
+        if (upd.state === 'done') A.updateInstall();
+      }
+      updMsg();
+    }, 1000);
+  }
+
   // ---------- the city: automatic (from the internet connection) or chosen by search (Open-Meteo geocoding) ----------
   var locResults = [], locMsg = '', locQ = '';
   function showCity() {
@@ -1467,6 +1507,7 @@
       case 'ev-add': addEvent(); break;
       case 'fam-to': famTo = famOrder()[(famOrder().indexOf(famTo) + 1) % famOrder().length]; setRender(); $('fam-to').focus(); break;
       case 'fam-add': addFamMsg(); break;
+      case 'upd-btn': updStart(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;
     }
