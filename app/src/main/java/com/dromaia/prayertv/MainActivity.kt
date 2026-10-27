@@ -36,7 +36,6 @@ import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.io.File
 
 class MainActivity : Activity() {
 
@@ -52,6 +51,7 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        cleanAfterUpdate()
         if (Device.isTv(this)) {
             // keeping the screen on is a setting (it would stop the TV's screensaver)
             if (getSharedPreferences(Schedule.PREFS, MODE_PRIVATE).getBoolean("keepOn", false)) {
@@ -155,6 +155,23 @@ class MainActivity : Activity() {
     }
 
     private var updateId = -1L
+    // once the new version is installed, the downloaded update file is not needed: remove it and its downloads entry
+    private fun cleanAfterUpdate() {
+        try {
+            val prefs = getSharedPreferences(Schedule.PREFS, MODE_PRIVATE)
+            val installed = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+            if (prefs.getLong("installedAt", 0L) == installed) return
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val ids = ArrayList<Long>()
+            dm.query(DownloadManager.Query())?.use { c ->
+                while (c.moveToNext()) ids.add(c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_ID)))
+            }
+            if (ids.isNotEmpty()) dm.remove(*ids.toLongArray())
+            getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.listFiles()?.forEach { it.delete() }
+            prefs.edit().putLong("installedAt", installed).apply()
+        } catch (_: Exception) {}
+    }
+
     private val UPDATE_URL = "https://github.com/DrOmaia/prayer-tv/releases/latest/download/prayer-tv.apk"
     private val APK_TYPE = "application/vnd.android.package-archive"
 
@@ -278,7 +295,7 @@ class MainActivity : Activity() {
             }
             return try {
                 val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "prayer-tv.apk").delete() }
+                getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.listFiles()?.forEach { it.delete() }
                 val req = DownloadManager.Request(Uri.parse(UPDATE_URL))
                     .setTitle("مواقيت الصلاة — آخر نسخة")
                     .setMimeType(APK_TYPE)
