@@ -555,7 +555,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .im-tr b { font-weight: 700; }
 .im-today { background: var(--now-tint); border-radius: 12px; border: 2px solid var(--gold); }
 .portrait .imsak-body { grid-template-columns: minmax(0, 1fr); flex: none; }
-.portrait .im-tr { font-size: 32px; padding: 14px 10px; grid-template-columns: 60px minmax(0, 1.9fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); }
+.portrait .im-tr { font-size: 32px; padding: 14px 10px; grid-template-columns: 92px minmax(0, 1.9fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); }
 .portrait .im-th { font-size: 26px; }
 .portrait .im-col + .im-col .im-th { display: none; }
 .cell.sel[class*="c-"] { background: var(--now-bg); border-color: var(--now-bg); }
