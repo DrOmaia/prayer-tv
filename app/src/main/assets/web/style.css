@@ -761,3 +761,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .im-years .cv-wheel { width: 420px; }
 .portrait .im-years .cv-it { font-size: 34px; }
 .portrait .im-years .cv-it.sel { font-size: 40px; }
+/* imsakiya in Ramadan: the days already fasted in a quieter colour with a tick */
+.im-past { background: rgba(142,102,36,.07); }
+.im-past span { color: var(--muted); }
+.im-past b { font-weight: 600; }
+.im-past .gold { white-space: nowrap; }
+.im-past .gold::after { content: '✓'; font-size: .75em; margin-inline-start: 3px; }

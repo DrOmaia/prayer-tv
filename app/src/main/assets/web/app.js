@@ -380,7 +380,7 @@
       timers: S.timers.map(function (x) {
         var now = Date.now(), past = tAt(x) <= now, W = S.timerWg, an = past && !x.rip && W.anniv ? tAnnivObj(x) : null, ms = past && !x.rip && W.ms ? tMsObj(x, now) : null;
         return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
-          date: x.showDate ? x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '',
+          date: x.showDate ? fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '',
           hijri: W.hijri ? tHijri(x, past) : '', dua: W.dua && x.rip ? '«' + RIP[x.rip][0] + '» ' + RIP[x.rip][1] : '',
           anniv: an ? { t: an.t, at: an.at, date: an.date } : null, ms: ms ? { t: ms.t, at: ms.at, date: ms.date } : null };
       }) })); } catch (e) {}
@@ -744,7 +744,9 @@
     var rows = days.map(function (dd, k) {
       var T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), wd = DAY_NAMES[new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay()];
       var today = dd.y === r.y && dd.m === r.m && dd.d === r.d;
-      return '<div class="im-tr' + (today ? ' im-today' : '') + '"><span class="gold">' + (k + 1) + '</span><span>' + wd + ' ' + dd.d + '/' + dd.m + '</span><span>' +
+      // in Ramadan: the days already fasted change colour, today is outlined
+      var past = Date.UTC(dd.y, dd.m - 1, dd.d) < Date.UTC(r.y, r.m - 1, r.d);
+      return '<div class="im-tr' + (today ? ' im-today' : past ? ' im-past' : '') + '"><span class="gold">' + (k + 1) + '</span><span>' + wd + ' ' + fd(dd.d, dd.m) + '</span><span>' +
         P.full(T.imsak) + '</span><span>' + P.full(T.at.fajr) + '</span><span><b>' + P.full(T.at.maghrib) + '</b></span><span>' + P.leftHM(T.at.maghrib - T.at.fajr) + '</span></div>';
     });
     var half = Math.ceil(rows.length / 2);
@@ -962,7 +964,9 @@
   function daysTo(e, r) { return Math.round((Date.UTC(e.y, e.m - 1, e.d) - Date.UTC(r.y, r.m - 1, r.d)) / 86400000); }
   // days left, in words: اليوم · غدًا · بعد غد · 5 أيام · 107 يومًا
   function daysText(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === 2 ? 'بعد غد' : countWord(n, '', '', 'أيام', 'يومًا'); }
-  function dmy(e) { return e.d + '/' + e.m + '/' + e.y; }
+  // dates as numbers read from the right: day, then month, then year (the marks keep the order in Arabic text)
+  function fd(d, m, y) { var R = '\u200F'; return d + R + '/' + m + (y ? R + '/' + y : ''); }
+  function dmy(e) { return fd(e.d, e.m, e.y); }
   function allEvents(r) {
     var own = S.events.filter(function (e) { return daysTo(e, r) >= 0; });
     var auto = autoEvents(r).filter(function (e) { return S.autoEv[e.auto] !== false; });
@@ -1321,7 +1325,7 @@
     $('set-family').innerHTML =
       '<div class="srow"><span class="sname">كاتب الرسائل</span><button class="sbtn al f on" data-k="fpar">' + (F.parent === 'mother' ? 'الأم' : 'الأب') + '</button></div>' +
       F.members.map(function (x, i) {
-        return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FAMILY.KINDS[x.kind] + ' · ' + x.d + '/' + x.m + (x.y ? '/' + x.y : '') + '</span></span>' +
+        return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FAMILY.KINDS[x.kind] + ' · ' + fd(x.d, x.m, x.y) + '</span></span>' +
           '<button class="sbtn al f" data-k="fmx-' + i + '">حذف</button></div>';
       }).join('') +
       '<div class="srow"><span class="sname">ذكرى الزواج</span>' +
@@ -1453,10 +1457,10 @@
     var when = n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === -1 ? 'أمس' : n === 2 ? 'بعد غد' : n === -2 ? 'قبل يومين' :
       (n > 0 ? 'بعد ' : 'قبل ') + countWord(Math.abs(n), '', '', 'أيام', 'يومًا');
     var big = cv.from === 'g' ? h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + ' هـ' : g.d + ' ' + G_MONTHS[g.m - 1] + ' ' + g.y + ' م';
-    var num = cv.from === 'g' ? h.y + '/' + h.m + '/' + h.d : g.d + '/' + g.m + '/' + g.y;
+    var num = cv.from === 'g' ? fd(h.d, h.m, h.y) : fd(g.d, g.m, g.y);
     var sn = seasonOfDay(P.noonOf(g.y, g.m, g.d));
     $('cv-out').innerHTML = '<div class="cv-day">' + DAY_NAMES[dow] + '</div><div class="cv-big">' + big + '</div>' +
-      '<div class="cv-num" dir="ltr">' + num + '</div><div class="muted cv-when">' + when + (sn ? ' · ' + sn[1] : '') + '</div>';
+      '<div class="cv-num">' + num + '</div><div class="muted cv-when">' + when + (sn ? ' · ' + sn[1] : '') + '</div>';
   }
 
   // ---------- timers: the time since (or until) a date, in the unit chosen; also as home-screen widgets ----------
@@ -1497,7 +1501,7 @@
   }
   function tLine(x, now) {
     var past = tAt(x) <= now;
-    return (past ? 'منذ ' : 'حتى ') + x.name + (x.showDate ? ' · ' + x.d + '/' + x.m + '/' + x.y + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
+    return (past ? 'منذ ' : 'حتى ') + x.name + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function tInk(c) { return c === 'white' ? '#3A3A3A' : '#FFFFFF'; }
