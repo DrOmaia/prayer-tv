@@ -413,11 +413,12 @@ object Widgets {
             rv.setTextColor(TIME_IDS[k], if (k == st.next) sty.accent else Color.WHITE)
             rv.setInt(COL_IDS[k], "setBackgroundResource", if (k == st.next) R.drawable.widget_hl else 0)
         }
-        // the prayer whose time we are in blinks in a frame (none between sunrise and Dhuhr)
+        // the prayer whose time we are in: a thin frame that fades in and out slowly (none between sunrise and Dhuhr)
         val cur = if (st.next == 2) -1 else (st.next + 5) % 6
         for (k in 0 until 6) {
             rv.setViewVisibility(NOW_IDS[k], if (k == cur) View.VISIBLE else View.GONE)
             rv.setInt(NOWF_IDS[k], "setColorFilter", sty.accent)
+            rv.setInt(NOWF_IDS[k], "setImageAlpha", 150)
         }
         rv.setProgressBar(R.id.progress, 1000, progress(st, now), false)
         putEvents(rv, d, sty, now)
