@@ -686,14 +686,52 @@
   }
 
   // ---------- Ramadan imsakiya: every day of the (current or coming) Ramadan ----------
-  function imsakRender() {
-    var r = P.ymd(Date.now()), start = null, days = [];
+  // the year shown: null = this year's Ramadan (or the next one); otherwise a Hijri year chosen on the wheel
+  var imYear = null, imTimer = null;
+  function imCurrentStart() {
+    var r = P.ymd(Date.now()), start = null;
     // the first Ramadan that has not ended yet (this year's while it lasts, then the next one)
     for (var i = -30; i < 400 && !start; i++) {
       var d = P.addDays(r.y, r.m, r.d, i), e = P.addDays(d.y, d.m, d.d, 29);
       if (P.isRamadan(d.y, d.m, d.d) && (i >= 0 || P.isRamadan(e.y, e.m, e.d) || Date.UTC(e.y, e.m - 1, e.d) >= Date.UTC(r.y, r.m - 1, r.d))) start = d;
       if (start && i < 0) { var e2 = P.addDays(start.y, start.m, start.d, 30); if (Date.UTC(e2.y, e2.m - 1, e2.d) <= Date.UTC(r.y, r.m - 1, r.d)) start = null; }
     }
+    return start;
+  }
+  function imDefaultYear() { var s0 = imCurrentStart(); return s0 ? hOf(s0.y, s0.m, s0.d).y : hOf(P.ymd(Date.now()).y, P.ymd(Date.now()).m, P.ymd(Date.now()).d).y; }
+  // the wheel of Hijri years (with the Gregorian year of that Ramadan) beside the title
+  function imWheel() {
+    var box = $('im-years'), y0 = imYear || imDefaultYear(), now = imDefaultYear();
+    if (!box.dataset.built) {
+      var html = '<div class="cv-pad"></div>';
+      for (var y = CV_H[0]; y <= CV_H[1]; y++) { var g = hToG(y, 9, 1); html += '<div class="cv-it" data-v="' + y + '">' + y + ' هـ' + (g ? ' · ' + g.y : '') + '</div>'; }
+      box.innerHTML = '<div class="cv-wrap"><div id="im-wheel" class="cv-wheel f" tabindex="0" data-wf="imy" aria-label="السنة">' + html + '<div class="cv-pad"></div></div></div>';
+      box.dataset.built = '1';
+      var w = $('im-wheel');
+      w.addEventListener('scroll', function () {
+        imMark(); clearTimeout(imTimer);
+        imTimer = setTimeout(function () {
+          var y = CV_H[0] + Math.round(w.scrollTop / imH());
+          y = Math.max(CV_H[0], Math.min(CV_H[1], y));
+          if (y !== (imYear || imDefaultYear())) { imYear = y === imDefaultYear() ? null : y; imsakRender(true); }
+        }, 160);
+      }, { passive: true });
+    }
+    var wh = $('im-wheel'); wh.scrollTop = (y0 - CV_H[0]) * imH(); imMark();
+    $('im-now').classList.toggle('hidden', !imYear || imYear === now);
+  }
+  function imH() { var it = document.querySelector('#im-wheel .cv-it'); return it ? it.offsetHeight : 1; }
+  function imMark() {
+    var w = $('im-wheel'), i = Math.round(w.scrollTop / imH());
+    Array.prototype.forEach.call(w.querySelectorAll('.cv-it'), function (it, k) { it.classList.toggle('sel', k === i); });
+  }
+  function imKey(dir) {
+    var y = Math.max(CV_H[0], Math.min(CV_H[1], (imYear || imDefaultYear()) + dir));
+    imYear = y === imDefaultYear() ? null : y;
+    imsakRender();
+  }
+  function imsakRender(fromWheel) {
+    var r = P.ymd(Date.now()), start = imYear ? hToG(imYear, 9, 1) : imCurrentStart(), days = [];
     for (var j = 0; start && j < 31; j++) {
       var dd = P.addDays(start.y, start.m, start.d, j);
       if (!P.isRamadan(dd.y, dd.m, dd.d)) break;
@@ -711,6 +749,7 @@
     });
     var half = Math.ceil(rows.length / 2);
     $('imsak-body').innerHTML = '<div class="im-col">' + head + rows.slice(0, half).join('') + '</div><div class="im-col">' + head + rows.slice(half).join('') + '</div>';
+    if (!fromWheel) imWheel(); else $('im-now').classList.toggle('hidden', !imYear);
   }
 
   // ---------- the month's prayer times (the month shown in the calendar), today marked ----------
@@ -1932,7 +1971,7 @@
     if (name === 'convert') { cvToday(); cvRender(); focusFirst($('cv-g')); return; }
     if (name === 'timers') { tEdit = null; twOpen = false; timersRender(); focusFirst(document.querySelector('#timers .f')); return; }
     if (name === 'month') { monthRender(); focusFirst(document.querySelector('#month .f')); return; }
-    if (name === 'imsak') { imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
+    if (name === 'imsak') { imYear = null; imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
     if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
@@ -1996,6 +2035,7 @@
     if (k === 'Enter' && document.activeElement && document.activeElement.id === 'loc-q') { e.preventDefault(); locSearch(); return; }
     if (typing && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'Escape' && k !== 'GoBack') return;
     var ae = document.activeElement;
+    if (ae && ae.id === 'im-wheel' && (k === 'ArrowUp' || k === 'ArrowDown')) { e.preventDefault(); imKey(k === 'ArrowUp' ? -1 : 1); return; }
     if (ae && ae.classList && ae.classList.contains('cv-wheel') && (k === 'ArrowUp' || k === 'ArrowDown')) { e.preventDefault(); cvKey(ae, k === 'ArrowUp' ? -1 : 1); return; }
     var dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (dirs[k]) { e.preventDefault(); move(dirs[k]); return; }
@@ -2076,6 +2116,7 @@
         }
         cvRender(); el.focus(); break;
       case 'cv-today': cvToday(); cvRender(); break;
+      case 'im-now': imYear = null; imsakRender(); $('im-wheel').focus(); break;
       case 'tm-add':
         var r0 = P.ymd(Date.now());
         tOpenEditor({ id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, rip: '', isNew: true }); break;

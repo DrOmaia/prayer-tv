@@ -746,3 +746,18 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* night: every card gets a faint gold edge; white becomes a warm ivory */
 .night .tm-card { box-shadow: inset 0 0 0 2px rgba(226,185,105,.25); }
 .night .tm-light { background: #EFE6D4 !important; }
+/* imsakiya: a wheel of years beside the title, and «هذه السنة» */
+#imsak .top { justify-content: space-between; }
+.im-pick { display: flex; align-items: center; gap: 20px; }
+.im-years { --ih: 44px; }
+.im-years .cv-wheel { width: 260px; height: calc(var(--ih) * 3); }
+.im-years .cv-pad { height: var(--ih); }
+.im-years .cv-wrap::after { top: var(--ih); }
+.im-years .cv-it { font-size: 24px; }
+.im-years .cv-it.sel { font-size: 28px; }
+.portrait #imsak .top { flex-direction: column; align-items: stretch; }
+.portrait .im-pick { justify-content: space-between; }
+.portrait .im-years { --ih: 70px; }
+.portrait .im-years .cv-wheel { width: 420px; }
+.portrait .im-years .cv-it { font-size: 34px; }
+.portrait .im-years .cv-it.sel { font-size: 40px; }
