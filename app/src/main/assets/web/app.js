@@ -206,11 +206,11 @@
   function wIcon(code, day, cls) { var k = weatherInfo(code, day)[0]; return '<span class="wi wi-' + k + ' ' + (cls || '') + '">' + W_ICONS[k] + '</span>'; }
   function hiLo(w) { return '<span dir="ltr">' + w.hi + '° / ' + w.lo + '°</span>'; }
   function stat(k, v) { return '<span class="ws ws-' + k + '">' + W_ICONS[k] + '<b>' + v + '</b></span>'; }
-  var WX = [null, null], DUST = [0, 0];
-  // alerts inside the weather card: dust and extreme heat
+  var WX = [null, null], DUST = [0, 0], wxAt = 0;
+  // alerts inside the weather card: dust in the air now (µg/m³) and extreme heat
   function wAlert(i, w) {
-    if (DUST[i] >= 500) return 'عاصفة غبارية';
-    if (DUST[i] >= 150) return 'غبار';
+    if (DUST[i] >= 1000) return 'عاصفة غبارية';
+    if (DUST[i] >= 400) return 'غبار';
     if (Math.max(w.t, w.hi || 0) >= 45) return 'حرارة شديدة';
     return '';
   }
@@ -269,6 +269,7 @@
       hi: days[0].max, lo: days[0].min, hours: hours, days: days, at: Date.now() };
   }
   function loadWeather() {
+    wxAt = Date.now();
     CITIES.forEach(function (c, i) {
       fetch('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
         '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
@@ -281,16 +282,11 @@
           showWeather(i, w);
         })
         .catch(function () {});
-      // dust in the next 6 hours (Open-Meteo air quality, µg/m³)
-      fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + c.lat + '&longitude=' + c.lon + '&hourly=dust&forecast_days=2&timezone=GMT')
+      // dust in the air now (Open-Meteo air quality, µg/m³)
+      fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + c.lat + '&longitude=' + c.lon + '&current=dust')
         .then(function (r) { return r.json(); })
         .then(function (j) {
-          var now = Date.now(), max = 0;
-          j.hourly.time.forEach(function (tm, k) {
-            var at = Date.parse(tm + ':00Z');
-            if (at >= now - HR && at <= now + 6 * HR && j.hourly.dust[k] > max) max = j.hourly.dust[k];
-          });
-          DUST[i] = max;
+          DUST[i] = (j.current && j.current.dust) || 0;
           if (WX[i]) showWeather(i, WX[i]);
         })
         .catch(function () {});
@@ -317,7 +313,7 @@
   CITIES.forEach(function (c, i) {
     try {
       var w = JSON.parse(localStorage.getItem('prayertv-w' + i));
-      if (w && Date.now() - w.at < 6 * HR) showWeather(i, w);
+      if (w && Date.now() - w.at < 2 * HR) showWeather(i, w);
     } catch (e) {}
   });
 
@@ -2175,6 +2171,7 @@
       if (screen === 'home') renderShortcuts();
       if (screen === 'settings') setRender();
       sendSchedule();
+      if (Date.now() - wxAt > 10 * MIN) loadWeather();
       // phone travelling: the automatic city follows the phone's location
       if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
     }
@@ -2187,7 +2184,7 @@
   tick();
   setTimeout(function () { tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);
   loadWeather();
-  setInterval(loadWeather, 30 * MIN);
+  setInterval(loadWeather, 15 * MIN);
   focusFirst();
   if (/^#(convert|calendar|timers)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

@@ -199,7 +199,7 @@
         android:max="1000"
         android:progressDrawable="@drawable/widget_bar" />
 
-    <!-- the six times; the next one on a light pill -->
+    <!-- the six times; the next one on a light pill, the current one in a blinking frame -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -208,30 +208,66 @@
         android:layout_marginEnd="8dp"
         android:layoutDirection="rtl"
         android:orientation="horizontal">
-        <LinearLayout android:id="@+id/col0" style="@style/WidgetCol">
-            <TextView android:id="@+id/n0" style="@style/WidgetName" />
-            <TextView android:id="@+id/t0" style="@style/WidgetTime" />
-        </LinearLayout>
-        <LinearLayout android:id="@+id/col1" style="@style/WidgetCol">
-            <TextView android:id="@+id/n1" style="@style/WidgetName" />
-            <TextView android:id="@+id/t1" style="@style/WidgetTime" />
-        </LinearLayout>
-        <LinearLayout android:id="@+id/col2" style="@style/WidgetCol">
-            <TextView android:id="@+id/n2" style="@style/WidgetName" />
-            <TextView android:id="@+id/t2" style="@style/WidgetTime" />
-        </LinearLayout>
-        <LinearLayout android:id="@+id/col3" style="@style/WidgetCol">
-            <TextView android:id="@+id/n3" style="@style/WidgetName" />
-            <TextView android:id="@+id/t3" style="@style/WidgetTime" />
-        </LinearLayout>
-        <LinearLayout android:id="@+id/col4" style="@style/WidgetCol">
-            <TextView android:id="@+id/n4" style="@style/WidgetName" />
-            <TextView android:id="@+id/t4" style="@style/WidgetTime" />
-        </LinearLayout>
-        <LinearLayout android:id="@+id/col5" style="@style/WidgetCol">
-            <TextView android:id="@+id/n5" style="@style/WidgetName" />
-            <TextView android:id="@+id/t5" style="@style/WidgetTime" />
-        </LinearLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now0" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf0" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col0" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n0" style="@style/WidgetName" />
+                <TextView android:id="@+id/t0" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now1" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf1" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col1" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n1" style="@style/WidgetName" />
+                <TextView android:id="@+id/t1" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now2" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf2" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col2" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n2" style="@style/WidgetName" />
+                <TextView android:id="@+id/t2" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now3" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf3" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col3" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n3" style="@style/WidgetName" />
+                <TextView android:id="@+id/t3" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now4" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf4" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col4" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n4" style="@style/WidgetName" />
+                <TextView android:id="@+id/t4" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout style="@style/WidgetCell">
+            <ViewFlipper android:id="@+id/now5" style="@style/WidgetNow">
+                <ImageView android:id="@+id/nowf5" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_now" />
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+            </ViewFlipper>
+            <LinearLayout android:id="@+id/col5" style="@style/WidgetCol" android:layout_width="match_parent">
+                <TextView android:id="@+id/n5" style="@style/WidgetName" />
+                <TextView android:id="@+id/t5" style="@style/WidgetTime" />
+            </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 
     <!-- a line that changes every 8 seconds: the supplication of the day, then the time's dhikr / iftar / an occasion -->

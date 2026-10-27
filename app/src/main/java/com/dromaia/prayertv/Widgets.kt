@@ -288,6 +288,8 @@ object Widgets {
     private val NAME_IDS = intArrayOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3, R.id.n4, R.id.n5)
     private val TIME_IDS = intArrayOf(R.id.t0, R.id.t1, R.id.t2, R.id.t3, R.id.t4, R.id.t5)
     private val COL_IDS = intArrayOf(R.id.col0, R.id.col1, R.id.col2, R.id.col3, R.id.col4, R.id.col5)
+    private val NOW_IDS = intArrayOf(R.id.now0, R.id.now1, R.id.now2, R.id.now3, R.id.now4, R.id.now5)
+    private val NOWF_IDS = intArrayOf(R.id.nowf0, R.id.nowf1, R.id.nowf2, R.id.nowf3, R.id.nowf4, R.id.nowf5)
 
     // next prayer, its time and the countdown (the same ids in the three prayer widgets)
     private fun putNext(rv: RemoteViews, sty: Style, st: State, now: Long) {
@@ -335,6 +337,12 @@ object Widgets {
             rv.setTextViewText(TIME_IDS[k], hm(st.at.getLong(k)))
             rv.setTextColor(TIME_IDS[k], if (k == st.next) sty.accent else Color.WHITE)
             rv.setInt(COL_IDS[k], "setBackgroundResource", if (k == st.next) R.drawable.widget_hl else 0)
+        }
+        // the prayer whose time we are in blinks in a frame (none between sunrise and Dhuhr)
+        val cur = if (st.next == 2) -1 else (st.next + 5) % 6
+        for (k in 0 until 6) {
+            rv.setViewVisibility(NOW_IDS[k], if (k == cur) View.VISIBLE else View.GONE)
+            rv.setInt(NOWF_IDS[k], "setColorFilter", sty.accent)
         }
         rv.setProgressBar(R.id.progress, 1000, progress(st, now), false)
         putEvents(rv, d, sty, now)

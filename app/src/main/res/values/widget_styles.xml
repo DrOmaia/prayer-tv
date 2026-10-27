@@ -15,6 +15,21 @@
         <item name="android:paddingTop">3dp</item>
         <item name="android:paddingBottom">3dp</item>
     </style>
+    <!-- a time's cell: its column over a frame that blinks while it is the current prayer -->
+    <style name="WidgetCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+    </style>
+    <style name="WidgetNow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:visibility">gone</item>
+        <item name="android:autoStart">true</item>
+        <item name="android:flipInterval">1000</item>
+        <item name="android:inAnimation">@android:anim/fade_in</item>
+        <item name="android:outAnimation">@android:anim/fade_out</item>
+    </style>
     <style name="WidgetName" parent="WidgetText">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
