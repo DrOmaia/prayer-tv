@@ -9,4 +9,5 @@
     <string name="widget_convert">تحويل التاريخ</string>
     <string name="shortcut_calendar">التقويم</string>
     <string name="widget_timer">عدّاد (منذ / حتى)</string>
+    <string name="widget_rotate">عدّادات تتقلّب</string>
 </resources>

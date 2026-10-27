@@ -67,7 +67,7 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
-        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java)
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, RotateWidget::class.java)
 
     // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
     fun timers(ctx: Context): List<Pair<String, String>> {
@@ -86,6 +86,77 @@ object Widgets {
     fun setTimer(ctx: Context, widgetId: Int, timerId: String) {
         ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("timer_$widgetId", timerId).apply()
         updateAll(ctx)
+    }
+
+    // ---- the rotating widget: timers ("t:" + id) and occasions ("e:" + name) chosen for it, shown in turn
+    fun rotateChoices(ctx: Context): List<Pair<String, String>> {
+        val d = data(ctx) ?: return emptyList()
+        val out = timers(ctx).map { ("t:" + it.first) to it.second }.toMutableList()
+        val ev = d.optJSONArray("events")
+        val now = System.currentTimeMillis()
+        if (ev != null) for (i in 0 until ev.length()) {
+            val e = ev.optJSONObject(i) ?: continue
+            val n = e.optString("name")
+            if (n.isNotEmpty() && e.optLong("at") >= now - 86_400_000L && out.none { it.first == "e:$n" }) out.add("e:$n" to n)
+        }
+        return out
+    }
+    fun rotateKeys(ctx: Context, widgetId: Int): List<String> =
+        (ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("rot_$widgetId", "") ?: "")
+            .split("\n").filter { it.isNotEmpty() }
+    fun setRotate(ctx: Context, widgetId: Int, keys: List<String>) {
+        ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("rot_$widgetId", keys.joinToString("\n")).apply()
+        updateAll(ctx)
+    }
+
+    private fun rotateViews(ctx: Context, d: JSONObject?, widgetId: Int, now: Long): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_rotate)
+        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "timers", 8))
+        val navy = Color.parseColor("#1E2A78")
+        val ta = d?.optJSONArray("timers")
+        val timers = (0 until (ta?.length() ?: 0)).mapNotNull { ta?.optJSONObject(it) }
+        val ea = d?.optJSONArray("events")
+        val events = (0 until (ea?.length() ?: 0)).mapNotNull { ea?.optJSONObject(it) }
+        val wg = d?.optJSONObject("timerWg")
+        val k = when (wg?.optString("font")) { "s" -> 0.8f; "l" -> 1.25f; "xl" -> 1.5f; else -> 1f }
+        // each card: background, ink, the count and the line under it
+        class Card(val bg: Int, val ink: Int, val count: CharSequence, val line: String)
+        val cards = mutableListOf<Card>()
+        for (key in rotateKeys(ctx, widgetId)) {
+            if (key.startsWith("t:")) {
+                val x = timers.firstOrNull { it.optString("id") == key.substring(2) } ?: continue
+                val bg = try { Color.parseColor(x.optString("color")) } catch (_: Exception) { navy }
+                val ink = try { Color.parseColor(x.optString("ink")) } catch (_: Exception) { Color.WHITE }
+                val at = x.optLong("at"); val date = x.optString("date")
+                cards.add(Card(bg, ink, bigNumbers(timerText(at, x.optString("unit"), now)),
+                    (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else ""))
+            } else if (key.startsWith("e:")) {
+                val e = events.firstOrNull { it.optString("name") == key.substring(2) } ?: continue
+                val left = (dayNumber(e.optLong("at")) - dayNumber(now)).toInt()
+                if (left < 0) continue
+                val date = e.optString("date")
+                cards.add(Card(navy, Color.WHITE, bigNumbers(if (left == 0) "اليوم" else tw(left.toLong(), "يوم", "يومان", "أيام", "يومًا")),
+                    (if (left == 0) "" else "حتى ") + e.optString("name") + if (date.isNotEmpty()) " · $date" else ""))
+            }
+            if (cards.size == 12) break
+        }
+        if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, "عدّادات", "اضغط مطولًا ← الإعدادات لاختيارها"))
+        cards.forEachIndexed { i, c ->
+            val item = RemoteViews(ctx.packageName, R.layout.widget_rotate_item)
+            item.setInt(R.id.rt_bg, "setColorFilter", c.bg)
+            item.setTextViewTextSize(R.id.rt_count, TypedValue.COMPLEX_UNIT_SP, 30f * k)
+            item.setTextViewTextSize(R.id.rt_line, TypedValue.COMPLEX_UNIT_SP, 14f * k)
+            item.setTextViewText(R.id.rt_count, c.count)
+            item.setTextViewText(R.id.rt_line, c.line)
+            // dots: where this card is among them
+            item.setTextViewText(R.id.rt_dots, cards.indices.joinToString(" ") { if (it == i) "●" else "○" })
+            item.setViewVisibility(R.id.rt_dots, if (cards.size > 1) View.VISIBLE else View.GONE)
+            for (id in intArrayOf(R.id.rt_count, R.id.rt_line, R.id.rt_dots)) item.setTextColor(id, c.ink)
+            rv.addView(R.id.rot_flip, item)
+        }
+        // continue the turn where it was (each refresh rebuilds the cards)
+        rv.setDisplayedChild(R.id.rot_flip, ((now / 5_000L) % cards.size).toInt())
+        return rv
     }
 
     private fun tw(n: Long, one: String, two: String, few: String, many: String) =
@@ -244,6 +315,10 @@ object Widgets {
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             try { am.updateAppWidget(id, timerViews(ctx, d, sty, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
+            nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
+        }
+        am.getAppWidgetIds(ComponentName(ctx, RotateWidget::class.java)).forEach { id ->
+            try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "RotateWidget: $e") }
             nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
         }
         // refresh again only while there is a widget on the home screen
@@ -629,6 +704,10 @@ class StripWidget : AppWidgetProvider() {
 }
 
 class TimerWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
+}
+
+class RotateWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 

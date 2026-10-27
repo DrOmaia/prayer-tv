@@ -368,7 +368,7 @@
         dua: (du.q ? quranText(du.q) : '«' + du.x + '»') + ' · ' + du.s
       });
     }
-    var events = allEvents(r).slice(0, 5).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d) }; });
+    var events = allEvents(r).slice(0, 30).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d), date: fd(e.d, e.m, e.y) }; });
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
     try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months,
