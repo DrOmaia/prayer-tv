@@ -367,7 +367,8 @@
       var du = short[Math.floor(+noon / 86400000) % short.length];
       days.push({
         names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }),
-        ram: !!T.ramadan, hijri: fHFull.format(noon), hday: h.day, greg: fGFull.format(noon).replace('،', ''),
+        // the Hijri month's number beside its name: «16 جمادى الأولى (5) 1448 هـ»
+        ram: !!T.ramadan, hijri: h.day + ' ' + H_MONTHS[h.month - 1] + ' (' + h.month + ') ' + h.year + ' هـ', hday: h.day, greg: fGFull.format(noon).replace('،', ''),
         dua: (du.q ? quranText(du.q) : '«' + du.x + '»') + ' · ' + du.s
       });
     }

@@ -339,12 +339,14 @@ object Widgets {
         }
         // the time passed since the last prayer, like «العشاء +3:04:23»
         rv.setProgressBar(R.id.progress, 1000, progress(st, now), false)
-        if (st.prevAt > 0) {
+        // not after sunrise (the time since sunrise means nothing to pray by)
+        if (st.prevAt > 0 && st.next != 2) {
+            rv.setViewVisibility(R.id.cur_name, View.VISIBLE)
             rv.setTextViewText(R.id.cur_name, st.prevName)
             rv.setChronometer(R.id.elapsed, SystemClock.elapsedRealtime() - (now - st.prevAt), "+%s", true)
             rv.setChronometerCountDown(R.id.elapsed, false)
             rv.setViewVisibility(R.id.elapsed, View.VISIBLE)
-        } else rv.setViewVisibility(R.id.elapsed, View.GONE)
+        } else { rv.setViewVisibility(R.id.elapsed, View.GONE); rv.setViewVisibility(R.id.cur_name, View.GONE) }
         putEvents(rv, d, sty, now)
         rv.setTextViewText(R.id.dua, st.today.optString("dua"))
         putInfo(rv, d, st, now)
