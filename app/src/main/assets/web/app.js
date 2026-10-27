@@ -28,7 +28,7 @@
     try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
     return {
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
-      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true }, s.alerts),
+      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true }, s.alerts), // sunrise: a silent note on the phone
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
@@ -331,15 +331,25 @@
     if (T.iqamah[k]) s += ' · الإقامة ' + P.full(T.iqamah[k]) + ' (بعد ' + minutesWord(Math.round((T.iqamah[k] - T.at[k]) / MIN)) + ')';
     return s;
   }
+  // the phone's notification, like «صلاتك»: «الفجر (04:38)» over «الرياض | وقت صلاة الفجر · الإقامة 04:58»
+  function phoneTitle(k, T) { return (k === 'dhuhr' && T.friday ? 'الجمعة' : P.name(k)) + ' (' + P.full(T.at[k]) + ')'; }
+  function phoneSub(k, T) {
+    var what = k === 'sunrise' ? 'وقت الشروق' : k === 'dhuhr' && T.friday ? 'وقت صلاة الجمعة' : 'وقت صلاة ' + P.name(k);
+    return S.loc.name + ' | ' + what + (k === 'maghrib' && T.ramadan ? ' · موعد الإفطار' : '') + (T.iqamah[k] ? ' · الإقامة ' + P.full(T.iqamah[k]) : '');
+  }
   function sendSchedule() {
     if (!A) return;
     var t = Date.now(), r = P.ymd(t), ev = [];
     for (var i = 0; i < 60; i++) {
       var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
       FIVE.forEach(function (k) {
-        if (S.alerts[k] && T.at[k] > t) ev.push({ at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T), snd: S.sound[k] });
+        if (S.alerts[k] && T.at[k] > t) ev.push(TV ? { at: T.at[k], title: alertTitle(k, T), sub: alertSub(k, T), snd: S.sound[k] } :
+          { at: T.at[k], title: phoneTitle(k, T), sub: phoneSub(k, T), snd: S.sound[k] });
       });
+      // the phone: a silent note at sunrise (the end of Fajr's time)
+      if (!TV && S.alerts.sunrise && T.at.sunrise > t) ev.push({ at: T.at.sunrise, title: phoneTitle('sunrise', T), sub: phoneSub('sunrise', T), snd: 'none' });
     }
+    ev.sort(function (a, b) { return a.at - b.at; });
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
     sendWidget();
   }
@@ -1187,7 +1197,7 @@
         '<button class="sbtn f" data-k="m-' + k + '" aria-label="ناقص دقيقة">−</button>' +
         '<span class="soff">' + (off > 0 ? '+' : '') + off + '</span>' +
         '<button class="sbtn f" data-k="p-' + k + '" aria-label="زائد دقيقة">+</button>' +
-        (k === 'sunrise' ? '<span class="sbtn al" style="visibility:hidden"></span>' :
+        (k === 'sunrise' && TV ? '<span class="sbtn al" style="visibility:hidden"></span>' :
           '<button class="sbtn al f' + (S.alerts[k] ? ' on' : '') + '" data-k="a-' + k + '">' + (S.alerts[k] ? 'التنبيه يعمل' : 'التنبيه متوقف') + '</button>') +
         '</div>';
     }).join('');
