@@ -95,7 +95,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#F2CF8A"
-                    android:textSize="13sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -104,7 +104,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:textSize="13sp" />
+                    android:textSize="17sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -121,7 +121,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#F2CF8A"
-                    android:textSize="13sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -130,7 +130,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:textSize="13sp" />
+                    android:textSize="17sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -147,7 +147,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#F2CF8A"
-                    android:textSize="13sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -156,7 +156,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:textSize="13sp" />
+                    android:textSize="17sp" />
             </LinearLayout>
         </ViewFlipper>
 
@@ -186,7 +186,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- progress from the last time to the next, and the time passed since the last one -->
+    <!-- progress from the last time to the next -->
     <ProgressBar
         android:id="@+id/progress"
         style="?android:attr/progressBarStyleHorizontal"
@@ -198,36 +198,6 @@
         android:indeterminate="false"
         android:max="1000"
         android:progressDrawable="@drawable/widget_bar" />
-
-    <LinearLayout
-        android:id="@+id/prog_row"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layoutDirection="rtl"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/cur_name"
-            style="@style/WidgetText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <Chronometer
-            android:id="@+id/elapsed"
-            style="@style/WidgetText"
-            android:textDirection="ltr"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textSize="21sp"
-            android:textStyle="bold" />
-    </LinearLayout>
 
     <!-- the six times; the next one on a light pill -->
     <LinearLayout
@@ -317,7 +287,7 @@
         </LinearLayout>
     </ViewFlipper>
 
-    <!-- Hijri date with the moon, and the Gregorian date -->
+    <!-- the Gregorian date on the right, the Hijri date with the moon on the left -->
     <LinearLayout
         android:id="@+id/foot"
         android:layout_width="match_parent"
@@ -331,14 +301,8 @@
         android:paddingTop="5dp"
         android:paddingBottom="7dp">
 
-        <ImageView
-            android:id="@+id/moon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginEnd="6dp" />
-
         <TextView
-            android:id="@+id/hijri"
+            android:id="@+id/greg"
             style="@style/WidgetText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -350,8 +314,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1" />
 
+        <ImageView
+            android:id="@+id/moon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="6dp" />
+
         <TextView
-            android:id="@+id/greg"
+            android:id="@+id/hijri"
             style="@style/WidgetText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

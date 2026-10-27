@@ -312,12 +312,11 @@ object Widgets {
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
         putBg(rv, sty, bgOf(sty, st))
         sizes(rv, sty, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.left_label to 12f,
-            R.id.countdown to 24f, R.id.cur_name to 15f, R.id.elapsed to 21f,
-            R.id.ev0n to 13f, R.id.ev1n to 13f, R.id.ev2n to 13f, R.id.ev0d to 13f, R.id.ev1d to 13f, R.id.ev2d to 13f, R.id.dua to 13f, R.id.info_label to 13f,
+            R.id.countdown to 24f,
+            R.id.ev0n to 17f, R.id.ev1n to 17f, R.id.ev2n to 17f, R.id.ev0d to 17f, R.id.ev1d to 17f, R.id.ev2d to 17f, R.id.dua to 13f, R.id.info_label to 13f,
             R.id.info_chrono to 14f, R.id.hijri to 13f, R.id.greg to 13f) + NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
         rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.progress, if (sty.prog) View.VISIBLE else View.GONE)
-        rv.setViewVisibility(R.id.prog_row, if (sty.prog) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.flip, if (sty.line) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.foot, if (sty.date) View.VISIBLE else View.GONE)
         // the date line's own shade fades with the background
@@ -337,16 +336,7 @@ object Widgets {
             rv.setTextColor(TIME_IDS[k], if (k == st.next) sty.accent else Color.WHITE)
             rv.setInt(COL_IDS[k], "setBackgroundResource", if (k == st.next) R.drawable.widget_hl else 0)
         }
-        // the time passed since the last prayer, like «العشاء +3:04:23»
         rv.setProgressBar(R.id.progress, 1000, progress(st, now), false)
-        // not after sunrise (the time since sunrise means nothing to pray by)
-        if (st.prevAt > 0 && st.next != 2) {
-            rv.setViewVisibility(R.id.cur_name, View.VISIBLE)
-            rv.setTextViewText(R.id.cur_name, st.prevName)
-            rv.setChronometer(R.id.elapsed, SystemClock.elapsedRealtime() - (now - st.prevAt), "+%s", true)
-            rv.setChronometerCountDown(R.id.elapsed, false)
-            rv.setViewVisibility(R.id.elapsed, View.VISIBLE)
-        } else { rv.setViewVisibility(R.id.elapsed, View.GONE); rv.setViewVisibility(R.id.cur_name, View.GONE) }
         putEvents(rv, d, sty, now)
         rv.setTextViewText(R.id.dua, st.today.optString("dua"))
         putInfo(rv, d, st, now)
