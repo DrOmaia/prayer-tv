@@ -7,7 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 
-// When a timer widget is added (or its settings are opened): choose which of the app's timers it shows.
+// When a timer widget is added (or its settings are opened): tick one timer, or several to show in turn.
 class TimerPickActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -15,18 +15,25 @@ class TimerPickActivity : Activity() {
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-        val timers = Widgets.timers(this)
-        if (timers.isEmpty()) {
-            Toast.makeText(this, "افتح التطبيق مرة، ثم أضف العدّاد من جديد", Toast.LENGTH_LONG).show()
+        val items = Widgets.rotateChoices(this)
+        if (items.isEmpty()) {
+            Toast.makeText(this, "افتح التطبيق مرة، ثم أضف الويدجت من جديد", Toast.LENGTH_LONG).show()
             finish(); return
         }
+        val chosen = Widgets.rotateKeys(this, id)
+        val checked = BooleanArray(items.size) { items[it].first in chosen }
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
-            .setTitle("اختر العدّاد")
-            .setItems(timers.map { it.second }.toTypedArray()) { _, which ->
-                Widgets.setTimer(this, id, timers[which].first)
-                setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+            .setTitle("اختر عدّادًا أو أكثر")
+            .setMultiChoiceItems(items.map { it.second }.toTypedArray(), checked) { _, which, on -> checked[which] = on }
+            .setPositiveButton("تم") { _, _ ->
+                val keys = items.indices.filter { checked[it] }.map { items[it].first }
+                if (keys.isNotEmpty()) {
+                    Widgets.setRotate(this, id, keys)
+                    setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                }
                 finish()
             }
+            .setNegativeButton("إلغاء") { _, _ -> finish() }
             .setOnCancelListener { finish() }
             .show()
     }

@@ -374,11 +374,10 @@
     try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months,
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
-        var now = Date.now(), past = tAt(x) <= now, W = S.timerWg, an = past && !x.rip && W.anniv ? tAnnivObj(x) : null, ms = past && !x.rip && W.ms ? tMsObj(x, now) : null;
+        var W = S.timerWg;
         return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
           date: x.showDate ? fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '',
-          hijri: W.hijri ? tHijri(x, past) : '', dua: W.dua && x.rip ? '«' + RIP[x.rip][0] + '» ' + RIP[x.rip][1] : '',
-          anniv: an ? { t: an.t, at: an.at, date: an.date } : null, ms: ms ? { t: ms.t, at: ms.at, date: ms.date } : null };
+          dua: W.dua && x.rip ? '«' + RIP[x.rip][0] + '» ' + RIP[x.rip][1] : '' };
       }) })); } catch (e) {}
   }
 
@@ -1460,7 +1459,9 @@
   }
 
   // ---------- timers: the time since (or until) a date, in the unit chosen; also as home-screen widgets ----------
-  var T_UNITS = [['timer', 'مؤقّت'], ['minutes', 'دقائق'], ['hours', 'ساعات'], ['days', 'أيام'], ['workdays', 'أيام عمل'], ['weeks', 'أسابيع'], ['months', 'أشهر']];
+  // three ways to count; an older timer keeps its own unit (minutes, hours, work days, weeks) as a fourth choice
+  var T_UNITS = [['timer', 'سنوات وأيام'], ['days', 'أيام'], ['months', 'أشهر']];
+  var T_OLD = { minutes: 'دقائق', hours: 'ساعات', workdays: 'أيام عمل', weeks: 'أسابيع' };
   var T_COLORS = { white: '#FFFFFF', navy: '#1E2A78', pink: '#C2185B', green: '#2E7D5B', gold: '#A8792A', black: '#16181B' };
   var T_COLOR_NAMES = [['white', 'أبيض'], ['navy', 'كحلي'], ['pink', 'فوشيا'], ['green', 'أخضر'], ['gold', 'ذهبي'], ['black', 'أسود']];
   function tAt(x) { return Date.UTC(x.y, x.m - 1, x.d, x.h >= 0 ? x.h : 0, x.h >= 0 ? x.mi : 0) - P.offH(Date.UTC(x.y, x.m - 1, x.d, 12)) * HR; }
@@ -1528,48 +1529,26 @@
     var o = tAnnivObj(x);
     return !o ? '' : o.left === 0 ? 'اليوم ' + o.t : o.t + ' ' + tIn(o.left) + ' · ' + o.date;
   }
-  // the next round number in the timer's own unit: «يبلغ 6,000,000 دقيقة بعد 248 يومًا»
-  var T_STEP = { minutes: [1e6, MIN, 'دقيقة'], hours: [1e4, HR, 'ساعة'], days: [1e3, 864e5, 'يوم'], timer: [1e3, 864e5, 'يوم'], weeks: [100, 7 * 864e5, 'أسبوع'] };
-  function tMilestone(x, now) {
-    var o = tMsObj(x, now);
-    return o ? o.t + ' ' + tIn(o.left) + ' · ' + o.date : '';
-  }
-  function tMsObj(x, now) {
-    var at = tAt(x), st = T_STEP[x.unit];
-    if (at > now) return null;
-    var when, label;
-    if (x.unit === 'months') {
-      var n = +tParts(x, now)[0][0], next = (Math.floor(n / 50) + 1) * 50, dt = new Date(Date.UTC(x.y, x.m - 1 + next, x.d));
-      when = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 12); label = tNum(next) + ' شهر';
-    } else if (st) {
-      var cur = Math.floor((now - at) / st[1]), nx = (Math.floor(cur / st[0]) + 1) * st[0];
-      when = at + nx * st[1]; label = tNum(nx) + ' ' + st[2];
-    } else return null;
-    var w = P.ymd(when);
-    return { t: 'يبلغ ' + label, at: when, date: w.d + ' ' + G_MONTHS[w.m - 1] + ' ' + w.y, left: daysTo(w, P.ymd(now)) };
-  }
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
-  // the timers tab: each card shows the count and one line; a tap opens the details (Hijri, anniversary,
-  // round number) and «تعديل»; the editor and the widget settings open as full-screen sheets
-  var tEdit = null, tOpen = -1, twOpen = false; // the timer being edited (a copy) · the open card · the widget sheet
+  // the timers tab: each card shows the count and one line; a tap opens its editor (with the Hijri date and the
+  // next anniversary at the top); the editor and the widget settings open as full-screen sheets
+  var tEdit = null, twOpen = false; // the timer being edited (a copy) · the widget sheet
   function tGDate(y, m, d) { return d + ' ' + G_MONTHS[m - 1] + ' ' + y; }
   function tCard(x, i, now, preview) {
-    var past = tAt(x) <= now, open = !preview && tOpen === i, an = past && !x.rip ? tAnnivObj(x) : null;
-    var chip = !open && an && an.left <= 7 ? '<span class="tm-chip">' + (an.left === 0 ? 'اليوم ' + an.t : tIn(an.left) + ' ' + an.t) + '</span>' : '';
+    var past = tAt(x) <= now, an = past && !x.rip ? tAnnivObj(x) : null;
+    var chip = !preview && an && an.left <= 7 ? '<span class="tm-chip">' + (an.left === 0 ? 'اليوم ' + an.t : tIn(an.left) + ' ' + an.t) + '</span>' : '';
     var head = '<span class="tm-num">' + tCount(x, now) + '</span>' +
       '<span class="tm-line">' + esc(x.name ? tLine(x, now) : (past ? 'منذ …' : 'حتى …')) + '</span>' + chip +
       (x.rip ? '<span class="tm-dua">«' + RIP[x.rip][0] + '» <small>' + RIP[x.rip][1] + '</small></span>' : '');
-    var rows = '';
-    if (open) {
-      var r = [['الهجري', tHijri(x, past)]], ms = past && !x.rip ? tMsObj(x, now) : null;
-      if (an) r.push(['الذكرى القادمة', (an.left === 0 ? 'اليوم ' + an.t : an.t + ' ' + tIn(an.left)) + ' · ' + an.date]);
-      if (ms) r.push(['الرقم المميّز', ms.t + ' ' + tIn(ms.left) + ' · ' + ms.date]);
-      if (!past) r.push(['الموعد', DAY_NAMES[new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay()] + ' ' + tGDate(x.y, x.m, x.d)]);
-      rows = '<div class="tm-rows">' + r.map(function (q) { return '<div class="tm-row"><span>' + q[0] + '</span><b>' + esc(q[1]) + '</b></div>'; }).join('') +
-        '<button class="pill f tm-editbtn" data-tme="' + i + '">تعديل</button></div>';
-    }
-    return '<div class="tm-card' + (x.color === 'white' ? ' tm-light' : '') + (open ? ' open' : '') + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
-      (preview ? '<div class="tm-head">' + head + '</div>' : '<button class="tm-head f" data-tm="' + i + '" aria-expanded="' + open + '">' + head + '</button>') + rows + '</div>';
+    return '<div class="tm-card' + (x.color === 'white' ? ' tm-light' : '') + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
+      (preview ? '<div class="tm-head">' + head + '</div>' : '<button class="tm-head f" data-tm="' + i + '">' + head + '</button>') + '</div>';
+  }
+  // above the editor's fields: the Hijri date and the next anniversary (or the day of a coming date)
+  function tInfo(x) {
+    var past = tAt(x) <= Date.now(), an = past && !x.rip ? tAnnivObj(x) : null, r = [['الهجري', tHijri(x, past)]];
+    if (an) r.push(['الذكرى القادمة', (an.left === 0 ? 'اليوم ' + an.t : an.t + ' ' + tIn(an.left)) + ' · ' + an.date]);
+    if (!past) r.push(['الموعد', DAY_NAMES[new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay()] + ' ' + tGDate(x.y, x.m, x.d)]);
+    return r.map(function (q) { return '<div class="tm-row"><span>' + q[0] + '</span><b>' + esc(q[1]) + '</b></div>'; }).join('');
   }
   // the count stays on one line: smaller when it is long
   function tFit(root) {
@@ -1595,11 +1574,6 @@
     });
     if (tEdit) { var pv = document.querySelector('#tm-sheet .tm-preview'); if (pv) { var h = tCount(tEdit, now), n2 = pv.querySelector('.tm-num'); if (n2 && n2.innerHTML !== h) { n2.innerHTML = h; tFit(pv); } } }
   }
-  function tToggle(i) {
-    tOpen = tOpen === i ? -1 : i;
-    timersRender();
-    var b = document.querySelector('#timers-list [data-tm="' + i + '"]'); if (b) b.focus();
-  }
   // the sheet: the editor or the widget settings, over the whole screen
   function tSheetRender() {
     var sh = $('tm-sheet');
@@ -1621,11 +1595,12 @@
       '<button class="gold-btn f" data-tk="save">حفظ</button></div>' +
       '<div class="tm-sheet-body">' +
       '<div class="tm-preview">' + tCard(x, -1, Date.now(), true) + '</div>' +
+      '<div class="tm-rows">' + tInfo(x) + '</div>' +
       '<label class="tm-lbl" for="tm-name">الاسم</label><input id="tm-name" class="inp f" maxlength="30" placeholder="مثل: إجازة الصيف" value="' + esc(x.name) + '">' +
       '<div class="tm-two"><div><label class="tm-lbl" for="tm-date">التاريخ</label><input id="tm-date" class="inp f" type="date" value="' + date + '"></div>' +
       '<div><label class="tm-lbl" for="tm-time">الوقت (اختياري)</label><div class="tm-timebox"><input id="tm-time" class="inp f" type="time" value="' + time + '">' +
       (time ? '<button class="tm-x f" data-tk="notime" aria-label="بلا وقت">×</button>' : '') + '</div></div></div>' +
-      '<div class="tm-lbl">الوحدة</div>' + tSeg('unit', T_UNITS, x.unit, 'tm-grid') +
+      '<div class="tm-lbl">طريقة العدّ</div>' + tSeg('unit', T_UNITS.concat(T_OLD[x.unit] ? [[x.unit, T_OLD[x.unit]]] : []), x.unit) +
       '<div class="tm-lbl">اللون</div><div class="tm-swatches">' + T_COLOR_NAMES.map(function (c) {
         return '<button class="tm-dot f' + (x.color === c[0] ? ' on' : '') + '" data-tk="color-' + c[0] + '" aria-label="' + c[1] + '" style="background:' + T_COLORS[c[0]] + '"></button>';
       }).join('') + '</div>' +
@@ -1634,7 +1609,7 @@
       (x.isNew ? '' : '<button class="tm-del f" data-tk="del">حذف العدّاد</button>') + '</div>';
     tFit(sh);
   }
-  var TW_LINES = [['name', 'الاسم والتاريخ'], ['hijri', 'التاريخ الهجري'], ['anniv', 'الذكرى القادمة'], ['ms', 'الرقم المميّز'], ['dua', 'الدعاء للراحل']];
+  var TW_LINES = [['name', 'الاسم والتاريخ'], ['dua', 'الدعاء للراحل']];
   function twRender(sh) {
     var W = S.timerWg, placed = [];
     try { placed = A && A.timerWidgets ? JSON.parse(A.timerWidgets()) : []; } catch (e) {}
@@ -1646,11 +1621,12 @@
       '<div class="tm-lbl">يظهر تحت العدّ</div>' + TW_LINES.map(function (o) { return tSwitch('data-tw="line-' + o[0] + '"', !!W[o[0]], o[1]); }).join('') +
       (placed.length ? '<div class="tm-lbl">العدّاد في كل ويدجت</div>' + placed.map(function (p, i) {
         return '<div class="tm-pick"><span>الويدجت ' + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
-          S.timers.map(function (x) { return '<option value="' + x.id + '"' + (x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
-          (S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
+          S.timers.map(function (x) { return '<option value="' + x.id + '"' + (p.n === 1 && x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
+          (p.n > 1 ? '<option value="" selected>' + countWord(p.n, 'عدّاد واحد', 'عدّادان', 'عدّادات', 'عدّادًا') + ' تتقلّب</option>' :
+            S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
       }).join('') : '') +
       '<p class="muted tm-note">' + (placed.length ? 'كل تغيير هنا يظهر على الويدجت مباشرة.' :
-        'لإضافة ويدجت: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد (منذ / حتى)»، ثم اختر اسمه. وبعدها تتحكّم به من هنا.') + '</p></div>';
+        'لإضافة ويدجت: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد»، ثم ضع ✓ على عدّاد واحد أو أكثر (أكثر من واحد يتقلّب كل 5 ثوانٍ).') + '</p></div>';
   }
   function twAction(k) {
     var p = k.split('-');
@@ -1689,7 +1665,7 @@
       // a second press confirms (the phone's WebView shows no confirm box)
       var db = document.querySelector('#tm-sheet [data-tk="del"]');
       if (db && !db.classList.contains('sure')) { db.classList.add('sure'); db.textContent = 'اضغط مرة أخرى لحذف «' + tEdit.name + '»'; return; }
-      S.timers = S.timers.filter(function (x) { return x.id !== tEdit.id; }); save(); sendWidget(); tOpen = -1; tEdit = null; timersRender(); return;
+      S.timers = S.timers.filter(function (x) { return x.id !== tEdit.id; }); save(); sendWidget(); tEdit = null; timersRender(); return;
     }
     else if (k === 'save') {
       if (!tEdit.name) { $('tm-name').focus(); return; }
@@ -2086,8 +2062,7 @@
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     if (el.dataset.sec) { setToggle(el); return; }
-    if (el.dataset.tm) { tToggle(+el.dataset.tm); return; }
-    if (el.dataset.tme) { tOpenEditor(Object.assign({}, S.timers[+el.dataset.tme])); return; }
+    if (el.dataset.tm) { tOpenEditor(Object.assign({}, S.timers[+el.dataset.tm])); return; }
     if (el.dataset.tk) { tAction(el.dataset.tk); return; }
     if (el.dataset.tw) { twAction(el.dataset.tw); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }

@@ -2,7 +2,7 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.dromaia.prayertv.TimerPickActivity"
     android:description="@string/widget_timer"
-    android:initialLayout="@layout/widget_timer"
+    android:initialLayout="@layout/widget_rotate"
     android:minWidth="110dp"
     android:minHeight="50dp"
     android:targetCellWidth="4"

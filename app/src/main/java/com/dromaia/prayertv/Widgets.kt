@@ -67,7 +67,7 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
-        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, RotateWidget::class.java)
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java)
 
     // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
     fun timers(ctx: Context): List<Pair<String, String>> {
@@ -79,16 +79,14 @@ object Widgets {
         val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
         val out = JSONArray()
         AppWidgetManager.getInstance(ctx).getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
-            out.put(JSONObject().put("id", id).put("timer", prefs.getString("timer_$id", "") ?: ""))
+            val keys = rotateKeys(ctx, id)
+            out.put(JSONObject().put("id", id).put("n", keys.size).put("timer", keys.firstOrNull()?.removePrefix("t:") ?: ""))
         }
         return out.toString()
     }
-    fun setTimer(ctx: Context, widgetId: Int, timerId: String) {
-        ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("timer_$widgetId", timerId).apply()
-        updateAll(ctx)
-    }
+    fun setTimer(ctx: Context, widgetId: Int, timerId: String) = setRotate(ctx, widgetId, listOf("t:$timerId"))
 
-    // ---- the rotating widget: timers ("t:" + id) and occasions ("e:" + name) chosen for it, shown in turn
+    // ---- the timer widget: the timers ("t:" + id) and occasions ("e:" + name) chosen for it; more than one turn every 5 s
     fun rotateChoices(ctx: Context): List<Pair<String, String>> {
         val d = data(ctx) ?: return emptyList()
         val out = timers(ctx).map { ("t:" + it.first) to it.second }.toMutableList()
@@ -101,9 +99,13 @@ object Widgets {
         }
         return out
     }
-    fun rotateKeys(ctx: Context, widgetId: Int): List<String> =
-        (ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("rot_$widgetId", "") ?: "")
-            .split("\n").filter { it.isNotEmpty() }
+    fun rotateKeys(ctx: Context, widgetId: Int): List<String> {
+        val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
+        val keys = (prefs.getString("rot_$widgetId", "") ?: "").split("\n").filter { it.isNotEmpty() }
+        // a widget placed before: the one timer it was showing
+        val old = prefs.getString("timer_$widgetId", "") ?: ""
+        return if (keys.isEmpty() && old.isNotEmpty()) listOf("t:$old") else keys
+    }
     fun setRotate(ctx: Context, widgetId: Int, keys: List<String>) {
         ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("rot_$widgetId", keys.joinToString("\n")).apply()
         updateAll(ctx)
@@ -120,7 +122,7 @@ object Widgets {
         val wg = d?.optJSONObject("timerWg")
         val k = when (wg?.optString("font")) { "s" -> 0.8f; "l" -> 1.25f; "xl" -> 1.5f; else -> 1f }
         // each card: background, ink, the count and the line under it
-        class Card(val bg: Int, val ink: Int, val count: CharSequence, val line: String)
+        class Card(val bg: Int, val ink: Int, val count: CharSequence, val line: String, val dua: String = "")
         val cards = mutableListOf<Card>()
         for (key in rotateKeys(ctx, widgetId)) {
             if (key.startsWith("t:")) {
@@ -129,7 +131,7 @@ object Widgets {
                 val ink = try { Color.parseColor(x.optString("ink")) } catch (_: Exception) { Color.WHITE }
                 val at = x.optLong("at"); val date = x.optString("date")
                 cards.add(Card(bg, ink, bigNumbers(timerText(at, x.optString("unit"), now)),
-                    (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else ""))
+                    (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else "", x.optString("dua")))
             } else if (key.startsWith("e:")) {
                 val e = events.firstOrNull { it.optString("name") == key.substring(2) } ?: continue
                 val left = (dayNumber(e.optLong("at")) - dayNumber(now)).toInt()
@@ -140,7 +142,7 @@ object Widgets {
             }
             if (cards.size == 12) break
         }
-        if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, "عدّادات", "اضغط مطولًا ← الإعدادات لاختيارها"))
+        if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, "عدّاد", "اضغط مطولًا ← الإعدادات لاختياره"))
         cards.forEachIndexed { i, c ->
             val item = RemoteViews(ctx.packageName, R.layout.widget_rotate_item)
             item.setInt(R.id.rt_bg, "setColorFilter", c.bg)
@@ -148,10 +150,14 @@ object Widgets {
             item.setTextViewTextSize(R.id.rt_line, TypedValue.COMPLEX_UNIT_SP, 14f * k)
             item.setTextViewText(R.id.rt_count, c.count)
             item.setTextViewText(R.id.rt_line, c.line)
+            item.setViewVisibility(R.id.rt_line, if (wg?.optBoolean("name", true) != false) View.VISIBLE else View.GONE)
+            item.setTextViewText(R.id.rt_dua, c.dua)
+            item.setTextViewTextSize(R.id.rt_dua, TypedValue.COMPLEX_UNIT_SP, 12f * k)
+            item.setViewVisibility(R.id.rt_dua, if (c.dua.isEmpty()) View.GONE else View.VISIBLE)
             // dots: where this card is among them
             item.setTextViewText(R.id.rt_dots, cards.indices.joinToString(" ") { if (it == i) "●" else "○" })
             item.setViewVisibility(R.id.rt_dots, if (cards.size > 1) View.VISIBLE else View.GONE)
-            for (id in intArrayOf(R.id.rt_count, R.id.rt_line, R.id.rt_dots)) item.setTextColor(id, c.ink)
+            for (id in intArrayOf(R.id.rt_count, R.id.rt_line, R.id.rt_dua, R.id.rt_dots)) item.setTextColor(id, c.ink)
             rv.addView(R.id.rot_flip, item)
         }
         // continue the turn where it was (each refresh rebuilds the cards)
@@ -213,55 +219,6 @@ object Widgets {
         return sp
     }
 
-    private fun inDays(n: Int): String = when (n) {
-        0 -> "اليوم"; 1 -> "غدًا"; 2 -> "بعد يومين"; in 3..10 -> "بعد $n أيام"; else -> "بعد $n يومًا"
-    }
-
-    private fun timerViews(ctx: Context, d: JSONObject?, sty: Style, widgetId: Int, now: Long): RemoteViews {
-        val rv = RemoteViews(ctx.packageName, R.layout.widget_timer)
-        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "timers", 7))
-        val tid = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("timer_$widgetId", "")
-        val a = d?.optJSONArray("timers")
-        val x = (0 until (a?.length() ?: 0)).mapNotNull { a?.optJSONObject(it) }.firstOrNull { it.optString("id") == tid }
-        if (x == null) {
-            rv.setInt(R.id.bg, "setColorFilter", Color.parseColor("#1E2A78"))
-            rv.setTextViewText(R.id.tm_count, "عدّاد")
-            rv.setTextViewText(R.id.tm_line, "اضغط مطولًا ← الإعدادات لاختياره")
-            return rv
-        }
-        val bg = try { Color.parseColor(x.optString("color")) } catch (_: Exception) { Color.parseColor("#1E2A78") }
-        val ink = try { Color.parseColor(x.optString("ink")) } catch (_: Exception) { Color.WHITE }
-        rv.setInt(R.id.bg, "setColorFilter", bg)
-        rv.setInt(R.id.bg, "setImageAlpha", maxOf(sty.alpha, 60))
-        val at = x.optLong("at")
-        // text size and lines chosen in the app's timers tab
-        val wg = d?.optJSONObject("timerWg")
-        val k = when (wg?.optString("font")) { "s" -> 0.8f; "l" -> 1.25f; "xl" -> 1.5f; else -> 1f }
-        rv.setTextViewTextSize(R.id.tm_count, TypedValue.COMPLEX_UNIT_SP, 30f * k)
-        rv.setTextViewTextSize(R.id.tm_line, TypedValue.COMPLEX_UNIT_SP, 14f * k)
-        rv.setTextViewTextSize(R.id.tm_more, TypedValue.COMPLEX_UNIT_SP, 13f * k)
-        rv.setTextViewText(R.id.tm_count, bigNumbers(timerText(at, x.optString("unit"), now)))
-        val date = x.optString("date")
-        rv.setTextViewText(R.id.tm_line, (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else "")
-        rv.setViewVisibility(R.id.tm_line, if (wg?.optBoolean("name", true) != false) View.VISIBLE else View.GONE)
-        // extra lines: Hijri date, the next anniversary and round number (days counted here), a prayer for the departed
-        val more = mutableListOf<String>()
-        x.optString("hijri").takeIf { it.isNotEmpty() }?.let { more.add(it) }
-        for (key in arrayOf("anniv", "ms")) {
-            val o = x.optJSONObject(key) ?: continue
-            val left = (dayNumber(o.optLong("at")) - dayNumber(now)).toInt()
-            if (left < 0) continue
-            more.add(o.optString("t") + " " + inDays(left) + " · " + o.optString("date"))
-        }
-        x.optString("dua").takeIf { it.isNotEmpty() }?.let { more.add(it) }
-        rv.setTextViewText(R.id.tm_more, more.joinToString("\n"))
-        rv.setViewVisibility(R.id.tm_more, if (more.isEmpty()) View.GONE else View.VISIBLE)
-        rv.setTextColor(R.id.tm_count, ink)
-        rv.setTextColor(R.id.tm_line, ink)
-        rv.setTextColor(R.id.tm_more, ink)
-        return rv
-    }
-
     // the look chosen in the app's settings (the same for all widgets): background, transparency, text size,
     // accent colour and the parts shown on «مواقيت اليوم»
     private class Style(o: JSONObject?) {
@@ -314,11 +271,7 @@ object Widgets {
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
-            try { am.updateAppWidget(id, timerViews(ctx, d, sty, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
-            nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
-        }
-        am.getAppWidgetIds(ComponentName(ctx, RotateWidget::class.java)).forEach { id ->
-            try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "RotateWidget: $e") }
+            try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
             nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
         }
         // refresh again only while there is a widget on the home screen
@@ -705,10 +658,6 @@ class StripWidget : AppWidgetProvider() {
 }
 
 class TimerWidget : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
-}
-
-class RotateWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 

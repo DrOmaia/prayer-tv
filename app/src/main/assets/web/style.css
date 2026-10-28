@@ -704,8 +704,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .tm-row { display: flex; gap: 20px; font-size: 24px; align-items: baseline; }
 .tm-row span { opacity: .7; min-width: 170px; }
 .tm-row b { font-weight: 600; opacity: .95; }
-.tm-editbtn { align-self: flex-start; height: 72px; font-size: 26px; background: rgba(255,255,255,.18); color: inherit; border-color: transparent; margin-top: 8px; }
-.tm-light .tm-editbtn { background: rgba(0,0,0,.06); }
+/* the editor: the Hijri date and the next anniversary under the preview */
+.tm-sheet-body .tm-rows { padding: 22px 6px 4px; gap: 10px; }
+.tm-sheet-body .tm-rows::before { display: none; }
 /* the sheet: editor / widget settings over the whole screen */
 .day { --sheet: #DDD3BF; }
 .night { --sheet: #1A1B50; }

@@ -114,25 +114,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_timer_info" />
         </receiver>
 
-        <receiver android:name=".RotateWidget" android:exported="false" android:label="@string/widget_rotate">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_rotate_info" />
-        </receiver>
-
-        <!-- choosing what a rotating widget shows (when it is added, or again from the widget's settings) -->
-        <activity
-            android:name=".RotatePickActivity"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-            </intent-filter>
-        </activity>
-
-        <!-- choosing which timer a timer widget shows (when it is added, or again from the widget's settings) -->
+        <!-- choosing the timers a timer widget shows (when it is added, or again from the widget's settings) -->
         <activity
             android:name=".TimerPickActivity"
             android:exported="true"

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Timers and occasions chosen for this widget, one after another every 5 seconds -->
+<!-- The timer widget: the timers and occasions chosen for it, one after another every 5 seconds when there are several -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
