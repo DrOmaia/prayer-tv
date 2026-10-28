@@ -80,7 +80,7 @@
       })(s.sound)
     };
   })();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
   // a family saved before these were added (the default family): add the writer, interests and the departed
   (function () {
     var F = S.family, D = FAMILY.DEFAULT;
@@ -1004,6 +1004,9 @@
       else cards.push(groups[g] = { g: g, list: [e] });
     });
     cards.sort(function (x, y) { return (x.g === 'a' ? -1 : 0) - (y.g === 'a' ? -1 : 0) || x.list[0].left - y.list[0].left; });
+    // the TV: the timers sent from the phone take turns in the birthdays card (ب), or in a card of their own
+    var tl = TV ? S.timers.map(function (x) { return { timer: x }; }) : [];
+    if (tl.length) { if (groups.b) groups.b.list = groups.b.list.concat(tl); else cards.push({ g: 't', list: tl }); }
     evCards = cards;
     $('events').innerHTML = cards.slice(0, 6).map(function (c, n) {
       return '<div class="ev' + (c.list.length > 1 ? ' ev-turn' : '') + '" id="evc-' + n + '">' + evInner(c.list[(evTurn[c.g] || 0) % c.list.length]) + '</div>';
@@ -1019,6 +1022,12 @@
     return SEASON[e.auto] ? 'a' : e.auto && (e.auto.indexOf('b-') === 0 || e.auto === 'anniv') ? 'b' : '';
   }
   function evInner(e) {
+    if (e.timer) {
+      // a timer (from the phone): its first number large, the rest small; «منذ / حتى» and its name
+      var x = e.timer, pt = tParts(x, Date.now()), past = tAt(x) <= Date.now(), first = pt[0];
+      return '<span class="ev-n">' + (first[0] >= 10000 ? tNum(first[0]) : first[0]) + '</span><div class="ev-t"><b>' + (past ? 'منذ ' : 'حتى ') + esc(x.name) +
+        '</b><span>' + first[1] + (pt[1] ? ' و' + pt[1][0] + ' ' + pt[1][1] : '') + '</span></div>';
+    }
     var big = e.left <= 2 ? daysText(e.left) : e.left;
     return '<span class="ev-n">' + big + '</span><div class="ev-t"><b>' + esc(e.name) +
       '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? 'أيام' : 'يومًا') + ' · ') + dmy(e) + '</span></div>';
@@ -1253,6 +1262,14 @@
       }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
     }).join('');
     // the phone's other notifications
+    var sAt = 0; try { sAt = +localStorage.getItem('prayertv-synced-at') || 0; } catch (e) {}
+    var same = syncData() === syncLast();
+    $('set-sync').innerHTML = '<div class="srow"><span class="sname">' + (syncState === 'send' ? 'جارٍ الإرسال…' :
+      syncState === 'none' ? '<span class="w-al">لم أجد التلفزيون على الشبكة، سأحاول عند فتح التطبيق مرة أخرى</span>' :
+      syncState === 'fail' ? '<span class="w-al">التلفزيون لم يرد، سأحاول لاحقًا</span>' :
+      same && sAt ? 'التلفزيون مثل الجوال ✓ <span class="muted">(آخر إرسال ' + P.full(sAt) + ')</span>' : 'لم يُرسل بعد') + '</span>' +
+      '<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>';
+    $('sum-sync').textContent = same && sAt ? '✓' : '';
     $('set-more-al').innerHTML = (TV ? [] : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']])
       .concat([['kaaba', 'تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة']]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
@@ -1758,12 +1775,44 @@
     text = (text || '').trim();
     if (!text || !A || !A.tvSend) return;
     tvState = 'send'; tvRender();
-    try { A.tvSend(JSON.stringify({ t: tvFrom(), x: text })); } catch (e) { tvState = 'fail'; tvRender(); }
+    try { A.tvSend(JSON.stringify({ t: tvFrom(), x: text }), 'msg'); } catch (e) { tvState = 'fail'; tvRender(); }
   }
   function tvAction(k) {
     if (k === 'close') { tvOpen = false; tvState = ''; tvRender(); $('tv-btn').focus(); return; }
     if (k === 'send') { tvSend($('tv-text').value); return; }
     if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
+  }
+  // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
+  var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'iqMin', 'sound', 'hijriAdj'];
+  var syncTimer = null, syncSending = '', syncState = '';
+  function syncData() { var o = {}; SYNC_KEYS.forEach(function (k) { o[k] = S[k]; }); return JSON.stringify(o); }
+  function syncLast() { try { return localStorage.getItem('prayertv-synced') || ''; } catch (e) { return ''; } }
+  // a change on the phone: sent two seconds later (several changes go together); not sent again when nothing changed
+  function syncSoon() { if (TV || !A || !A.tvSend) return; clearTimeout(syncTimer); syncTimer = setTimeout(function () { syncNow(false); }, 2000); }
+  function syncNow(force) {
+    if (TV || !A || !A.tvSend) return;
+    var d = syncData();
+    if (!force && d === syncLast()) return;
+    syncSending = d; syncState = 'send';
+    try { A.tvSend(JSON.stringify({ k: 'sync', s: JSON.parse(d) }), 'sync'); } catch (e) { syncState = 'fail'; }
+  }
+  function syncDone(r) {
+    syncState = r;
+    if (r === 'ok') { try { localStorage.setItem('prayertv-synced', syncSending); localStorage.setItem('prayertv-synced-at', String(Date.now())); } catch (e) {} }
+    if (screen === 'settings') setRender();
+  }
+  // the TV: what a phone sent replaces the same settings here
+  function syncTake() {
+    var j = null;
+    try { j = A && A.takeSync ? A.takeSync() : ''; } catch (e) {}
+    if (!j) return;
+    var o; try { o = JSON.parse(j); } catch (e) { return; }
+    SYNC_KEYS.forEach(function (k) { if (o[k] !== undefined) S[k] = o[k]; });
+    save();
+    P.setIqamah(S.iqMin); P.setHijriAdj(S.hijriAdj);
+    autoCache.key = ''; lastQ = ''; lastDay = '';
+    tick();
+    if (screen === 'settings') setRender();
   }
   // the TV: a message from a phone, on top of the screen for a minute (a press closes it)
   var msgTimer = null;
@@ -1923,6 +1972,7 @@
       S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
       P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
     }
+    if (a === 'syncnow') { syncNow(true); setRender(); return; }
     if (a === 'ndim') { S.nightDim = !S.nightDim; save(); setRender(); return; }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
     if (a === 'snd') { S.sound[v] = p[2]; try { A && A.previewSound && A.previewSound('stop'); } catch (e) {} }
@@ -2247,7 +2297,11 @@
     back: back,
     // a widget opens a screen (the date converter, the calendar)
     // the phone: the TV's answer to a message ('ok', 'none', 'fail'); the TV: a message from a phone
-    tvSent: function (r) { tvState = r; tvRender(); if (r === 'ok') { var i = $('tv-text'); if (i) i.value = ''; } },
+    tvSent: function (r, kind) {
+      if (kind === 'sync') { syncDone(r); return; }
+      tvState = r; tvRender(); if (r === 'ok') { var i = $('tv-text'); if (i) i.value = ''; }
+    },
+    sync: function () { syncTake(); },
     message: function (title, text) { showMessage(title, text); },
     open: function (name) { if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
     onResume: function () {
@@ -2256,12 +2310,14 @@
       if (screen === 'settings') setRender();
       sendSchedule();
       if (Date.now() - wxAt > 10 * MIN) loadWeather();
+      if (TV) syncTake(); else syncSoon();
       // phone travelling: the automatic city follows the phone's location
       if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
     }
   };
 
   if (A && TV) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
+  if (TV) syncTake();
   showCity();
   if (S.loc.mode === 'auto') locateAuto();
   renderShortcuts();

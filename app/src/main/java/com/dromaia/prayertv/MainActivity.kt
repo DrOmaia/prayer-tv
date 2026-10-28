@@ -42,6 +42,10 @@ class MainActivity : Activity() {
     companion object {
         @Volatile var visible = false
         private var current: java.lang.ref.WeakReference<MainActivity>? = null
+        // the TV: a phone sent its settings; the page takes them now if it is running (otherwise when it starts)
+        fun syncArrived() {
+            current?.get()?.web?.evaluateJavascript("window.App && App.sync()", null)
+        }
         // the TV: a message from a family phone, on the app's own screen while it is open
         fun message(title: String, text: String) {
             val a = current?.get() ?: return
@@ -256,9 +260,16 @@ class MainActivity : Activity() {
 
         // the phone: a message to the TV at home; the answer comes back to the page ('ok', 'none', 'fail')
         @JavascriptInterface
-        fun tvSend(json: String) = TvLink.send(this@MainActivity, json) { r ->
-            runOnUiThread { web?.evaluateJavascript("window.App && App.tvSent('$r')", null) }
+        fun tvSend(json: String, kind: String) {
+            val k = kind.filter { it.isLetter() }
+            TvLink.send(this@MainActivity, json) { r ->
+                runOnUiThread { web?.evaluateJavascript("window.App && App.tvSent('$r', '$k')", null) }
+            }
         }
+
+        // the TV: the settings a phone sent (read once)
+        @JavascriptInterface
+        fun takeSync(): String = TvLink.takeSync(this@MainActivity)
 
         // the cities whose weather the phone checks in the background ([] = off)
         @JavascriptInterface

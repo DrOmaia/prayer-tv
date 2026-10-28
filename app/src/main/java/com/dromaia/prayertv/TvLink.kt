@@ -59,9 +59,18 @@ object TvLink {
     private fun handle(ctx: Context, c: Socket) {
         try {
             c.use {
-                it.soTimeout = 5000
-                val line = it.getInputStream().bufferedReader(Charsets.UTF_8).readLine()?.take(1000) ?: return
+                it.soTimeout = 8000
+                val line = it.getInputStream().bufferedReader(Charsets.UTF_8).readLine()?.take(400_000) ?: return
                 val o = JSONObject(line)
+                // a phone's settings (occasions, family, timers, prayer settings): kept until the page takes them
+                if (o.optString("k") == "sync") {
+                    val st = o.optJSONObject("s") ?: return
+                    ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("pendingSync", st.toString()).apply()
+                    it.getOutputStream().write("ok\n".toByteArray(Charsets.UTF_8))
+                    it.getOutputStream().flush()
+                    Handler(Looper.getMainLooper()).post { MainActivity.syncArrived() }
+                    return
+                }
                 val title = o.optString("t").take(40).ifEmpty { "رسالة" }
                 val text = o.optString("x").take(160)
                 if (text.isBlank()) return
@@ -84,6 +93,13 @@ object TvLink {
         }
     }
 
+    fun takeSync(ctx: Context): String {
+        val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
+        val s = prefs.getString("pendingSync", "") ?: ""
+        if (s.isNotEmpty()) prefs.edit().remove("pendingSync").apply()
+        return s
+    }
+
     // ---- the phone: the TV found last time first, otherwise look for it on the network (a few seconds)
     fun send(ctx: Context, payload: String, done: (String) -> Unit) {
         val app = ctx.applicationContext
@@ -101,7 +117,7 @@ object TvLink {
         val ip = host.substringBeforeLast(':'); val port = host.substringAfterLast(':').toInt()
         Socket().use { s ->
             s.connect(InetSocketAddress(ip, port), 3000)
-            s.soTimeout = 4000
+            s.soTimeout = 8000
             s.getOutputStream().write((payload.replace('\n', ' ') + "\n").toByteArray(Charsets.UTF_8))
             s.getOutputStream().flush()
             s.getInputStream().bufferedReader(Charsets.UTF_8).readLine() == "ok"
