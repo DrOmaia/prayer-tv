@@ -245,6 +245,10 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun setTimerWidget(id: Int, timerId: String) = Widgets.setTimer(this@MainActivity, id, timerId)
 
+        // put a widget on the home screen from the app (kind: prayer, ring, strip, month, convert, event, timer)
+        @JavascriptInterface
+        fun pinWidget(kind: String, keys: String): String = Widgets.pin(this@MainActivity, kind, keys)
+
         // the phone's own location (for «تحديد تلقائي»): approximate is enough for the city
         @JavascriptInterface
         fun locOk(): Boolean = checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED

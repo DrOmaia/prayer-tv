@@ -1305,7 +1305,11 @@
       '<div class="srow snd-row"><span class="sname">يظهر في «مواقيت اليوم»</span><span class="snd-opts">' +
       [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
         return '<button class="sbtn f' + (W[o[0]] ? ' on' : '') + '" data-k="wg-' + o[0] + '-t">' + o[1] + '</button>';
-      }).join('') + '</span></div>';
+      }).join('') + '</span></div>' +
+      (A && A.pinWidget ? '<div class="srow snd-row"><span class="sname">ضعه على الشاشة الرئيسية</span><span class="snd-opts">' +
+        [['prayer', 'مواقيت اليوم'], ['ring', 'الدائرة'], ['strip', 'الشريط'], ['month', 'الشهر الهجري'], ['convert', 'تحويل التاريخ'], ['event', 'عدّاد المناسبة']].map(function (o) {
+          return '<button class="sbtn f" data-pin="' + o[0] + '">' + o[1] + '</button>';
+        }).join('') + '</span></div><div id="pin-msg" class="muted set-note"></div>' : '');
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
@@ -1532,7 +1536,7 @@
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   // the timers tab: each card shows the count and one line; a tap opens its editor (with the Hijri date and the
   // next anniversary at the top); the editor and the widget settings open as full-screen sheets
-  var tEdit = null, twOpen = false; // the timer being edited (a copy) · the widget sheet
+  var tEdit = null, twOpen = false, tPin = null; // the timer being edited (a copy) · the widget sheet · «+ ويدجت» (ticked keys)
   function tGDate(y, m, d) { return d + ' ' + G_MONTHS[m - 1] + ' ' + y; }
   function tCard(x, i, now, preview) {
     var past = tAt(x) <= now, an = past && !x.rip ? tAnnivObj(x) : null;
@@ -1577,9 +1581,9 @@
   // the sheet: the editor or the widget settings, over the whole screen
   function tSheetRender() {
     var sh = $('tm-sheet');
-    if (!tEdit && !twOpen) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
+    if (!tEdit && !twOpen && !tPin) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
     sh.classList.remove('hidden');
-    if (tEdit) tEditRender(sh); else twRender(sh);
+    if (tEdit) tEditRender(sh); else if (tPin) tPinRender(sh); else twRender(sh);
   }
   function tSeg(key, opts, cur, cls) {
     return '<div class="tm-seg' + (cls ? ' ' + cls : '') + '">' + opts.map(function (o) {
@@ -1627,6 +1631,35 @@
       }).join('') : '') +
       '<p class="muted tm-note">' + (placed.length ? 'كل تغيير هنا يظهر على الويدجت مباشرة.' :
         'لإضافة ويدجت: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد»، ثم ضع ✓ على عدّاد واحد أو أكثر (أكثر من واحد يتقلّب كل 5 ثوانٍ).') + '</p></div>';
+  }
+  // «+ ويدجت»: tick timers (and occasions), then the phone asks «إضافة؟» and puts the widget on the home screen
+  function tPinItems() {
+    var seen = {}, out = S.timers.map(function (x) { return ['t:' + x.id, x.name]; });
+    allEvents(P.ymd(Date.now())).forEach(function (e) { if (!seen[e.name]) { seen[e.name] = 1; out.push(['e:' + e.name, e.name]); } });
+    return out;
+  }
+  function tPinRender(sh) {
+    sh.innerHTML = '<div class="tm-bar"><button class="f" data-tp="cancel">إلغاء</button><b>ويدجت جديد</b>' +
+      '<button class="gold-btn f" data-tp="go">ضعه على الشاشة</button></div>' +
+      '<div class="tm-sheet-body"><p class="muted tm-note">ضع ✓ على عدّاد واحد (يثبت) أو أكثر (يتقلّب كل 5 ثوانٍ)، ثم «ضعه على الشاشة» واضغط «إضافة» في رسالة الجوال.</p>' +
+      tPinItems().map(function (o, i) { return tSwitch('data-tp="' + i + '"', !!tPin.keys[o[0]], esc(o[1])); }).join('') +
+      (tPin.msg ? '<p class="tm-note tm-warn">' + tPin.msg + '</p>' : '') + '</div>';
+  }
+  function tPinAction(k) {
+    if (k === 'cancel') { tPin = null; tSheetRender(); $('tm-pin').focus(); return; }
+    var items = tPinItems();
+    if (k === 'go') {
+      var keys = items.filter(function (o) { return tPin.keys[o[0]]; }).map(function (o) { return o[0]; }), r = 'no';
+      if (!keys.length) tPin.msg = 'اختر عدّادًا واحدًا على الأقل';
+      else {
+        try { r = A && A.pinWidget ? A.pinWidget('timer', keys.join('\n')) : 'no'; } catch (e) {}
+        if (r === 'ok') { tPin = null; tSheetRender(); $('tm-pin').focus(); return; }
+        tPin.msg = 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة ← «عدّاد».';
+      }
+    } else { var o = items[+k]; if (o) tPin.keys[o[0]] = !tPin.keys[o[0]]; }
+    var sh = $('tm-sheet'), st = sh.scrollTop;
+    tSheetRender(); sh.scrollTop = st;
+    var b = document.querySelector('#tm-sheet [data-tp="' + k + '"]'); if (b) b.focus();
   }
   function twAction(k) {
     var p = k.split('-');
@@ -1964,7 +1997,7 @@
   function go(name) { stack.push(screen); show(name); }
   function back() {
     if (iqOpen()) { iqDismiss(); return true; }
-    if (screen === 'timers' && (tEdit || twOpen)) { if (tEdit) tClose(); else twAction('close'); return true; }
+    if (screen === 'timers' && (tEdit || twOpen || tPin)) { if (tEdit) tClose(); else if (tPin) tPinAction('cancel'); else twAction('close'); return true; }
     if (screen === 'home') return false;
     if (screen === 'kahf') kStop();
     var to = stack.pop() || 'home';
@@ -2062,6 +2095,13 @@
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     if (el.dataset.sec) { setToggle(el); return; }
+    if (el.dataset.tp) { tPinAction(el.dataset.tp); return; }
+    if (el.dataset.pin) {
+      var pr = 'no';
+      try { pr = A.pinWidget(el.dataset.pin, ''); } catch (x) {}
+      $('pin-msg').textContent = pr === 'ok' ? 'اضغط «إضافة» في رسالة الجوال' : 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة';
+      return;
+    }
     if (el.dataset.tm) { tOpenEditor(Object.assign({}, S.timers[+el.dataset.tm])); return; }
     if (el.dataset.tk) { tAction(el.dataset.tk); return; }
     if (el.dataset.tw) { twAction(el.dataset.tw); return; }
@@ -2095,6 +2135,7 @@
       case 'tm-add':
         var r0 = P.ymd(Date.now());
         tOpenEditor({ id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, rip: '', isNew: true }); break;
+      case 'tm-pin': tPin = { keys: {}, msg: '' }; tEdit = null; twOpen = false; tSheetRender(); var c0 = document.querySelector('#tm-sheet [data-tp="0"]'); if (c0) c0.focus(); break;
       case 'tm-wg-btn': twOpen = true; tEdit = null; tSheetRender(); var cb = document.querySelector('#tm-sheet [data-tw="close"]'); if (cb) cb.focus(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;

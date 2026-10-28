@@ -84,6 +84,38 @@ object Widgets {
         }
         return out.toString()
     }
+    // a button in the app puts a widget on the home screen: the phone asks «إضافة؟» and adds it.
+    // For a timer widget the timers ticked in the app are kept until the new widget has its number.
+    fun pin(ctx: Context, kind: String, keys: String): String {
+        if (Build.VERSION.SDK_INT < 26) return "no"
+        val am = AppWidgetManager.getInstance(ctx)
+        if (!am.isRequestPinAppWidgetSupported) return "no"
+        val cls = when (kind) {
+            "prayer" -> PrayerWidget::class.java; "ring" -> RingWidget::class.java; "strip" -> StripWidget::class.java
+            "month" -> MonthWidget::class.java; "convert" -> ConvertWidget::class.java; "event" -> EventWidget::class.java
+            "timer" -> TimerWidget::class.java; else -> return "no"
+        }
+        var done: PendingIntent? = null
+        if (kind == "timer") {
+            ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit()
+                .putString("rot_pending", keys).putLong("rot_pending_at", System.currentTimeMillis()).apply()
+            done = PendingIntent.getBroadcast(ctx, 9, Intent(ctx, TimerWidget::class.java).setAction(PINNED),
+                PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0))
+        }
+        return try { if (am.requestPinAppWidget(ComponentName(ctx, cls), null, done)) "ok" else "no" } catch (_: Exception) { "no" }
+    }
+    // the timers ticked before the phone added the widget (asked for in the last 10 minutes); used once
+    fun takePending(ctx: Context, widgetId: Int): Boolean {
+        val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
+        val keys = (prefs.getString("rot_pending", "") ?: "").split("\n").filter { it.isNotEmpty() }
+        val fresh = System.currentTimeMillis() - prefs.getLong("rot_pending_at", 0L) < 10 * 60_000L
+        if (keys.isEmpty() || !fresh || rotateKeys(ctx, widgetId).isNotEmpty()) return false
+        prefs.edit().remove("rot_pending").apply()
+        setRotate(ctx, widgetId, keys)
+        return true
+    }
+    const val PINNED = "com.dromaia.prayertv.TIMER_PINNED"
+
     fun setTimer(ctx: Context, widgetId: Int, timerId: String) = setRotate(ctx, widgetId, listOf("t:$timerId"))
 
     // ---- the timer widget: the timers ("t:" + id) and occasions ("e:" + name) chosen for it; more than one turn every 5 s
@@ -659,6 +691,14 @@ class StripWidget : AppWidgetProvider() {
 
 class TimerWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
+    override fun onReceive(ctx: Context, intent: Intent) {
+        super.onReceive(ctx, intent)
+        // added from the app's button: give the new widget the timers ticked there
+        if (intent.action == Widgets.PINNED) {
+            val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) try { Widgets.takePending(ctx, id) } catch (_: Exception) {}
+        }
+    }
 }
 
 class MonthWidget : AppWidgetProvider() {

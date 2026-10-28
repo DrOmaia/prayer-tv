@@ -15,6 +15,11 @@ class TimerPickActivity : Activity() {
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+        // added from the app's «+ ويدجت»: the timers are already chosen
+        if (Widgets.takePending(this, id)) {
+            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+            finish(); return
+        }
         val items = Widgets.rotateChoices(this)
         if (items.isEmpty()) {
             Toast.makeText(this, "افتح التطبيق مرة، ثم أضف الويدجت من جديد", Toast.LENGTH_LONG).show()

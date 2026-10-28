@@ -768,3 +768,5 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .im-past b { font-weight: 600; }
 .im-past .gold { white-space: nowrap; }
 .im-past .gold::after { content: '✓'; font-size: .75em; margin-inline-start: 3px; }
+/* «+ ويدجت»: a note when the phone cannot add the widget from the app */
+.tm-warn { color: #B3261E; }
