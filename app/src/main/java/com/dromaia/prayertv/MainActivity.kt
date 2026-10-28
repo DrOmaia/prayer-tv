@@ -245,6 +245,10 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun setTimerWidget(id: Int, timerId: String) = Widgets.setTimer(this@MainActivity, id, timerId)
 
+        // the cities whose weather the phone checks in the background ([] = off)
+        @JavascriptInterface
+        fun weatherWatch(json: String) = Weather.watch(this@MainActivity, json)
+
         // put a widget on the home screen from the app (kind: prayer, ring, strip, month, convert, event, timer)
         @JavascriptInterface
         fun pinWidget(kind: String, keys: String): String = Widgets.pin(this@MainActivity, kind, keys)

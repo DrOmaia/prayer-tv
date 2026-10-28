@@ -125,6 +125,9 @@
             </intent-filter>
         </activity>
 
+        <!-- the phone's weather check every two hours (dust, rain, heat, cold) -->
+        <receiver android:name=".WeatherReceiver" android:exported="false" />
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -28,7 +28,8 @@
     try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
     return {
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
-      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true }, s.alerts), // sunrise: a silent note on the phone
+      // sunrise: a silent note on the phone; friday: an hour before Jumu'ah; weather: dust, rain, heat, cold (phone)
+      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true }, s.alerts),
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
@@ -344,9 +345,14 @@
       });
       // the phone: a silent note at sunrise (the end of Fajr's time)
       if (!TV && S.alerts.sunrise && T.at.sunrise > t) ev.push({ at: T.at.sunrise, title: phoneTitle('sunrise', T), sub: phoneSub('sunrise', T), snd: 'none' });
+      // the phone: an hour before Jumu'ah
+      if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: 'بعد ساعة: صلاة الجمعة ' + P.full(T.at.dhuhr),
+        sub: 'اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ', snd: 'tone' });
     }
     ev.sort(function (a, b) { return a.at - b.at; });
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
+    // the phone checks the weather of both cities in the background and notifies of dust, rain, heat or cold
+    try { if (!TV && A.weatherWatch) A.weatherWatch(JSON.stringify(S.alerts.weather ? CITIES : [])); } catch (e) {}
     sendWidget();
   }
 
@@ -1229,6 +1235,10 @@
       return '<div class="srow snd-row"><span class="sname">' + x[1] + '</span><span class="snd-opts">' + SOUNDS.map(function (o) {
         return '<button class="sbtn f' + (S.sound[x[0]] === o[0] ? ' on' : '') + '" data-k="snd-' + x[0] + '-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
+    }).join('');
+    // the phone's other notifications
+    $('set-more-al').innerHTML = TV ? '' : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']].map(function (o) {
+      return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
     }).join('');
     $('set-prayers').innerHTML = ORDER.map(function (k) {
       var off = S.offsets[k];
@@ -2181,7 +2191,7 @@
   window.App = {
     back: back,
     // a widget opens a screen (the date converter, the calendar)
-    open: function (name) { if (/^(convert|calendar|timers)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
+    open: function (name) { if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
     onResume: function () {
       appsCache = null;
       if (screen === 'home') renderShortcuts();
@@ -2202,5 +2212,5 @@
   loadWeather();
   setInterval(loadWeather, 15 * MIN);
   focusFirst();
-  if (/^#(convert|calendar|timers)$/.test(location.hash)) window.App.open(location.hash.slice(1));
+  if (/^#(convert|calendar|timers|weather)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

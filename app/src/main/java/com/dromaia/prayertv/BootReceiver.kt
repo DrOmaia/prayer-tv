@@ -7,10 +7,11 @@ import android.os.Build
 import android.provider.Settings
 
 // After a restart, an update, or a change of the clock / time zone / exact-alarm permission:
-// arm the next alert again and refresh the widgets; after a restart, open the app on a TV.
+// arm the next alert and the weather check again and refresh the widgets; after a restart, open the app on a TV.
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Schedule.armNext(ctx)
+        Weather.arm(ctx)
         try { Widgets.updateAll(ctx) } catch (_: Exception) {}
         if (intent.action != Intent.ACTION_BOOT_COMPLETED || !Device.isTv(ctx)) return
         val openOnBoot = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getBoolean("openOnBoot", true)
