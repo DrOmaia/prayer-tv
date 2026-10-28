@@ -29,7 +29,7 @@
     return {
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
       // sunrise: a silent note on the phone; friday: an hour before Jumu'ah; weather: dust, rain, heat, cold (phone)
-      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true }, s.alerts),
+      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true, kaaba: true }, s.alerts),
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
@@ -349,6 +349,13 @@
       if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: 'بعد ساعة: صلاة الجمعة ' + P.full(T.at.dhuhr),
         sub: 'اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ', snd: 'tone' });
     }
+    if (S.alerts.kaaba) [r.y, r.y + 1].forEach(function (y) {
+      P.kaabaSun(y).forEach(function (at) {
+        var sub = 'استقبل الشمس واجعل ظلّك خلفك: هذا اتجاه القبلة بالضبط';
+        if (at - 5 * MIN > t) ev.push({ at: at - 5 * MIN, title: 'بعد 5 دقائق (' + P.full(at) + ') تتعامد الشمس على الكعبة', sub: sub, snd: 'tone' });
+        if (at > t) ev.push({ at: at, title: 'الآن تتعامد الشمس على الكعبة', sub: sub, snd: 'tone' });
+      });
+    });
     ev.sort(function (a, b) { return a.at - b.at; });
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
     // the phone checks the weather of both cities in the background and notifies of dust, rain, heat or cold
@@ -653,12 +660,18 @@
     season = { ramadan: h.month === 9, hajj: h.month === 12 && h.day <= 9, arafah: h.month === 12 && (h.day === 8 || h.day === 9),
       eid: (h.month === 10 && h.day <= 3) || (h.month === 12 && h.day >= 10 && h.day <= 13), friday: today.friday };
     ['ramadan', 'hajj', 'eid', 'friday'].forEach(function (k) { stage.classList.toggle('s-' + k, !!season[k]); });
+    var sp = special(r);
+    stage.classList.toggle('s-bday', !!sp && !season.ramadan && !season.eid && !season.hajj);
+    $('bday').textContent = sp ? '✦ ' + sp.type + ' ✦' : '';
+    $('bday').classList.toggle('hidden', !sp);
     var badge = season.eid ? 'عيدكم مبارك' : season.arafah && h.day === 9 ? 'يوم عرفة' : season.hajj ? 'عشر ذي الحجة' : season.ramadan ? 'رمضان كريم' : today.friday ? 'جمعة مباركة' : '';
     $('season-badge').textContent = badge;
     $('season-badge').classList.toggle('hidden', !badge);
     lastFact = '';
   }
 
+  // the moon's age in days now (from the new moon of 6 Jan 2000 18:14 UTC; a lunation is 29.53 days)
+  function moonAge(t) { var a = ((t - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530589; return a < 0 ? a + 29.530589 : a; }
   // the moon on this Hijri day (lit on the right while waxing, on the left while waning)
   function moonSvg(day) {
     var p = Math.min(.999, day / 29.53), rx = Math.abs(Math.cos(2 * Math.PI * p)) * 9, wax = p < .5;
@@ -907,7 +920,7 @@
   }
 
   // ---------- every second ----------
-  var lastDay = '', night = null;
+  var lastDay = '', night = null, skyKey = null;
   function dayOf(y, m, d) {
     var T = P.dayTimes(y, m, d, S.offsets);
     T.maghribAt = T.at.maghrib;
@@ -923,6 +936,9 @@
     // dark from two hours after Isha until Fajr
     var n = S.theme === 'dark' || (S.theme === 'auto' && (t >= today.at.isha + 2 * HR || t < today.at.fajr));
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); tempPaint(); }
+    // the TV: tonight's real moon in the sky over the mosque, from Maghrib until Fajr (redrawn every 10 minutes)
+    var sky = t >= today.at.maghrib || t < today.at.fajr, mk = sky ? Math.floor(t / (10 * MIN)) : -1;
+    if (mk !== skyKey) { skyKey = mk; stage.classList.toggle('sky-on', sky); if (sky) $('sky-moon').innerHTML = moonSvg(moonAge(t)); }
     // the remote's focus ring hides after 10 seconds without a key
     stage.classList.toggle('idle', TV && Date.now() - lastKeyAt > 10000);
     $('clock').textContent = P.full(t);
@@ -1237,7 +1253,8 @@
       }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
     }).join('');
     // the phone's other notifications
-    $('set-more-al').innerHTML = TV ? '' : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']].map(function (o) {
+    $('set-more-al').innerHTML = (TV ? [] : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']])
+      .concat([['kaaba', 'تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة']]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
     }).join('');
     $('set-prayers').innerHTML = ORDER.map(function (k) {
@@ -1722,6 +1739,40 @@
     var b = document.querySelector('#tm-sheet [data-tk="' + k + '"]'); if (b) b.focus();
   }
 
+  // ---------- a message from the phone to the TV at home (same Wi-Fi): ready buttons or free text ----------
+  var TV_QUICK = ['الأكل جاهز', 'تعالوا للصلاة', 'حان وقت النوم', 'أطفئوا التلفزيون', 'أنا في الطريق، وصلت قريبًا'];
+  var tvOpen = false, tvState = '';
+  function tvFrom() { return 'رسالة من ' + (fam().parent === 'mother' ? 'ماما' : 'بابا'); }
+  function tvRender() {
+    var sh = $('tv-sheet');
+    if (!tvOpen) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
+    sh.classList.remove('hidden');
+    var msg = { send: 'جارٍ الإرسال…', ok: 'وصلت إلى التلفزيون ✓', none: 'لم أجد التلفزيون: تأكد أن الجوال والتلفزيون على نفس شبكة الواي فاي وأن «مواقيت الصلاة» مفتوح على التلفزيون مرة على الأقل.', fail: 'التلفزيون لم يرد، حاول مرة أخرى.' }[tvState] || '';
+    sh.innerHTML = '<div class="tm-bar"><button class="f" data-tv="close">إغلاق</button><b>رسالة إلى التلفزيون</b><span></span></div>' +
+      '<div class="tm-sheet-body"><div class="tv-quick">' + TV_QUICK.map(function (q, i) { return '<button class="pill f" data-tv="q' + i + '">' + q + '</button>'; }).join('') + '</div>' +
+      '<label class="tm-lbl" for="tv-text">أو اكتب رسالتك</label><input id="tv-text" class="inp f" maxlength="120" placeholder="مثل: كل عام وأنتم بخير">' +
+      '<button class="gold-btn f tv-send" data-tv="send">إرسال</button>' +
+      (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + '</div>';
+  }
+  function tvSend(text) {
+    text = (text || '').trim();
+    if (!text || !A || !A.tvSend) return;
+    tvState = 'send'; tvRender();
+    try { A.tvSend(JSON.stringify({ t: tvFrom(), x: text })); } catch (e) { tvState = 'fail'; tvRender(); }
+  }
+  function tvAction(k) {
+    if (k === 'close') { tvOpen = false; tvState = ''; tvRender(); $('tv-btn').focus(); return; }
+    if (k === 'send') { tvSend($('tv-text').value); return; }
+    if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
+  }
+  // the TV: a message from a phone, on top of the screen for a minute (a press closes it)
+  var msgTimer = null;
+  function showMessage(title, text) {
+    $('msg-title').textContent = title; $('msg-text').textContent = text;
+    $('msg-pop').classList.remove('hidden');
+    clearTimeout(msgTimer); msgTimer = setTimeout(function () { $('msg-pop').classList.add('hidden'); }, 60000);
+  }
+
   // ---------- update from the settings: the latest release is downloaded and the installer opens ----------
   var upd = { latest: '', state: '', pct: 0, timer: null, asked: false };
   function myVersion() { try { return A && A.version ? 'v' + String(A.version()).split('.').pop() : ''; } catch (e) { return ''; } }
@@ -2007,6 +2058,8 @@
   function go(name) { stack.push(screen); show(name); }
   function back() {
     if (iqOpen()) { iqDismiss(); return true; }
+    if (!$('msg-pop').classList.contains('hidden')) { $('msg-pop').classList.add('hidden'); return true; }
+    if (tvOpen) { tvAction('close'); return true; }
     if (screen === 'timers' && (tEdit || twOpen || tPin)) { if (tEdit) tClose(); else if (tPin) tPinAction('cancel'); else twAction('close'); return true; }
     if (screen === 'home') return false;
     if (screen === 'kahf') kStop();
@@ -2106,6 +2159,7 @@
     if (el.dataset.k) { setAction(el.dataset.k); return; }
     if (el.dataset.sec) { setToggle(el); return; }
     if (el.dataset.tp) { tPinAction(el.dataset.tp); return; }
+    if (el.dataset.tv) { tvAction(el.dataset.tv); return; }
     if (el.dataset.pin) {
       var pr = 'no';
       try { pr = A.pinWidget(el.dataset.pin, ''); } catch (x) {}
@@ -2145,6 +2199,7 @@
       case 'tm-add':
         var r0 = P.ymd(Date.now());
         tOpenEditor({ id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, rip: '', isNew: true }); break;
+      case 'tv-btn': tvOpen = true; tvState = ''; tvRender(); var q0 = document.querySelector('#tv-sheet [data-tv="q0"]'); if (q0) q0.focus(); break;
       case 'tm-pin': tPin = { keys: {}, msg: '' }; tEdit = null; twOpen = false; tSheetRender(); var c0 = document.querySelector('#tm-sheet [data-tp="0"]'); if (c0) c0.focus(); break;
       case 'tm-wg-btn': twOpen = true; tEdit = null; tSheetRender(); var cb = document.querySelector('#tm-sheet [data-tw="close"]'); if (cb) cb.focus(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
@@ -2191,6 +2246,9 @@
   window.App = {
     back: back,
     // a widget opens a screen (the date converter, the calendar)
+    // the phone: the TV's answer to a message ('ok', 'none', 'fail'); the TV: a message from a phone
+    tvSent: function (r) { tvState = r; tvRender(); if (r === 'ok') { var i = $('tv-text'); if (i) i.value = ''; } },
+    message: function (title, text) { showMessage(title, text); },
     open: function (name) { if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
     onResume: function () {
       appsCache = null;

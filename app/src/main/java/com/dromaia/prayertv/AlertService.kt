@@ -44,7 +44,9 @@ class AlertService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) return stopNow()
-        startAsForeground()
+        // a message from a phone starts this from the TV's listening service: if the system refuses the foreground
+        // state, the banner and the tone still work while the app is in that state
+        try { startAsForeground() } catch (_: Exception) {}
         val title = intent?.getStringExtra("title") ?: return stopNow()
         val sub = intent.getStringExtra("sub") ?: ""
         playSound(Device.soundRes(intent.getStringExtra("snd") ?: "tone"))
@@ -52,8 +54,8 @@ class AlertService : Service() {
             showBanner(title, sub)
         }
         handler.removeCallbacksAndMessages(null)
-        // the banner goes after 15 seconds; the service stays until the sound ends
-        handler.postDelayed({ removeBanner(); if (player?.isPlaying != true) stopNow() }, 15000)
+        // the banner goes after 15 seconds (a family message: a minute); the service stays until the sound ends
+        handler.postDelayed({ removeBanner(); if (player?.isPlaying != true) stopNow() }, intent.getLongExtra("keep", 15000L))
         handler.postDelayed({ stopNow() }, 6 * 60_000L)
         return START_NOT_STICKY
     }

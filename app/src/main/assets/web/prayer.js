@@ -157,6 +157,22 @@
     return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
   }
 
+  // the two moments a year when the sun stands right over the Kaaba (Makkah's noon on the day its height is 90°):
+  // then every shadow points away from the Qibla
+  function kaabaSun(year) {
+    var LAT_K = 21.4225, LON_K = 39.8262, out = [];
+    [[5, 15, 30], [7, 5, 30]].forEach(function (w) {
+      var best = null;
+      for (var i = 0; i < w[2]; i++) {
+        var day = new Date(Date.UTC(year, w[0] - 1, w[1] + i)), jd = julian(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate());
+        var h = 12 - LON_K / 15 - sunPos(jd + .375).eqt, p = sunPos(jd + h / 24), miss = Math.abs(p.decl - LAT_K);
+        if (!best || miss < best.miss) best = { miss: miss, at: Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()) + h * HR };
+      }
+      if (best && best.miss < .5) out.push(Math.round(best.at / 60000) * 60000);
+    });
+    return out;
+  }
+
   window.Prayer = {
     ORDER: ORDER, HR: HR, MIN: MIN, zone: function () { return ZONE; }, setLocation: setLocation, methodFor: methodFor, METHODS: METHODS,
     method: function () { return METHOD; }, setHijriAdj: setHijriAdj,
@@ -169,6 +185,6 @@
       }
     },
     dayTimes: dayTimes, setIsha: setIsha, setIqamah: setIqamah, ymd: ymd, noonOf: noonOf, name: name, full: full, left: left, leftHM: leftHM,
-    pad: pad, addDays: addDays, isRamadan: isRamadan, offH: offH
+    pad: pad, addDays: addDays, isRamadan: isRamadan, offH: offH, kaabaSun: kaabaSun
   };
 })();

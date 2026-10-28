@@ -770,3 +770,26 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .im-past .gold::after { content: '✓'; font-size: .75em; margin-inline-start: 3px; }
 /* «+ ويدجت»: a note when the phone cannot add the widget from the app */
 .tm-warn { color: #B3261E; }
+/* tonight's moon in the sky over the mosque (TV, from Maghrib until Fajr) */
+.sky-moon { display: none; position: absolute; left: 400px; top: 206px; width: 84px; height: 84px; z-index: -1; pointer-events: none; }
+.sky-on:not(.portrait) .sky-moon { display: block; }
+.sky-moon svg { width: 100%; height: 100%; }
+.sky-moon .moon-dark { fill: rgba(142,102,36,.12); }
+.sky-moon .moon-lit { fill: #C9A35E; }
+.night .sky-moon { filter: drop-shadow(0 0 16px rgba(246,217,154,.55)); }
+.night .sky-moon .moon-dark { fill: rgba(255,255,255,.07); }
+.night .sky-moon .moon-lit { fill: #F6D99A; }
+/* a family birthday or the wedding anniversary: the Eid bunting and a gold line under the date */
+.s-bday .deco { display: block; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='60' viewBox='0 0 150 60'%3E%3Cpath d='M0 4Q75 18 150 4' fill='none' stroke='%23C9A35E' stroke-width='1.5'/%3E%3Cpath d='M14 8l24 2-13 26z' fill='%23C9A35E'/%3E%3Cpath d='M60 11l26 0-13 28z' fill='%237B5BB5'/%3E%3Cpath d='M110 10l24-2-11 26z' fill='%232A9D8F'/%3E%3Cpath d='M48 46l2 5 5 1-5 2-2 5-2-5-5-2 5-1z' fill='%23E2B969'/%3E%3Cpath d='M98 44l1.5 4 4 1-4 1.5-1.5 4-1.5-4-4-1.5 4-1z' fill='%23E2B969'/%3E%3C/svg%3E"); }
+.bday { margin-top: 14px; font-size: 30px; font-weight: 700; color: var(--gold); }
+.portrait .bday { font-size: 34px; text-align: center; }
+/* the phone: a message to the TV */
+.tv-quick { display: flex; flex-wrap: wrap; gap: 16px; margin: 10px 0 24px; }
+.tv-quick .pill { height: 84px; font-size: 30px; padding: 0 30px; }
+.tv-send { height: 92px; font-size: 32px; margin-top: 24px; }
+/* the TV: a message that has just arrived, on top of the screen */
+.msg-pop { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); z-index: 40; min-width: 760px; max-width: 1500px; padding: 30px 48px;
+  display: flex; flex-direction: column; gap: 10px; text-align: center; border-radius: 28px; background: var(--card2); border: 3px solid var(--gold);
+  box-shadow: 0 20px 60px var(--shadow), 0 0 50px rgba(226,185,105,.35); }
+.msg-pop b { font-size: 30px; color: var(--gold); }
+.msg-pop span { font-size: 52px; font-weight: 700; color: var(--ink); }

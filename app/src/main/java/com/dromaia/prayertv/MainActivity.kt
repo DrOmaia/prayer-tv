@@ -41,6 +41,13 @@ class MainActivity : Activity() {
 
     companion object {
         @Volatile var visible = false
+        private var current: java.lang.ref.WeakReference<MainActivity>? = null
+        // the TV: a message from a family phone, on the app's own screen while it is open
+        fun message(title: String, text: String) {
+            val a = current?.get() ?: return
+            if (!visible) return
+            a.web?.evaluateJavascript("window.App && App.message(" + JSONObject.quote(title) + "," + JSONObject.quote(text) + ")", null)
+        }
         // a widget can open the app on one of its screens (e.g. the date converter)
         const val EXTRA_SCREEN = "screen"
     }
@@ -52,6 +59,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         cleanAfterUpdate()
+        current = java.lang.ref.WeakReference(this)
+        TvLinkService.start(this)
         if (Device.isTv(this)) {
             // keeping the screen on is a setting (it would stop the TV's screensaver)
             if (getSharedPreferences(Schedule.PREFS, MODE_PRIVATE).getBoolean("keepOn", false)) {
@@ -244,6 +253,12 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun setTimerWidget(id: Int, timerId: String) = Widgets.setTimer(this@MainActivity, id, timerId)
+
+        // the phone: a message to the TV at home; the answer comes back to the page ('ok', 'none', 'fail')
+        @JavascriptInterface
+        fun tvSend(json: String) = TvLink.send(this@MainActivity, json) { r ->
+            runOnUiThread { web?.evaluateJavascript("window.App && App.tvSent('$r')", null) }
+        }
 
         // the cities whose weather the phone checks in the background ([] = off)
         @JavascriptInterface

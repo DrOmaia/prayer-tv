@@ -12,6 +12,7 @@
   <!-- Main screen -->
   <section id="home" class="screen">
     <div id="deco" class="deco"></div>
+    <div id="sky-moon" class="sky-moon" aria-hidden="true"></div>
     <header class="top">
       <button id="wbig" class="wx-big f" data-go="weather" aria-label="الحرارة الآن"><span id="wbig-icon" class="wb-icon"></span><span id="wbig-temp" class="wb-temp">—</span><span class="wb-side"><span id="wb-c0" class="wb-l"></span><span id="wb-c1" class="wb-l"></span></span></button>
       <div class="wx-stack">
@@ -20,6 +21,7 @@
       </div>
       <div id="events" class="events"></div>
       <div class="top-right">
+        <button id="tv-btn" class="round f phone-only" aria-label="رسالة إلى التلفزيون"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
         <button id="theme-btn" class="round f" aria-label="الوضع الداكن / الفاتح"><svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
         <button class="round f tv-only" data-go="quran" aria-label="القرآن الكريم"><svg viewBox="0 0 24 24" class="ic"><path d="M12 6c-2-1.5-5-2-8-1.5v14c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-14c-3-.5-6 0-8 1.5zM12 6v14"/></svg></button>
         <button class="round f tv-only" data-go="calendar" aria-label="التقويم"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
@@ -32,6 +34,7 @@
         <div id="clock" class="clock" dir="ltr"></div>
         <div id="g-date" class="g-date"></div>
         <div class="h-date"><span id="moon" class="moon"></span><span id="h-date"></span> <span id="season-badge" class="badge-gold hidden"></span></div>
+        <div id="bday" class="bday hidden"></div>
         <div id="ramadan" class="ramadan hidden">
           <div id="iftar-card" class="rcard"><div><b>متبقٍّ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div id="suhoor-card" class="rcard"><div><b>متبقٍّ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
@@ -148,6 +151,9 @@
   </section>
   <!-- the timer editor / the widget settings: a full-screen sheet over the timers tab -->
   <div id="tm-sheet" class="tm-sheet hidden"></div>
+  <!-- the phone: a message to the TV at home; the TV: a message that has just arrived -->
+  <div id="tv-sheet" class="tm-sheet hidden"></div>
+  <div id="msg-pop" class="msg-pop hidden" role="alert"><b id="msg-title"></b><span id="msg-text"></span></div>
 
   <!-- The month's prayer times -->
   <section id="month" class="screen hidden">
