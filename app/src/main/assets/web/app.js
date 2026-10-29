@@ -66,6 +66,7 @@
       // phone home-screen widgets: background ('time' colour of the time of day · 'dark'), transparency 0–100,
       // text size, accent colour and the parts shown on «مواقيت اليوم»
       widget: Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold', city: true, prog: true, line: true, date: true }, s.widget),
+      wstyle: s.wstyle || null, // each widget's own look: {prayer, ring, strip, month, convert}
       nightDim: s.nightDim !== false, // the TV dims at night
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
       // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
@@ -81,6 +82,7 @@
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
+  if (!S.wstyle) { S.wstyle = {}; ['prayer', 'ring', 'strip', 'month', 'convert'].forEach(function (k) { S.wstyle[k] = Object.assign({}, S.widget); }); }
   // a family saved before these were added (the default family): add the writer, interests and the departed
   (function () {
     var F = S.family, D = FAMILY.DEFAULT;
@@ -384,7 +386,7 @@
     var events = allEvents(r).slice(0, 30).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d), date: fd(e.d, e.m, e.y) }; });
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, months: months,
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, styles: S.wstyle, months: months,
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
         var W = S.timerWg;
@@ -1335,25 +1337,6 @@
         return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</span></div>' + '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
       (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? 'يظهر' : 'مخفي') + '</button></div>';
-    // phone widgets: one look for all of them
-    var W = S.widget;
-    function wRow(name, key, opts) {
-      return '<div class="srow snd-row"><span class="sname">' + name + '</span><span class="snd-opts">' + opts.map(function (o) {
-        return '<button class="sbtn f' + (String(W[key]) === String(o[0]) ? ' on' : '') + '" data-k="wg-' + key + '-' + o[0] + '">' + o[1] + '</button>';
-      }).join('') + '</span></div>';
-    }
-    $('set-widget').innerHTML = wRow('الخلفية', 'bg', [['time', 'لون حسب الوقت'], ['dark', 'داكن']]) +
-      wRow('الشفافية', 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
-      wRow('حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']]) +
-      wRow('لون التمييز', 'accent', [['gold', 'ذهبي'], ['white', 'أبيض'], ['green', 'أخضر'], ['sky', 'سماوي']]) +
-      '<div class="srow snd-row"><span class="sname">يظهر في «مواقيت اليوم»</span><span class="snd-opts">' +
-      [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
-        return '<button class="sbtn f' + (W[o[0]] ? ' on' : '') + '" data-k="wg-' + o[0] + '-t">' + o[1] + '</button>';
-      }).join('') + '</span></div>' +
-      (A && A.pinWidget ? '<div class="srow snd-row"><span class="sname">ضعه على الشاشة الرئيسية</span><span class="snd-opts">' +
-        [['prayer', 'مواقيت اليوم'], ['ring', 'الدائرة'], ['strip', 'الشريط'], ['month', 'الشهر الهجري'], ['convert', 'تحويل التاريخ'], ['event', 'عدّاد المناسبة']].map(function (o) {
-          return '<button class="sbtn f" data-pin="' + o[0] + '">' + o[1] + '</button>';
-        }).join('') + '</span></div><div id="pin-msg" class="muted set-note"></div>' : '');
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
@@ -1580,7 +1563,7 @@
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   // the timers tab: each card shows the count and one line; a tap opens its editor (with the Hijri date and the
   // next anniversary at the top); the editor and the widget settings open as full-screen sheets
-  var tEdit = null, twOpen = false, tPin = null; // the timer being edited (a copy) · the widget sheet · «+ ويدجت» (ticked keys)
+  var tEdit = null, tPin = null; // the timer being edited (a copy) · a new timer widget (the ticked timers)
   function tGDate(y, m, d) { return d + ' ' + G_MONTHS[m - 1] + ' ' + y; }
   function tCard(x, i, now, preview) {
     var past = tAt(x) <= now, an = past && !x.rip ? tAnnivObj(x) : null;
@@ -1625,9 +1608,9 @@
   // the sheet: the editor or the widget settings, over the whole screen
   function tSheetRender() {
     var sh = $('tm-sheet');
-    if (!tEdit && !twOpen && !tPin) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
+    if (!tEdit && !tPin) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
     sh.classList.remove('hidden');
-    if (tEdit) tEditRender(sh); else if (tPin) tPinRender(sh); else twRender(sh);
+    if (tEdit) tEditRender(sh); else tPinRender(sh);
   }
   function tSeg(key, opts, cur, cls) {
     return '<div class="tm-seg' + (cls ? ' ' + cls : '') + '">' + opts.map(function (o) {
@@ -1658,24 +1641,6 @@
     tFit(sh);
   }
   var TW_LINES = [['name', 'الاسم والتاريخ'], ['dua', 'الدعاء للراحل']];
-  function twRender(sh) {
-    var W = S.timerWg, placed = [];
-    try { placed = A && A.timerWidgets ? JSON.parse(A.timerWidgets()) : []; } catch (e) {}
-    sh.innerHTML = '<div class="tm-bar"><span></span><b>الويدجت</b><button class="gold-btn f" data-tw="close">تم</button></div>' +
-      '<div class="tm-sheet-body">' +
-      '<div class="tm-lbl">حجم الخط</div><div class="tm-seg">' + [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']].map(function (o) {
-        return '<button class="f' + (W.font === o[0] ? ' on' : '') + '" data-tw="font-' + o[0] + '">' + o[1] + '</button>';
-      }).join('') + '</div>' +
-      '<div class="tm-lbl">يظهر تحت العدّ</div>' + TW_LINES.map(function (o) { return tSwitch('data-tw="line-' + o[0] + '"', !!W[o[0]], o[1]); }).join('') +
-      (placed.length ? '<div class="tm-lbl">العدّاد في كل ويدجت</div>' + placed.map(function (p, i) {
-        return '<div class="tm-pick"><span>الويدجت ' + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
-          S.timers.map(function (x) { return '<option value="' + x.id + '"' + (p.n === 1 && x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
-          (p.n > 1 ? '<option value="" selected>' + countWord(p.n, 'عدّاد واحد', 'عدّادان', 'عدّادات', 'عدّادًا') + ' تتقلّب</option>' :
-            S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
-      }).join('') : '') +
-      '<p class="muted tm-note">' + (placed.length ? 'كل تغيير هنا يظهر على الويدجت مباشرة.' :
-        'لإضافة ويدجت: اضغط مطولًا على الشاشة الرئيسية ← الأدوات (Widgets) ← مواقيت الصلاة ← «عدّاد»، ثم ضع ✓ على عدّاد واحد أو أكثر (أكثر من واحد يتقلّب كل 5 ثوانٍ).') + '</p></div>';
-  }
   // «+ ويدجت»: tick timers (and occasions), then the phone asks «إضافة؟» and puts the widget on the home screen
   function tPinItems() {
     var seen = {}, out = S.timers.map(function (x) { return ['t:' + x.id, x.name]; });
@@ -1690,28 +1655,20 @@
       (tPin.msg ? '<p class="tm-note tm-warn">' + tPin.msg + '</p>' : '') + '</div>';
   }
   function tPinAction(k) {
-    if (k === 'cancel') { tPin = null; tSheetRender(); $('tm-pin').focus(); return; }
+    if (k === 'cancel') { tPin = null; tSheetRender(); wgFocus('timer'); return; }
     var items = tPinItems();
     if (k === 'go') {
       var keys = items.filter(function (o) { return tPin.keys[o[0]]; }).map(function (o) { return o[0]; }), r = 'no';
       if (!keys.length) tPin.msg = 'اختر عدّادًا واحدًا على الأقل';
       else {
         try { r = A && A.pinWidget ? A.pinWidget('timer', keys.join('\n')) : 'no'; } catch (e) {}
-        if (r === 'ok') { tPin = null; tSheetRender(); $('tm-pin').focus(); return; }
+        if (r === 'ok') { tPin = null; tSheetRender(); wgFocus('timer'); return; }
         tPin.msg = 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة ← «عدّاد».';
       }
     } else { var o = items[+k]; if (o) tPin.keys[o[0]] = !tPin.keys[o[0]]; }
     var sh = $('tm-sheet'), st = sh.scrollTop;
     tSheetRender(); sh.scrollTop = st;
     var b = document.querySelector('#tm-sheet [data-tp="' + k + '"]'); if (b) b.focus();
-  }
-  function twAction(k) {
-    var p = k.split('-');
-    if (k === 'close') { twOpen = false; tSheetRender(); var hb = $('tm-wg-btn'); if (hb) hb.focus(); return; }
-    if (p[0] === 'font') S.timerWg.font = p[1];
-    else if (p[0] === 'line') S.timerWg[p[1]] = !S.timerWg[p[1]];
-    save(); sendWidget(); tSheetRender();
-    var b = document.querySelector('[data-tw="' + k + '"]'); if (b) b.focus();
   }
   function tReadForm() {
     if (!tEdit || !$('tm-name')) return;
@@ -1727,7 +1684,7 @@
     var pv = document.querySelector('#tm-sheet .tm-preview');
     if (pv) { pv.innerHTML = tCard(tEdit, -1, Date.now(), true); tFit(pv); }
   }
-  function tOpenEditor(x) { tEdit = x; twOpen = false; tSheetRender(); var n = $('tm-name'); if (n) (x.isNew ? n : document.querySelector('#tm-sheet [data-tk="save"]')).focus(); }
+  function tOpenEditor(x) { tEdit = x; tSheetRender(); var n = $('tm-name'); if (n) (x.isNew ? n : document.querySelector('#tm-sheet [data-tk="save"]')).focus(); }
   function tClose() { var back = tEdit && !tEdit.isNew ? S.timers.map(function (t) { return t.id; }).indexOf(tEdit.id) : -1; tEdit = null; timersRender(); var b = back >= 0 && document.querySelector('#timers-list [data-tm="' + back + '"]'); if (b) b.focus(); }
   function tAction(k) {
     tReadForm();
@@ -1754,6 +1711,141 @@
     var sh = $('tm-sheet'), st = sh.scrollTop;
     tSheetRender(); sh.scrollTop = st;
     var b = document.querySelector('#tm-sheet [data-tk="' + k + '"]'); if (b) b.focus();
+  }
+
+  // ---------- the «الويدجت» screen (phone): each home-screen widget with a live preview, a button to put it there,
+  // and its own look; the timer widget's choices too ----------
+  var WG_KINDS = [['prayer', 'مواقيت اليوم', '4×2'], ['ring', 'الصلاة القادمة (دائرة)', '2×2'], ['strip', 'شريط الصلاة القادمة', '4×1'],
+    ['timer', 'عدّاد', '4×1'], ['event', 'عدّاد المناسبة', '2×2'], ['month', 'الشهر الهجري', '4×4'], ['convert', 'تحويل التاريخ', '1×1']];
+  var WG_BG = [['#2E2A6B', '#B0688F'], ['#1A5DAE', '#4AA6DC'], ['#7E3F14', '#CF8A2E'], ['#43195A', '#C9544A'], ['#0A1030', '#2B3070']];
+  var WG_ACC = { gold: '#F2CF8A', white: '#FFFFFF', green: '#8FE3A8', sky: '#8FD3FF' }, WG_SC = { s: .88, m: 1, l: 1.15 };
+  var wgEdit = '', wgMsg = {};
+  function wgPlaced() { try { return A && A.placedWidgets ? JSON.parse(A.placedWidgets()) : {}; } catch (e) { return {}; } }
+  function wgFocus(k, what) { var b = document.querySelector('[data-' + (what || 'wgp') + '="' + k + '"]'); if (b) b.focus(); }
+  // what the widgets show now: the next time, the one before, the countdown, the dates, the nearest occasion
+  function wgNow(t) {
+    var r = P.ymd(t), T = P.dayTimes(r.y, r.m, r.d, S.offsets), at = ORDER.map(function (k) { return T.at[k]; }), next = -1, nextAt, prevAt;
+    for (var i = 0; i < 6; i++) if (at[i] > t) { next = i; break; }
+    if (next < 0) { var tm = P.addDays(r.y, r.m, r.d, 1); next = 0; nextAt = P.dayTimes(tm.y, tm.m, tm.d, S.offsets).at.fajr; prevAt = at[5]; }
+    else { nextAt = at[next]; var ym = P.addDays(r.y, r.m, r.d, -1); prevAt = next ? at[next - 1] : P.dayTimes(ym.y, ym.m, ym.d, S.offsets).at.isha; }
+    var left = Math.max(0, Math.floor((nextAt - t) / 1000)), h = hOf(r.y, r.m, r.d), ev = allEvents(r)[0];
+    return { r: r, T: T, at: at, next: next, nextAt: nextAt, cur: (next + 5) % 6, names: ORDER.map(function (k) { return P.name(k, T.friday); }),
+      cd: Math.floor(left / 3600) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60),
+      prog: Math.round(100 * Math.min(1, Math.max(0, (t - prevAt) / Math.max(1, nextAt - prevAt)))),
+      per: next === 1 ? 0 : next === 2 || next === 3 ? 1 : next === 4 ? 2 : next === 5 ? 3 : 4,
+      h: h, hijri: h.d + ' ' + H_MONTHS[h.m - 1] + ' (' + h.m + ') ' + h.y + ' هـ', greg: fGFull.format(new Date(t)).replace('،', ''),
+      ev: ev ? { name: ev.name, left: ev.left } : null };
+  }
+  function wgLook(k) { var W = S.wstyle[k]; return { bg: W.bg === 'dark' ? 'rgba(20,26,36,.95)' : null, o: (100 - W.clear) / 100, a: WG_ACC[W.accent] || WG_ACC.gold, k: WG_SC[W.font] || 1, W: W }; }
+  function wgBox(k, L, n, inner, cls) {
+    return '<div class="wgp wgp-' + k + (cls ? ' ' + cls : '') + '" style="--a:' + L.a + ';--k:' + L.k + '"><i class="wgp-bg" style="background:' +
+      (L.bg || 'linear-gradient(135deg,' + WG_BG[n.per][0] + ',' + WG_BG[n.per][1] + ')') + ';opacity:' + L.o + '"></i>' + inner + '</div>';
+  }
+  function wgInDays(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === 2 ? 'بعد يومين' : n <= 10 ? 'بعد ' + n + ' أيام' : 'بعد ' + n + ' يومًا'; }
+  function wgPreview(k, t) {
+    var n = wgNow(t);
+    if (k === 'prayer') {
+      var L = wgLook(k), W = L.W;
+      return wgBox(k, L, n, '<div class="wgp-top"><div class="wgp-nx">' + (W.city ? '<small>' + esc(S.loc.name) + '</small>' : '') +
+        '<div><b class="wgp-big">' + n.names[n.next] + '</b> <span>' + P.full(n.nextAt) + '</span></div></div>' +
+        (n.ev ? '<div class="wgp-ev"><b>' + esc(n.ev.name) + '</b><span>' + wgInDays(n.ev.left) + '</span></div>' : '<div></div>') +
+        '<div class="wgp-cd"><small>متبقٍّ</small><b class="ltr">' + n.cd + '</b></div></div>' +
+        (W.prog ? '<div class="wgp-bar"><i style="width:' + n.prog + '%"></i></div>' : '') +
+        '<div class="wgp-cols">' + n.names.map(function (nm, i) {
+          return '<div class="' + (i === n.next ? 'on' : '') + (i === n.cur ? ' now' : '') + '"><small>' + nm + '</small><b>' + P.full(n.at[i]) + '</b></div>';
+        }).join('') + '</div>' + (W.line ? '<div class="wgp-line">«سبحان الله وبحمده، سبحان الله العظيم»</div>' : '') +
+        (W.date ? '<div class="wgp-foot"><span>' + n.greg + '</span><span>' + moonSvg(n.h.d) + n.hijri + '</span></div>' : ''));
+    }
+    if (k === 'ring') {
+      var L2 = wgLook(k);
+      return wgBox(k, L2, n, '<div class="wgp-arc" style="background:conic-gradient(var(--a) ' + n.prog + '%, rgba(255,255,255,.22) 0)"></div>' +
+        '<div class="wgp-in"><b>' + n.names[n.next] + '</b><span class="wgp-c ltr">' + n.cd + '</span><small>' + P.full(n.nextAt) + '</small></div>', 'wgp-round');
+    }
+    if (k === 'strip') {
+      var L3 = wgLook(k);
+      return wgBox(k, L3, n, '<span class="wgp-h">' + moonSvg(n.h.d) + n.hijri + '</span><span><b>' + n.names[n.next] + '</b> ' + P.full(n.nextAt) + '</span><b class="wgp-c ltr">' + n.cd + '</b>');
+    }
+    if (k === 'convert') {
+      var L4 = wgLook(k);
+      return wgBox(k, L4, n, '<b class="wgp-c">' + n.h.d + '</b><span>هجري</span>');
+    }
+    if (k === 'month') {
+      var L5 = wgLook(k), cells = '', first = null;
+      for (var i = -30; i <= 30; i++) {
+        var dd = P.addDays(n.r.y, n.r.m, n.r.d, i), hh = hOf(dd.y, dd.m, dd.d);
+        if (hh.y !== n.h.y || hh.m !== n.h.m) continue;
+        if (!first) { first = dd; for (var e = 0; e < new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay(); e++) cells += '<i></i>'; }
+        cells += '<i class="' + (i === 0 ? 'on' : '') + '"><b>' + hh.d + '</b><small>' + dd.d + '</small></i>';
+      }
+      return wgBox(k, L5, n, '<div class="wgp-mt">' + H_MONTHS[n.h.m - 1] + ' ' + n.h.y + ' هـ</div><div class="wgp-grid">' +
+        ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map(function (x) { return '<em>' + x + '</em>'; }).join('') + cells + '</div>');
+    }
+    if (k === 'event') {
+      return '<div class="wgp wgp-event">' + (n.ev ? '<div><b class="wgp-c">' + (n.ev.left || 'اليوم') + '</b> <span>' + (n.ev.left ? n.ev.left >= 3 && n.ev.left <= 10 ? 'أيام' : 'يوم' : '') + '</span></div><span>' + esc(n.ev.name) + '</span>' : '<span>لا توجد مناسبة</span>') + '</div>';
+    }
+    // timer: the first timer chosen for a widget on the screen, or the first timer
+    var x = S.timers[0], tw = S.timerWg, kk = { s: .8, m: 1, l: 1.25, xl: 1.5 }[tw.font] || 1;
+    if (!x) return '<div class="wgp wgp-timer" style="background:#1E2A78;color:#fff"><b>أضف عدّادًا من تاب «العدّادات»</b></div>';
+    var past = tAt(x) <= t;
+    return '<div class="wgp wgp-timer" style="--k:' + kk + ';background:' + (T_COLORS[x.color] || '#1E2A78') + ';color:' + tInk(x.color) + '"><span class="wgp-c">' + tCount(x, t) + '</span>' +
+      (tw.name !== false ? '<span>' + (past ? 'منذ ' : 'حتى ') + esc(x.name) + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) : '') + '</span>' : '') +
+      (tw.dua && x.rip ? '<small>«' + RIP[x.rip][0] + '»</small>' : '') + '</div>';
+  }
+  function wgRow(k, name, key, opts) {
+    var W = k === 'timer' ? S.timerWg : S.wstyle[k];
+    return '<div class="srow snd-row"><span class="sname">' + name + '</span><span class="snd-opts">' + opts.map(function (o) {
+      var on = o[0] === 't' ? !!W[key] : String(W[key]) === String(o[0]);
+      return '<button class="sbtn f' + (on ? ' on' : '') + '" data-wgs="' + k + '-' + key + '-' + o[0] + '">' + o[1] + '</button>';
+    }).join('') + '</span></div>';
+  }
+  function wgSettings(k) {
+    if (k === 'timer') {
+      var placed = [];
+      try { placed = A && A.timerWidgets ? JSON.parse(A.timerWidgets()) : []; } catch (e) {}
+      return wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']]) +
+        '<div class="srow snd-row"><span class="sname">يظهر تحت العدّ</span><span class="snd-opts">' + TW_LINES.map(function (o) {
+          return '<button class="sbtn f' + (S.timerWg[o[0]] ? ' on' : '') + '" data-wgs="timer-' + o[0] + '-t">' + o[1] + '</button>';
+        }).join('') + '</span></div>' +
+        placed.map(function (p, i) {
+          return '<div class="tm-pick"><span>الويدجت ' + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
+            S.timers.map(function (x) { return '<option value="' + x.id + '"' + (p.n === 1 && x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
+            (p.n > 1 ? '<option value="" selected>' + countWord(p.n, 'عدّاد واحد', 'عدّادان', 'عدّادات', 'عدّادًا') + ' تتقلّب</option>' :
+              S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
+        }).join('') + '<p class="muted set-note">لون كل عدّاد يُختار من تاب «العدّادات». لتغيير عدّادات ويدجت يتقلّب: اضغط عليه مطولًا ← الإعدادات.</p>';
+    }
+    return wgRow(k, 'الخلفية', 'bg', [['time', 'لون حسب الوقت'], ['dark', 'داكن']]) +
+      wgRow(k, 'الشفافية', 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
+      wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']]) +
+      wgRow(k, 'لون التمييز', 'accent', [['gold', 'ذهبي'], ['white', 'أبيض'], ['green', 'أخضر'], ['sky', 'سماوي']]) +
+      (k === 'prayer' ? '<div class="srow snd-row"><span class="sname">يظهر فيه</span><span class="snd-opts">' +
+        [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
+          return '<button class="sbtn f' + (S.wstyle.prayer[o[0]] ? ' on' : '') + '" data-wgs="prayer-' + o[0] + '-t">' + o[1] + '</button>';
+        }).join('') + '</span></div>' : '');
+  }
+  function wgRender() {
+    var on = wgPlaced(), t = Date.now();
+    $('wg-body').innerHTML = WG_KINDS.map(function (w) {
+      var k = w[0], c = on[k] || 0, open = wgEdit === k;
+      return '<div class="card wg-card" id="wg-' + k + '"><div class="wg-head"><b>' + w[1] + '</b><span class="muted ltr">' + w[2] + '</span>' +
+        (c ? '<span class="wg-on">على شاشتك ✓' + (c > 1 ? ' (' + c + ')' : '') + '</span>' : '') + '</div>' +
+        '<div class="wg-stage">' + wgPreview(k, t) + '</div>' +
+        '<div class="wg-btns">' + (A && A.pinWidget ? '<button class="gold-btn f" data-wgp="' + k + '">ضعه على الشاشة</button>' : '') +
+        (k !== 'event' ? '<button class="pill f" data-wge="' + k + '">' + (open ? 'تم' : 'تعديل الشكل') + '</button>' : '') + '</div>' +
+        (wgMsg[k] ? '<p class="set-note ' + (wgMsg[k].bad ? 'tm-warn' : 'muted') + '">' + wgMsg[k].text + '</p>' : '') +
+        (open ? '<div class="wg-set">' + wgSettings(k) + '</div>' : '') + '</div>';
+    }).join('');
+  }
+  function wgSet(v) {
+    var p = v.split('-'), k = p[0], key = p[1], val = p[2], W = k === 'timer' ? S.timerWg : S.wstyle[k];
+    if (val === 't') W[key] = !W[key]; else W[key] = key === 'clear' ? +val : val;
+    save(); sendWidget(); wgRender(); wgFocus(v, 'wgs');
+  }
+  function wgPin(k) {
+    if (k === 'timer') { tPin = { keys: {}, msg: '' }; tEdit = null; tSheetRender(); var c0 = document.querySelector('#tm-sheet [data-tp="0"]'); if (c0) c0.focus(); return; }
+    var r = 'no';
+    try { r = A.pinWidget(k, ''); } catch (e) {}
+    wgMsg = {}; wgMsg[k] = r === 'ok' ? { text: 'اضغط «إضافة» في رسالة الجوال' } : { bad: 1, text: 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة' };
+    wgRender(); wgFocus(k);
   }
 
   // ---------- a message from the phone to the TV at home (same Wi-Fi): ready buttons or free text ----------
@@ -2089,7 +2181,8 @@
     if (name === 'home') { renderShortcuts(); tick(); }
     if (name === 'calendar') { calOpen(); return; }
     if (name === 'convert') { cvToday(); cvRender(); focusFirst($('cv-g')); return; }
-    if (name === 'timers') { tEdit = null; twOpen = false; timersRender(); focusFirst(document.querySelector('#timers .f')); return; }
+    if (name === 'widgets') { wgEdit = ''; wgRender(); focusFirst(document.querySelector('#widgets .f')); return; }
+    if (name === 'timers') { tEdit = null; timersRender(); focusFirst(document.querySelector('#timers .f')); return; }
     if (name === 'month') { monthRender(); focusFirst(document.querySelector('#month .f')); return; }
     if (name === 'imsak') { imYear = null; imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
@@ -2110,7 +2203,8 @@
     if (iqOpen()) { iqDismiss(); return true; }
     if (!$('msg-pop').classList.contains('hidden')) { $('msg-pop').classList.add('hidden'); return true; }
     if (tvOpen) { tvAction('close'); return true; }
-    if (screen === 'timers' && (tEdit || twOpen || tPin)) { if (tEdit) tClose(); else if (tPin) tPinAction('cancel'); else twAction('close'); return true; }
+    if (tPin) { tPinAction('cancel'); return true; }
+    if (screen === 'timers' && tEdit) { tClose(); return true; }
     if (screen === 'home') return false;
     if (screen === 'kahf') kStop();
     var to = stack.pop() || 'home';
@@ -2210,15 +2304,11 @@
     if (el.dataset.sec) { setToggle(el); return; }
     if (el.dataset.tp) { tPinAction(el.dataset.tp); return; }
     if (el.dataset.tv) { tvAction(el.dataset.tv); return; }
-    if (el.dataset.pin) {
-      var pr = 'no';
-      try { pr = A.pinWidget(el.dataset.pin, ''); } catch (x) {}
-      $('pin-msg').textContent = pr === 'ok' ? 'اضغط «إضافة» في رسالة الجوال' : 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة';
-      return;
-    }
     if (el.dataset.tm) { tOpenEditor(Object.assign({}, S.timers[+el.dataset.tm])); return; }
     if (el.dataset.tk) { tAction(el.dataset.tk); return; }
-    if (el.dataset.tw) { twAction(el.dataset.tw); return; }
+    if (el.dataset.wgp) { wgPin(el.dataset.wgp); return; }
+    if (el.dataset.wge) { wgEdit = wgEdit === el.dataset.wge ? '' : el.dataset.wge; wgRender(); wgFocus(el.dataset.wge, 'wge'); return; }
+    if (el.dataset.wgs) { wgSet(el.dataset.wgs); return; }
     if (el.classList.contains('cell')) { el.focus(); return; }
     switch (el.id) {
       case 'iq-close': iqDismiss(); break;
@@ -2250,8 +2340,6 @@
         var r0 = P.ymd(Date.now());
         tOpenEditor({ id: 't' + Date.now(), name: '', y: r0.y, m: r0.m, d: r0.d, h: -1, mi: 0, unit: 'days', color: 'navy', showDate: true, rip: '', isNew: true }); break;
       case 'tv-btn': tvOpen = true; tvState = ''; tvRender(); var q0 = document.querySelector('#tv-sheet [data-tv="q0"]'); if (q0) q0.focus(); break;
-      case 'tm-pin': tPin = { keys: {}, msg: '' }; tEdit = null; twOpen = false; tSheetRender(); var c0 = document.querySelector('#tm-sheet [data-tp="0"]'); if (c0) c0.focus(); break;
-      case 'tm-wg-btn': twOpen = true; tEdit = null; tSheetRender(); var cb = document.querySelector('#tm-sheet [data-tw="close"]'); if (cb) cb.focus(); break;
       case 'fm-kind': fmDraft.kind = KIND_ORDER[(KIND_ORDER.indexOf(fmDraft.kind) + 1) % KIND_ORDER.length]; setRender(); $('fm-kind').focus(); break;
       case 'fm-add': addMember(); break;
     }
@@ -2311,6 +2399,7 @@
       sendSchedule();
       if (Date.now() - wxAt > 10 * MIN) loadWeather();
       if (TV) syncTake(); else syncSoon();
+      if (screen === 'widgets') wgRender(); // a widget may have been added or removed meanwhile
       // phone travelling: the automatic city follows the phone's location
       if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
     }

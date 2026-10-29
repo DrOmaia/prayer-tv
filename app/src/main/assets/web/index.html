@@ -140,8 +140,7 @@
         <div class="big-title">العدّادات</div>
       </div>
       <div class="tm-actions">
-        <button id="tm-wg-btn" class="pill f">الويدجت</button>
-        <button id="tm-pin" class="pill f">+ ويدجت</button>
+        <button class="pill f" data-go="widgets">الويدجت</button>
         <button id="tm-add" class="gold-btn f">+ عدّاد جديد</button>
       </div>
     </header>
@@ -215,6 +214,17 @@
   </section>
 
   <!-- Weather -->
+  <!-- Phone: every home-screen widget with a live preview, a button to put it there, and its own look -->
+  <section id="widgets" class="screen hidden">
+    <header class="top">
+      <div class="title-row">
+        <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div><div class="big-title">الويدجت</div><div class="muted sub-title">«ضعه على الشاشة» ثم «إضافة» في رسالة الجوال</div></div>
+      </div>
+    </header>
+    <div id="wg-body" class="wg-body"></div>
+  </section>
+
   <section id="weather" class="screen hidden">
     <header class="top">
       <div class="title-row">
@@ -309,11 +319,7 @@
           </div>
         </div>
         <div class="set-sec phone-only" id="sec-widget">
-          <button class="set-tg f" data-sec="widget"><span class="set-tt">الويدجت على الشاشة الرئيسية</span><span class="set-pm">+</span></button>
-          <div class="set-sb">
-            <div class="muted set-note">لكل الويدجتات: «مواقيت اليوم»، الدائرة، الشريط، الشهر الهجري، محوّل التاريخ</div>
-            <div id="set-widget"></div>
-          </div>
+          <button class="set-tg f" data-go="widgets"><span class="set-tt">الويدجت على الشاشة الرئيسية</span><span class="set-pm">‹</span></button>
         </div>
         <div class="set-sec" id="sec-update">
           <button class="set-tg f" data-sec="update"><span class="set-tt">تحديث التطبيق</span><span id="sum-update" class="set-sum"></span><span class="set-pm">+</span></button>

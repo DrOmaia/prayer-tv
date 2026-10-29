@@ -275,6 +275,9 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun weatherWatch(json: String) = Weather.watch(this@MainActivity, json)
 
+        @JavascriptInterface
+        fun placedWidgets(): String = Widgets.placedCounts(this@MainActivity)
+
         // put a widget on the home screen from the app (kind: prayer, ring, strip, month, convert, event, timer)
         @JavascriptInterface
         fun pinWidget(kind: String, keys: String): String = Widgets.pin(this@MainActivity, kind, keys)

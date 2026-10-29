@@ -793,3 +793,68 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   box-shadow: 0 20px 60px var(--shadow), 0 0 50px rgba(226,185,105,.35); }
 .msg-pop b { font-size: 30px; color: var(--gold); }
 .msg-pop span { font-size: 52px; font-weight: 700; color: var(--ink); }
+/* ---------- the «الويدجت» screen (phone): each widget's card with a live preview over a home-screen backdrop ---------- */
+.wg-body { display: flex; flex-direction: column; gap: 28px; padding-bottom: 40px; }
+.wg-card { padding: 30px 30px 26px; display: flex; flex-direction: column; gap: 20px; }
+.wg-head { display: flex; align-items: baseline; gap: 16px; }
+.wg-head b { font-size: 38px; }
+.wg-head .muted { font-size: 26px; }
+.wg-on { margin-inline-start: auto; font-size: 26px; font-weight: 700; color: var(--gold); }
+.wg-stage { display: flex; justify-content: center; padding: 34px 20px; border-radius: 26px; background: linear-gradient(160deg, #0D1240, #3A1F6E); }
+.wg-btns { display: flex; gap: 16px; }
+.wg-btns .gold-btn, .wg-btns .pill { height: 84px; font-size: 30px; padding: 0 34px; }
+.wg-set { border-top: 1px solid var(--line); padding-top: 10px; }
+.wg-set .snd-opts { flex-wrap: wrap; }
+/* a widget: white text over its background (its transparency is the background's opacity) */
+.wgp { position: relative; color: #fff; direction: rtl; text-shadow: 0 2px 6px rgba(0,0,0,.45); font-size: calc(var(--k, 1) * 34px); line-height: 1.25; }
+.wgp-bg { position: absolute; inset: 0; border-radius: 60px; z-index: 0; }
+.wgp > :not(.wgp-bg) { position: relative; z-index: 1; }
+.wgp small { font-size: .82em; opacity: .85; }
+.wgp-prayer { width: 940px; border-radius: 60px; overflow: hidden; display: flex; flex-direction: column; }
+.wgp-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 26px 40px 0; }
+.wgp-nx small, .wgp-cd small { display: block; font-size: .7em; }
+.wgp-big { font-size: 1.8em; }
+.wgp-ev { text-align: center; display: flex; flex-direction: column; }
+.wgp-ev b { color: var(--a); font-size: 1.25em; }
+.wgp-cd { text-align: left; }
+.wgp-cd b { color: var(--a); font-size: 1.8em; }
+.wgp-bar { height: 10px; margin: 14px 40px 0; border-radius: 6px; background: rgba(255,255,255,.3); }
+.wgp-bar i { display: block; height: 100%; border-radius: 6px; background: var(--a); }
+.wgp-cols { display: grid; grid-template-columns: repeat(6, 1fr); padding: 14px 20px 6px; text-align: center; }
+.wgp-cols > div { display: flex; flex-direction: column; padding: 8px 0; border-radius: 30px; border: 3px solid transparent; }
+.wgp-cols > .on { background: rgba(255,255,255,.2); }
+.wgp-cols > .on b { color: var(--a); }
+.wgp-cols > .now { border-color: var(--a); }
+.wgp-cols b { font-size: 1.25em; }
+.wgp-line { text-align: center; font-size: .9em; padding: 4px 40px 14px; }
+.wgp-foot { display: flex; justify-content: space-between; gap: 20px; padding: 14px 40px 20px; background: rgba(0,0,0,.18); font-size: .9em; position: relative; z-index: 1; }
+.wgp-foot .moon-ic, .wgp-h .moon-ic { width: 1em; height: 1em; vertical-align: -.12em; margin-inline-end: 10px; }
+.wgp .moon-dark { fill: rgba(255,255,255,.25); }
+.wgp .moon-lit { fill: #F2CF8A; }
+.wgp-round { width: 440px; height: 440px; display: flex; align-items: center; justify-content: center; }
+.wgp-round .wgp-bg { border-radius: 50%; }
+.wgp > .wgp-arc { position: absolute; inset: 22px; border-radius: 50%; -webkit-mask: radial-gradient(circle, transparent 66%, #000 67%); mask: radial-gradient(circle, transparent 66%, #000 67%); }
+.wgp-in { display: flex; flex-direction: column; align-items: center; }
+.wgp-in b { font-size: 1.35em; }
+.wgp-c { color: var(--a); font-weight: 700; }
+.wgp-in .wgp-c { font-size: 1.5em; }
+.wgp-strip { width: 940px; height: 190px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 40px; }
+.wgp-strip .wgp-c { font-size: 1.5em; }
+.wgp-convert { width: 220px; height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.wgp-convert .wgp-bg { border-radius: 50px; }
+.wgp-convert .wgp-c { font-size: 2.6em; line-height: 1; }
+.wgp-month { width: 900px; padding: 30px 30px 24px; }
+.wgp-mt { text-align: center; font-weight: 700; font-size: 1.2em; margin-bottom: 14px; }
+.wgp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+.wgp-grid em { font-style: normal; font-size: .6em; opacity: .8; }
+.wgp-grid i { font-style: normal; display: flex; flex-direction: column; padding: 4px 0; border-radius: 18px; border: 3px solid transparent; }
+.wgp-grid i b { font-size: .9em; }
+.wgp-grid i small { font-size: .55em; }
+.wgp-grid i.on { border-color: var(--a); }
+.wgp-grid i.on b { color: var(--a); }
+.wgp-event { width: 440px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.wgp-event .wgp-c { font-size: 2.8em; color: #F2CF8A; }
+.wgp-timer { width: 940px; min-height: 200px; border-radius: 70px; padding: 26px 46px; display: flex; flex-direction: column; justify-content: center; gap: 8px; text-shadow: none; }
+.wgp-timer .wgp-c { color: inherit; text-align: center; font-size: 1.6em; }
+.wgp-timer .wgp-c small { font-size: .5em; margin: 0 6px; }
+.wgp-timer span:not(.wgp-c) { font-weight: 700; font-size: .85em; }

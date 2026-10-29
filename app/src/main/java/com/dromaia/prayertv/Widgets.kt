@@ -74,7 +74,16 @@ object Widgets {
         val a = data(ctx)?.optJSONArray("timers") ?: return emptyList()
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { it.optString("id") to it.optString("name") }
     }
-    // the timer widgets on the home screen and the timer each shows (for the app's timers tab)
+    // how many of each kind are on the home screen (for the app's «الويدجت» screen)
+    fun placedCounts(ctx: Context): String {
+        val am = AppWidgetManager.getInstance(ctx)
+        val out = JSONObject()
+        mapOf("prayer" to PrayerWidget::class.java, "ring" to RingWidget::class.java, "strip" to StripWidget::class.java,
+            "month" to MonthWidget::class.java, "convert" to ConvertWidget::class.java, "event" to EventWidget::class.java,
+            "timer" to TimerWidget::class.java).forEach { (k, c) -> out.put(k, am.getAppWidgetIds(ComponentName(ctx, c)).size) }
+        return out.toString()
+    }
+    // the timer widgets on the home screen and the timer each shows (for the app's «الويدجت» screen)
     fun placedTimers(ctx: Context): String {
         val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
         val out = JSONArray()
@@ -284,7 +293,8 @@ object Widgets {
         val d = data(ctx)
         d?.optString("tz")?.takeIf { it.isNotEmpty() }?.let { TZ = TimeZone.getTimeZone(it) }
         val st = state(d, now)
-        val sty = Style(d?.optJSONObject("style"))
+        // each kind of widget has its own look (chosen in the app's «الويدجت» screen); older data: one look for all
+        fun styleOf(kind: String) = Style(d?.optJSONObject("styles")?.optJSONObject(kind) ?: d?.optJSONObject("style"))
         // refresh at the next prayer time and at midnight; every 10 minutes for the progress bar and ring
         var nextChange = minOf(st?.nextAt ?: Long.MAX_VALUE, nextMidnight(now), now + 30 * 60_000L)
         // each widget on its own: a failure in one never stops the others (the last error is kept for the settings)
@@ -295,11 +305,11 @@ object Widgets {
             }
             return ids.isNotEmpty()
         }
-        if (each(PrayerWidget::class.java) { prayerViews(ctx, d, sty, st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
-        if (each(RingWidget::class.java) { ringViews(ctx, sty, st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
-        each(StripWidget::class.java) { stripViews(ctx, sty, st, now) }
-        each(MonthWidget::class.java) { monthViews(ctx, d, sty, st, now) }
-        each(ConvertWidget::class.java) { convertViews(ctx, sty, st) }
+        if (each(PrayerWidget::class.java) { prayerViews(ctx, d, styleOf("prayer"), st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
+        if (each(RingWidget::class.java) { ringViews(ctx, styleOf("ring"), st, now) }) nextChange = minOf(nextChange, now + 10 * 60_000L)
+        each(StripWidget::class.java) { stripViews(ctx, styleOf("strip"), st, now) }
+        each(MonthWidget::class.java) { monthViews(ctx, d, styleOf("month"), st, now) }
+        each(ConvertWidget::class.java) { convertViews(ctx, styleOf("convert"), st) }
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
