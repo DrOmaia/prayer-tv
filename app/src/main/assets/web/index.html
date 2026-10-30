@@ -146,12 +146,14 @@
         <div><div id="r-title" class="quran big-title"></div><div class="muted sub-title">اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية</div></div>
       </div>
     </header>
+    <div class="r-views"><button class="pill f" data-rview="page">صفحات المصحف</button><button class="pill f" data-rview="text">نص متصل</button></div>
     <div id="r-mark" class="r-mark"></div>
     <div id="r-text" class="r-text quran"></div>
+    <div id="r-pages" class="r-pages quran hidden"></div>
     <div class="r-bar">
-      <button class="pill f" data-rnav="-1">السورة السابقة</button>
+      <button id="r-prev" class="pill f" data-rnav="-1">السورة السابقة</button>
       <button class="gold-btn f" data-rmark="1">علّمت هنا</button>
-      <button class="pill f" data-rnav="1">السورة التالية</button>
+      <button id="r-next" class="pill f" data-rnav="1">السورة التالية</button>
     </div>
   </section>
 
@@ -426,6 +428,7 @@
 </div>
 
 <script src="mushaf.js"></script>
+<script src="mushaf-pages.js"></script>
 <script src="quran.js"></script>
 <script src="adhkar.js"></script>
 <script src="reminders.js"></script>

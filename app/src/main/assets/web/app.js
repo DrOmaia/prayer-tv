@@ -75,6 +75,7 @@
       trip: s.trip || { on: false }, // a journey under way (its notification is sent once)
       guest: s.guest || { on: false, name: '' }, // the TV: guest mode (until it is ended)
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
+      qView: s.qView || 'page', // the reader: 'page' (Mushaf pages) or 'text' (continuous)
       qMode: s.qMode || 'listen', // the Quran tab: 'read' or 'listen'
       qMark: s.qMark || null, // the reader's mark: where the reading stopped {s, i, at}
       qRemind: Object.assign({ on: false, time: '21:00' }, s.qRemind), // a daily reminder of the reading (phone)
@@ -1985,6 +1986,37 @@
   }
   // ---------- reading without audio (the whole Quran as a page; one mark keeps the place) ----------
   var rd = { s: 1, i: 0 };
+  // the Mushaf page of an ayah (from mushaf-pages.js) and its page number
+  var PAGE_OF = {};
+  Object.keys(window.MUSHAF_PAGES).forEach(function (p) { window.MUSHAF_PAGES[p].forEach(function (x) { PAGE_OF[x[0] + ':' + x[1]] = +p; }); });
+  function rdPageNo() { return PAGE_OF[rd.s + ':' + Math.max(1, rd.i)] || 1; }
+  // one Mushaf page: its surahs (with their names and Basmala) and its ayat, each tappable
+  function rdPageHtml(p) {
+    var list = window.MUSHAF_PAGES[p], h = '', lastS = 0;
+    list.forEach(function (x) {
+      var s = x[0], a = x[1];
+      if (s !== lastS) {
+        h += '<div class="m-surah">سورة ' + QURAN[s - 1][0] + '</div>';
+        if (a === 1 && s !== 1 && s !== 9) h += '<div class="m-bism">' + BASMALA + '</div>';
+        lastS = s;
+      }
+      h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + QURAN[s - 1][1][a - 1] + ' ﴿' + arNum(a) + '﴾</span> ';
+    });
+    return '<div class="m-page">' + h + '</div><div class="m-num">' + arNum(p) + '</div>';
+  }
+  function rdPagesRender() {
+    var p = rdPageNo();
+    $('r-pages').innerHTML = rdPageHtml(p);
+    $('r-pages').dataset.p = p;
+  }
+  function rdPageTurn(d) {
+    var p = +$('r-pages').dataset.p || rdPageNo(), n = p + d;
+    if (n < 1 || n > 604) return;
+    var first = window.MUSHAF_PAGES[n][0];
+    rd.s = first[0]; rd.i = first[1];
+    rdRender();
+  }
+  function rdView(v) { S.qView = v; save(); rdRender(); }
   function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
   function rdText(s) {
     var v = QURAN[s - 1][1], h = '<span class="rv" data-i="0">' + BASMALA + '</span> ';
@@ -1992,7 +2024,19 @@
     return h;
   }
   function rdRender() {
+    var pageView = (S.qView || 'page') === 'page';
+    $('r-text').classList.toggle('hidden', pageView);
+    $('r-pages').classList.toggle('hidden', !pageView);
+    if (pageView) {
+      rdPagesRender();
+      var mm = S.qMark;
+      $('r-mark').innerHTML = mm ? '<span>توقفت عند سورة ' + QURAN[mm.s - 1][0] + ' · الآية ' + mm.i + '</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>' : '<span class="muted">لم تحدّد موضعك بعد</span>';
+      $('r-title').textContent = 'سورة ' + QURAN[rd.s - 1][0] + ' · صفحة ' + rdPageNo();
+      $('r-prev').textContent = 'الصفحة السابقة'; $('r-next').textContent = 'الصفحة التالية';
+      return;
+    }
     var box = $('r-text');
+    $('r-prev').textContent = 'السورة السابقة'; $('r-next').textContent = 'السورة التالية';
     $('r-title').textContent = 'سورة ' + QURAN[rd.s - 1][0];
     if (box.dataset.s !== String(rd.s)) { box.dataset.s = rd.s; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
@@ -2028,9 +2072,11 @@
   }
   function rdClear() { S.qMark = null; save(); sendWidget(); sendSchedule(); rdRender(); }
   function rdNav(d) {
+    if ((S.qView || 'page') === 'page') { rdPageTurn(d); return; }
     var n = rd.s + d; if (n < 1 || n > 114) return;
     rd.s = n; rd.i = 0; $('r-text').dataset.s = ''; rdRender(); $('r-text').scrollTop = 0;
   }
+  function el0(e) { return e.target.closest && e.target.closest('button'); }
   function rdOpen(m) { rdSet(m); if (screen === 'reader') rdRender(); else go('reader'); }
 
   // ---------- guest mode on the TV: a big welcome instead of the occasions; no private family messages ----------
@@ -2447,7 +2493,11 @@
 
   document.addEventListener('click', function (e) {
     var rv = e.target.closest && e.target.closest('.rv');
-    if (rv && screen === 'reader') { rd.i = +rv.dataset.i; rdHl(); return; }
+    if (rv && screen === 'reader') {
+      if (rv.dataset.s) { rd.s = +rv.dataset.s; rd.i = +rv.dataset.i; rdRender(); return; }
+      rd.i = +rv.dataset.i; rdHl(); return;
+    }
+    if (el0(e) && el0(e).dataset.rview) { rdView(el0(e).dataset.rview); return; }
     var el = e.target.closest('button');
     if (!el) return;
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
@@ -2564,6 +2614,7 @@
   }
   onSwipe($('cal-grid'), function () { calMonth(1); }, function () { calMonth(-1); });
   onSwipe(document.querySelector('.kahf-text'), kNext, kPrev);
+  onSwipe(document.getElementById('r-pages'), function () { rdPageTurn(1); }, function () { rdPageTurn(-1); });
 
   // called by Android
   window.App = {

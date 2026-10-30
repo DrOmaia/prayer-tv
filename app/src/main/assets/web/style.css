@@ -891,3 +891,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .q-modes { display: flex; gap: 20px; padding: 0 40px 20px; }
 .q-mode { flex: 1; height: 120px; font-size: 40px; font-weight: 700; border-radius: 30px; background: var(--card2); border: 2px solid var(--line); color: var(--ink); }
 .q-mode.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
+/* the Mushaf page: a page on its own, big text, its number at the bottom */
+.r-views { display: flex; gap: 16px; padding: 0 40px 14px; }
+.r-views .pill { flex: 1; height: 84px; font-size: 28px; }
+.r-pages { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 6px 36px 10px; }
+.r-pages::-webkit-scrollbar { display: none; }
+.m-page { text-align: justify; font-size: calc(58px * var(--qz, 1)); line-height: 2.05; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.m-surah { text-align: center; font-size: 36px; font-weight: 700; color: var(--gold); margin-top: 14px; }
+.m-bism { text-align: center; font-size: calc(46px * var(--qz, 1)); }
+.m-num { text-align: center; font-size: 30px; color: var(--muted); padding: 10px 0 18px; }
+.m-page .rv { cursor: pointer; }
