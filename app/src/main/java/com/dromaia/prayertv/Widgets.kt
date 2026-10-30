@@ -22,6 +22,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.UnderlineSpan
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -272,6 +273,14 @@ object Widgets {
         val prog = o?.optBoolean("prog", true) ?: true
         val line = o?.optBoolean("line", true) ?: true
         val date = o?.optBoolean("date", true) ?: true
+        // «مواقيت اليوم»: the place of each part of the top line ('r' right, 'c' centre, 'l' left) and of the changing line,
+        // and the size of each part (the next prayer with the times and the date · the time left · the occasions · the line)
+        val posNext = o?.optString("posNext").takeUnless { it.isNullOrEmpty() } ?: "r"
+        val posEv = o?.optString("posEv").takeUnless { it.isNullOrEmpty() } ?: "c"
+        val posLeft = o?.optString("posLeft").takeUnless { it.isNullOrEmpty() } ?: "l"
+        val posLine = o?.optString("posLine").takeUnless { it.isNullOrEmpty() } ?: "c"
+        private val k: (String) -> Float = { key -> when (o?.optString(key)) { "s" -> 0.85f; "m" -> 1f; "l" -> 1.2f; "xl" -> 1.45f; else -> scale } }
+        val kMain = k("fMain"); val kLeft = k("fLeft"); val kEv = k("fEv"); val kLine = k("fLine")
     }
 
     private fun putBg(rv: RemoteViews, sty: Style, res: Int) {
@@ -383,10 +392,31 @@ object Widgets {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_prayer)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
         putBg(rv, sty, bgOf(sty, st))
-        sizes(rv, sty, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.left_label to 12f,
-            R.id.countdown to 24f,
-            R.id.ev0n to 17f, R.id.ev1n to 17f, R.id.ev2n to 17f, R.id.ev0d to 17f, R.id.ev1d to 17f, R.id.ev2d to 17f, R.id.dua to 13f, R.id.info_label to 13f,
-            R.id.info_chrono to 14f, R.id.hijri to 13f, R.id.greg to 13f) + NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
+        // the three parts of the top line in the places chosen (two parts on one place: the other moves to the free one)
+        val want = listOf(R.layout.widget_part_next to sty.posNext, R.layout.widget_part_events to sty.posEv, R.layout.widget_part_left to sty.posLeft)
+        val free = mutableListOf("r", "c", "l")
+        val placed = mutableMapOf<Int, String>()
+        want.forEach { (lay, pos) -> if (pos in free) { placed[lay] = pos; free.remove(pos) } }
+        want.forEach { (lay, _) -> if (lay !in placed) { placed[lay] = free.removeAt(0) } }
+        val gravity = mapOf("r" to Gravity.START, "c" to Gravity.CENTER_HORIZONTAL, "l" to Gravity.END)
+        placed.forEach { (lay, pos) ->
+            rv.addView(when (pos) { "r" -> R.id.slot_r; "c" -> R.id.slot_c; else -> R.id.slot_l }, RemoteViews(ctx.packageName, lay))
+        }
+        val gNext = gravity[placed[R.layout.widget_part_next]] ?: Gravity.START
+        val gEv = gravity[placed[R.layout.widget_part_events]] ?: Gravity.CENTER_HORIZONTAL
+        rv.setInt(R.id.part_next, "setGravity", gNext or Gravity.CENTER_VERTICAL)
+        rv.setInt(R.id.part_left, "setGravity", (gravity[placed[R.layout.widget_part_left]] ?: Gravity.END) or Gravity.CENTER_VERTICAL)
+        for (id in intArrayOf(R.id.ev_box0, R.id.ev_box1, R.id.ev_box2)) rv.setInt(id, "setGravity", gEv)
+        val gLine = gravity[sty.posLine] ?: Gravity.CENTER_HORIZONTAL
+        rv.setInt(R.id.dua, "setGravity", gLine or Gravity.CENTER_VERTICAL)
+        rv.setInt(R.id.info_row, "setGravity", gLine or Gravity.CENTER_VERTICAL)
+        // each part in its own size
+        fun size(k: Float, list: List<Pair<Int, Float>>) = list.forEach { (id, sp) -> rv.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * k) }
+        size(sty.kMain, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.hijri to 13f, R.id.greg to 13f) +
+            NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
+        size(sty.kLeft, listOf(R.id.left_label to 12f, R.id.countdown to 24f))
+        size(sty.kEv, listOf(R.id.ev0n to 17f, R.id.ev1n to 17f, R.id.ev2n to 17f, R.id.ev0d to 17f, R.id.ev1d to 17f, R.id.ev2d to 17f))
+        size(sty.kLine, listOf(R.id.dua to 13f, R.id.info_label to 13f, R.id.info_chrono to 14f))
         rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.progress, if (sty.prog) View.VISIBLE else View.GONE)
         rv.setViewVisibility(R.id.flip, if (sty.line) View.VISIBLE else View.GONE)

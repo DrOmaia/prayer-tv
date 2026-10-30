@@ -858,3 +858,4 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wgp-timer .wgp-c { color: inherit; text-align: center; font-size: 1.6em; }
 .wgp-timer .wgp-c small { font-size: .5em; margin: 0 6px; }
 .wgp-timer span:not(.wgp-c) { font-weight: 700; font-size: .85em; }
+.wg-sub { margin: 18px 0 2px; }

@@ -83,6 +83,11 @@
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
   if (!S.wstyle) { S.wstyle = {}; ['prayer', 'ring', 'strip', 'month', 'convert'].forEach(function (k) { S.wstyle[k] = Object.assign({}, S.widget); }); }
+  // «مواقيت اليوم»: the place of each part (right / centre / left) and the size of each
+  (function (W) {
+    var f = W.font || 'm';
+    S.wstyle.prayer = Object.assign({ posNext: 'r', posEv: 'c', posLeft: 'l', posLine: 'c', fMain: f, fLeft: f, fEv: f, fLine: f }, W);
+  })(S.wstyle.prayer);
   // a family saved before these were added (the default family): add the writer, interests and the departed
   (function () {
     var F = S.family, D = FAMILY.DEFAULT;
@@ -1745,16 +1750,19 @@
   function wgPreview(k, t) {
     var n = wgNow(t);
     if (k === 'prayer') {
-      var L = wgLook(k), W = L.W;
-      return wgBox(k, L, n, '<div class="wgp-top"><div class="wgp-nx">' + (W.city ? '<small>' + esc(S.loc.name) + '</small>' : '') +
-        '<div><b class="wgp-big">' + n.names[n.next] + '</b> <span>' + P.full(n.nextAt) + '</span></div></div>' +
-        (n.ev ? '<div class="wgp-ev"><b>' + esc(n.ev.name) + '</b><span>' + wgInDays(n.ev.left) + '</span></div>' : '<div></div>') +
-        '<div class="wgp-cd"><small>متبقٍّ</small><b class="ltr">' + n.cd + '</b></div></div>' +
+      var L = wgLook(k), W = L.W, SZ = { s: .85, m: 1, l: 1.2, xl: 1.45 }, AL = { r: 'right', c: 'center', l: 'left' };
+      var fz = function (key) { return 'font-size:' + (34 * (SZ[W[key]] || 1)).toFixed(1) + 'px;'; };
+      var parts = {}, place = function (pos, html) { parts[pos] = html; };
+      place(W.posNext, '<div class="wgp-nx" style="' + fz('fMain') + 'text-align:' + AL[W.posNext] + '">' + (W.city ? '<small>' + esc(S.loc.name) + '</small>' : '') +
+        '<div><b class="wgp-big">' + n.names[n.next] + '</b> <span>' + P.full(n.nextAt) + '</span></div></div>');
+      place(W.posEv, n.ev ? '<div class="wgp-ev" style="' + fz('fEv') + 'text-align:' + AL[W.posEv] + '"><b>' + esc(n.ev.name) + '</b><span>' + wgInDays(n.ev.left) + '</span></div>' : '<div></div>');
+      place(W.posLeft, '<div class="wgp-cd" style="' + fz('fLeft') + 'text-align:' + AL[W.posLeft] + '"><small>متبقٍّ</small><b class="ltr">' + n.cd + '</b></div>');
+      return wgBox(k, L, n, '<div class="wgp-top">' + (parts.r || '<div></div>') + (parts.c || '<div></div>') + (parts.l || '<div></div>') + '</div>' +
         (W.prog ? '<div class="wgp-bar"><i style="width:' + n.prog + '%"></i></div>' : '') +
-        '<div class="wgp-cols">' + n.names.map(function (nm, i) {
+        '<div class="wgp-cols" style="' + fz('fMain') + '">' + n.names.map(function (nm, i) {
           return '<div class="' + (i === n.next ? 'on' : '') + (i === n.cur ? ' now' : '') + '"><small>' + nm + '</small><b>' + P.full(n.at[i]) + '</b></div>';
-        }).join('') + '</div>' + (W.line ? '<div class="wgp-line">«سبحان الله وبحمده، سبحان الله العظيم»</div>' : '') +
-        (W.date ? '<div class="wgp-foot"><span>' + n.greg + '</span><span>' + moonSvg(n.h.d) + n.hijri + '</span></div>' : ''));
+        }).join('') + '</div>' + (W.line ? '<div class="wgp-line" style="' + fz('fLine') + 'text-align:' + AL[W.posLine] + '">«سبحان الله وبحمده، سبحان الله العظيم»</div>' : '') +
+        (W.date ? '<div class="wgp-foot" style="' + fz('fMain') + '"><span>' + n.greg + '</span><span>' + moonSvg(n.h.d) + n.hijri + '</span></div>' : ''));
     }
     if (k === 'ring') {
       var L2 = wgLook(k);
@@ -1813,9 +1821,14 @@
               S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
         }).join('') + '<p class="muted set-note">لون كل عدّاد يُختار من تاب «العدّادات». لتغيير عدّادات ويدجت يتقلّب: اضغط عليه مطولًا ← الإعدادات.</p>';
     }
+    var POS = [['r', 'يمين'], ['c', 'وسط'], ['l', 'يسار']], SIZES = [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']];
     return wgRow(k, 'الخلفية', 'bg', [['time', 'لون حسب الوقت'], ['dark', 'داكن']]) +
       wgRow(k, 'الشفافية', 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
-      wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']]) +
+      (k === 'prayer' ? '<div class="tm-lbl wg-sub">المكان</div>' + wgRow(k, 'الصلاة القادمة', 'posNext', POS) + wgRow(k, 'المناسبات', 'posEv', POS) +
+        wgRow(k, 'المتبقي', 'posLeft', POS) + wgRow(k, 'السطر المتبدّل', 'posLine', POS) +
+        '<div class="tm-lbl wg-sub">حجم الخط</div>' + wgRow(k, 'الصلاة والمواقيت والتاريخ', 'fMain', SIZES) + wgRow(k, 'المتبقي', 'fLeft', SIZES) +
+        wgRow(k, 'المناسبات', 'fEv', SIZES) + wgRow(k, 'السطر المتبدّل', 'fLine', SIZES) + '<div class="tm-lbl wg-sub">غير ذلك</div>' :
+        wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']])) +
       wgRow(k, 'لون التمييز', 'accent', [['gold', 'ذهبي'], ['white', 'أبيض'], ['green', 'أخضر'], ['sky', 'سماوي']]) +
       (k === 'prayer' ? '<div class="srow snd-row"><span class="sname">يظهر فيه</span><span class="snd-opts">' +
         [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
@@ -1837,6 +1850,7 @@
   }
   function wgSet(v) {
     var p = v.split('-'), k = p[0], key = p[1], val = p[2], W = k === 'timer' ? S.timerWg : S.wstyle[k];
+    if (/^pos(Next|Ev|Left)$/.test(key)) ['posNext', 'posEv', 'posLeft'].forEach(function (o) { if (o !== key && W[o] === val) W[o] = W[key]; });
     if (val === 't') W[key] = !W[key]; else W[key] = key === 'clear' ? +val : val;
     save(); sendWidget(); wgRender(); wgFocus(v, 'wgs');
   }
