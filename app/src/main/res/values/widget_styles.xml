@@ -26,7 +26,7 @@
         <item name="android:layout_height">match_parent</item>
         <item name="android:visibility">gone</item>
         <item name="android:autoStart">true</item>
-        <item name="android:flipInterval">2500</item>
+        <item name="android:flipInterval">4000</item>
         <item name="android:inAnimation">@anim/now_in</item>
         <item name="android:outAnimation">@anim/now_out</item>
     </style>

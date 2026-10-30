@@ -64,7 +64,7 @@
         android:max="1000"
         android:progressDrawable="@drawable/widget_bar" />
 
-    <!-- the six times; the next one on a light pill, the current one in a blinking frame -->
+    <!-- the six times; the current one in a slowly blinking frame -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

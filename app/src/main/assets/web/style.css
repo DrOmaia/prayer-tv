@@ -822,9 +822,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wgp-bar i { display: block; height: 100%; border-radius: 6px; background: var(--a); }
 .wgp-cols { display: grid; grid-template-columns: repeat(6, 1fr); padding: 14px 20px 6px; text-align: center; }
 .wgp-cols > div { display: flex; flex-direction: column; padding: 8px 0; border-radius: 30px; border: 3px solid transparent; }
-.wgp-cols > .on { background: rgba(255,255,255,.2); }
-.wgp-cols > .on b { color: var(--a); }
-.wgp-cols > .now { border-color: var(--a); }
+.wgp-cols > .now { border-color: var(--a); animation: wgp-blink 4s ease-in-out infinite alternate; }
+@keyframes wgp-blink { from { border-color: var(--a); } to { border-color: transparent; } }
 .wgp-cols b { font-size: 1.25em; }
 .wgp-line { text-align: center; font-size: .9em; padding: 4px 40px 14px; }
 .wgp-foot { display: flex; justify-content: space-between; gap: 20px; padding: 14px 40px 20px; background: rgba(0,0,0,.18); font-size: .9em; position: relative; z-index: 1; }

@@ -435,8 +435,9 @@ object Widgets {
         for (k in 0 until 6) {
             rv.setTextViewText(NAME_IDS[k], st.names.getString(k))
             rv.setTextViewText(TIME_IDS[k], hm(st.at.getLong(k)))
-            rv.setTextColor(TIME_IDS[k], if (k == st.next) sty.accent else Color.WHITE)
-            rv.setInt(COL_IDS[k], "setBackgroundResource", if (k == st.next) R.drawable.widget_hl else 0)
+            // one mark only: the time we are in (its frame below); the next prayer is named at the top
+            rv.setTextColor(TIME_IDS[k], Color.WHITE)
+            rv.setInt(COL_IDS[k], "setBackgroundResource", 0)
         }
         // the time we are in (sunrise too, until Dhuhr): a thin frame that fades in and out slowly
         val cur = (st.next + 5) % 6
