@@ -901,3 +901,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .m-bism { text-align: center; font-size: calc(46px * var(--qz, 1)); }
 .m-num { text-align: center; font-size: 30px; color: var(--muted); padding: 10px 0 18px; }
 .m-page .rv { cursor: pointer; }
+/* reading: the size slider */
+.r-size { display: flex; align-items: center; gap: 16px; padding: 0 40px 10px; font-size: 26px; }
+.r-size input[type=range] { flex: 1; height: 44px; accent-color: var(--gold); }

@@ -1202,7 +1202,16 @@
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
   // the size of the text: pinch with two fingers on this screen (kept)
-  function kApplySize() { document.documentElement.style.setProperty('--qz', S.qSize || 1); }
+  function kApplySize() {
+    document.documentElement.style.setProperty('--qz', S.qSize || 1);
+    var sl = document.getElementById('r-slider');
+    if (sl) { sl.value = Math.round((S.qSize || 1) * 100); $('r-size-v').textContent = Math.round((S.qSize || 1) * 100) + '%'; }
+  }
+  // the size slider (reading): the same size as the two fingers, kept
+  document.getElementById('r-slider').addEventListener('input', function (e) {
+    S.qSize = Math.round(+e.target.value) / 100; kApplySize();
+  });
+  document.getElementById('r-slider').addEventListener('change', function () { save(); });
   function kReadRender(i) {
     var rd = $('k-read');
     if (rd.dataset.s !== String(kahf.s)) {
