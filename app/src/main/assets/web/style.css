@@ -904,3 +904,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* reading: the size slider */
 .r-size { display: flex; align-items: center; gap: 16px; padding: 0 40px 10px; font-size: 26px; }
 .r-size input[type=range] { flex: 1; height: 44px; accent-color: var(--gold); }
+/* the text view: a light page for easy reading; the Basmala in its own colour; page numbers on their own line */
+.r-text { background: #FBF7EC; color: #2A2418; border-radius: 26px; margin: 0 16px; padding: 24px 34px 40px !important; }
+.r-text .rv.bism { display: block; text-align: center; color: #8E5A12; font-weight: 700; margin: 6px 0 14px; }
+.r-text .rv.cur { background: rgba(142,90,18,.16); }
+.r-pno { text-align: center; font-size: 30px; color: #7A6A4F; border-top: 1px solid #D8C9A8; border-bottom: 1px solid #D8C9A8; margin: 22px 0 14px; padding: 6px 0; }

@@ -2027,9 +2027,14 @@
   }
   function rdView(v) { S.qView = v; save(); rdRender(); }
   function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
+  // the text view: the verses of the surah, with a line for each page's number where a new page begins
   function rdText(s) {
-    var v = QURAN[s - 1][1], h = '<span class="rv" data-i="0">' + BASMALA + '</span> ';
-    for (var k = 0; k < v.length; k++) h += '<span class="rv" data-i="' + (k + 1) + '">' + v[k] + ' ﴿' + arNum(k + 1) + '﴾</span> ';
+    var v = QURAN[s - 1][1], h = '<span class="rv bism" data-i="0">' + BASMALA + '</span> ', lastP = 0;
+    for (var k = 0; k < v.length; k++) {
+      var pg = PAGE_OF[s + ':' + (k + 1)];
+      if (pg && pg !== lastP) { h += '<div class="r-pno">' + arNum(pg) + '</div>'; lastP = pg; }
+      h += '<span class="rv" data-i="' + (k + 1) + '">' + v[k] + ' ﴿' + arNum(k + 1) + '﴾</span> ';
+    }
     return h;
   }
   function rdRender() {
