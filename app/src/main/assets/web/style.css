@@ -858,3 +858,15 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wgp-timer .wgp-c small { font-size: .5em; margin: 0 6px; }
 .wgp-timer span:not(.wgp-c) { font-weight: 700; font-size: .85em; }
 .wg-sub { margin: 18px 0 2px; }
+/* the TV, guest mode: a big welcome where the occasions are; no birthdays or family lines */
+.guest { display: none; }
+#stage.g-mode .guest { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; flex: 1; }
+.guest span { font-size: 34px; color: var(--muted); }
+.guest b { font-size: 64px; color: var(--gold); line-height: 1.15; }
+#stage.g-mode #events, #stage.g-mode .bday { display: none !important; }
+#stage.g-mode.s-bday .deco { display: none; }
+.tv-guest-h { margin-top: 40px; }
+/* the phone, traveller mode */
+.trip { margin-top: 20px; padding: 26px 30px; display: flex; flex-direction: column; gap: 10px; font-size: 30px; text-align: right; }
+.trip-t { font-size: 34px; font-weight: 700; }
+.trip-n { font-size: 25px; }

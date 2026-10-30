@@ -29,7 +29,7 @@
     return {
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
       // sunrise: a silent note on the phone; friday: an hour before Jumu'ah; weather: dust, rain, heat, cold (phone)
-      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true, kaaba: true }, s.alerts),
+      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true, kaaba: true, travel: true }, s.alerts),
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
@@ -71,6 +71,9 @@
       evCard: s.evCard || {}, // occasion → its card letter ('a' 'b' 'c'; '' = its own card); unset = the default
       // the city of the prayer times: 'auto' (found from the internet connection) or chosen by search
       loc: s.loc || { mode: 'city', name: 'الرياض', country: 'السعودية', lat: 24.7136, lon: 46.6753, tz: 'Asia/Riyadh', cc: 'SA' },
+      home: s.home || { name: 'الرياض', lat: 24.7136, lon: 46.6753 }, // traveller mode: the distance is counted from here
+      trip: s.trip || { on: false }, // a journey under way (its notification is sent once)
+      guest: s.guest || { on: false, name: '' }, // the TV: guest mode (until it is ended)
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
       // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
       theme: s.theme || 'auto', // 'auto' (dark at night) · 'light' · 'dark'
@@ -907,12 +910,12 @@
     return null;
   }
   function showReminder(t) {
-    var r = P.ymd(t), sp = special(r), n = Math.floor(t / (3 * MIN));
+    var r = P.ymd(t), sp = S.guest.on ? null : special(r), n = Math.floor(t / (3 * MIN));
     var key = sp ? sp.id : String(n);
     if (key === lastQ) return;
     var first = lastQ === '';
     lastQ = key;
-    var q = sp || (n % 2 ? famMessage(Math.floor(n / 2)) : reminder(Math.floor(n / 2))), box = $('quote-box');
+    var q = sp || (n % 2 && !S.guest.on ? famMessage(Math.floor(n / 2)) : reminder(Math.floor(n / 2))), box = $('quote-box');
     function put() {
       $('quote-type').textContent = q.type;
       $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
@@ -927,7 +930,7 @@
   }
 
   // ---------- every second ----------
-  var lastDay = '', night = null, skyKey = null;
+  var lastDay = '', night = null, skyKey = null, tripMin = -1;
   function dayOf(y, m, d) {
     var T = P.dayTimes(y, m, d, S.offsets);
     T.maghribAt = T.at.maghrib;
@@ -950,6 +953,7 @@
     stage.classList.toggle('idle', TV && Date.now() - lastKeyAt > 10000);
     $('clock').textContent = P.full(t);
     showReminder(t);
+    if (!TV && Math.floor(t / MIN) !== tripMin) { tripMin = Math.floor(t / MIN); tripCheck(today); }
     fridayMorning = today.friday && t >= today.at.sunrise && t < today.at.dhuhr;
     if (today.friday) $('fr-left').textContent = t < today.at.dhuhr ? 'متبقٍّ على الجمعة ' + P.leftHM(today.at.dhuhr - t) : '';
     showFact(t, today, yest);
@@ -1262,7 +1266,9 @@
       locResults.map(function (g, i) {
         return '<div class="srow"><span class="sname">' + esc(g.name) + ' <span class="muted">· ' + esc([g.admin1, g.country].filter(Boolean).join('، ')) + '</span></span>' +
           '<button class="sbtn al f" data-k="loc-' + i + '">اختيار</button></div>';
-      }).join('');
+      }).join('') +
+      (TV ? '' : '<div class="srow"><span class="sname">البيت (لوضع المسافر): ' + esc(S.home.name) + '</span>' +
+        (S.home.name !== S.loc.name ? '<button class="sbtn al f" data-k="home">اجعل ' + esc(S.loc.name) + ' البيت</button>' : '') + '</div>');
     $('set-sound').innerHTML = '<div class="muted set-note">صوت التنبيه لكل صلاة</div>' + FIVE.map(function (k) { return [k, P.name(k)]; }).map(function (x) {
       return '<div class="srow snd-row"><span class="sname">' + x[1] + '</span><span class="snd-opts">' + SOUNDS.map(function (o) {
         return '<button class="sbtn f' + (S.sound[x[0]] === o[0] ? ' on' : '') + '" data-k="snd-' + x[0] + '-' + o[0] + '">' + o[1] + '</button>';
@@ -1278,6 +1284,7 @@
       '<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>';
     $('sum-sync').textContent = same && sAt ? '✓' : '';
     $('set-more-al').innerHTML = (TV ? [] : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']])
+      .concat(TV ? [] : [['travel', 'وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ' + S.home.name]])
       .concat([['kaaba', 'تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة']]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
     }).join('');
@@ -1300,6 +1307,7 @@
     }).join('') : '<div class="muted set-note">لا توجد اختصارات</div>';
     var overlay = !A || A.canOverlay();
     $('set-general').innerHTML =
+      '<div class="srow"><span class="sname">وضع الضيوف' + (S.guest.on ? ' <span class="muted">· ' + esc(S.guest.name || 'ضيوفنا الكرام') + '</span>' : '') + '</span><button class="sbtn f' + (S.guest.on ? ' on' : '') + '" data-k="guest">' + (S.guest.on ? 'يعمل · إنهاء' : 'متوقف') + '</button></div>' +
       '<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f' + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? 'يعمل' : 'متوقف') + '</button></div>' +
       (A && A.dreamOn ? '<div class="srow"><span class="sname">شاشة التوقف (Screensaver)</span><button class="sbtn f' + (A.dreamOn() ? ' on' : '') + '" data-k="dream">' + (A.dreamOn() ? 'يعمل' : 'متوقف') + '</button>' +
         (A.dreamOn() ? '<button class="sbtn f" data-k="dreamset">اختيارها في إعدادات التلفزيون</button>' : '') + '</div>' : '') +
@@ -1875,6 +1883,8 @@
       '<div class="tm-sheet-body"><div class="tv-quick">' + TV_QUICK.map(function (q, i) { return '<button class="pill f" data-tv="q' + i + '">' + q + '</button>'; }).join('') + '</div>' +
       '<label class="tm-lbl" for="tv-text">أو اكتب رسالتك</label><input id="tv-text" class="inp f" maxlength="120" placeholder="مثل: كل عام وأنتم بخير">' +
       '<button class="gold-btn f tv-send" data-tv="send">إرسال</button>' +
+      '<div class="tm-lbl tv-guest-h">وضع الضيوف</div><input id="guest-in" class="inp f" maxlength="30" placeholder="ضيوفنا الكرام">' +
+      '<div class="tv-quick"><button class="pill f" data-tv="gon">تشغيل وضع الضيوف</button><button class="pill f" data-tv="goff">إنهاء وضع الضيوف</button></div>' +
       (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + '</div>';
   }
   function tvSend(text) {
@@ -1886,6 +1896,7 @@
   function tvAction(k) {
     if (k === 'close') { tvOpen = false; tvState = ''; tvRender(); $('tv-btn').focus(); return; }
     if (k === 'send') { tvSend($('tv-text').value); return; }
+    if (k === 'gon' || k === 'goff') { guestSend(k === 'gon'); return; }
     if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
   }
   // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
@@ -1914,12 +1925,50 @@
     if (!j) return;
     var o; try { o = JSON.parse(j); } catch (e) { return; }
     SYNC_KEYS.forEach(function (k) { if (o[k] !== undefined) S[k] = o[k]; });
+    if (o.guest) { S.guest = o.guest; guestApply(); }
     save();
     P.setIqamah(S.iqMin); P.setHijriAdj(S.hijriAdj);
     autoCache.key = ''; lastQ = ''; lastDay = '';
     tick();
     if (screen === 'settings') setRender();
   }
+  // ---------- guest mode on the TV: a big welcome instead of the occasions; no private family messages ----------
+  function guestApply() {
+    stage.classList.toggle('g-mode', !!S.guest.on);
+    $('guest-name').textContent = S.guest.name || 'ضيوفنا الكرام';
+    lastQ = '';
+  }
+  function guestSend(on) {
+    var nm = $('guest-in') ? $('guest-in').value.trim() : '';
+    if (!A || !A.tvSend) return;
+    tvState = 'send'; tvRender();
+    try { A.tvSend(JSON.stringify({ k: 'sync', s: { guest: { on: on, name: nm } } }), 'guest'); } catch (e) { tvState = 'fail'; tvRender(); }
+  }
+
+  // ---------- traveller mode (phone): 81 km or more from home, the Shafi'i allowances of the traveller ----------
+  function km(a, b) {
+    var R = 6371, dLa = (b.lat - a.lat) * Math.PI / 180, dLo = (b.lon - a.lon) * Math.PI / 180;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function tripCheck(today) {
+    if (TV) return;
+    var d = Math.round(km(S.home, S.loc)), away = S.alerts.travel && d >= 81;
+    $('trip').classList.toggle('hidden', !away);
+    if (away) {
+      var T = today.at;
+      $('trip').innerHTML = '<div class="gold trip-t">أنت مسافر · <span class="ltr">' + d + '</span> كم عن ' + esc(S.home.name) + '</div>' +
+        '<div>تُقصر الظهر والعصر والعشاء ركعتين</div>' +
+        '<div><b>جمع تقديم:</b> الظهر والعصر ' + P.full(T.dhuhr) + ' · المغرب والعشاء ' + P.full(T.maghrib) + '</div>' +
+        '<div><b>جمع تأخير:</b> في وقت العصر ' + P.full(T.asr) + ' · وفي وقت العشاء ' + P.full(T.isha) + '</div>' +
+        '<div class="muted trip-n">إن نويت الإقامة أربعة أيام غير يومي الدخول والخروج انقطع سفرك · منهاج الطالبين</div>';
+    }
+    if (away && !S.trip.on) {
+      S.trip = { on: true, at: Date.now() }; save();
+      try { A && A.notifyNow && A.notifyNow('أنت مسافر: ' + d + ' كم عن ' + S.home.name, 'يجوز قصر الرباعية والجمع بين الظهر والعصر والمغرب والعشاء'); } catch (e) {}
+    } else if (!away && S.trip.on) { S.trip = { on: false }; save(); }
+  }
+
   // the TV: a message from a phone, on top of the screen for a minute (a press closes it)
   var msgTimer = null;
   function showMessage(title, text) {
@@ -2078,6 +2127,8 @@
       S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
       P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
     }
+    if (a === 'guest') { S.guest = { on: !S.guest.on, name: S.guest.name }; save(); guestApply(); setRender(); return; }
+    if (a === 'home') { S.home = { name: S.loc.name, lat: S.loc.lat, lon: S.loc.lon }; S.trip = { on: false }; save(); tripMin = -1; tick(); setRender(); return; }
     if (a === 'syncnow') { syncNow(true); setRender(); return; }
     if (a === 'ndim') { S.nightDim = !S.nightDim; save(); setRender(); return; }
     if (a === 'theme') { S.theme = v; night = null; tick(); }
@@ -2412,7 +2463,7 @@
       if (screen === 'settings') setRender();
       sendSchedule();
       if (Date.now() - wxAt > 10 * MIN) loadWeather();
-      if (TV) syncTake(); else syncSoon();
+      if (TV) { guestApply(); syncTake(); } else syncSoon();
       if (screen === 'widgets') wgRender(); // a widget may have been added or removed meanwhile
       // phone travelling: the automatic city follows the phone's location
       if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
@@ -2420,7 +2471,7 @@
   };
 
   if (A && TV) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
-  if (TV) syncTake();
+  if (TV) { guestApply(); syncTake(); }
   showCity();
   if (S.loc.mode === 'auto') locateAuto();
   renderShortcuts();

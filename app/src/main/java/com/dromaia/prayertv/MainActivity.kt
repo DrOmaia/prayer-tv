@@ -275,6 +275,10 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun weatherWatch(json: String) = Weather.watch(this@MainActivity, json)
 
+        // the phone: a notification now (traveller mode)
+        @JavascriptInterface
+        fun notifyNow(title: String, sub: String) = Device.notify(this@MainActivity, title, sub, "tone")
+
         @JavascriptInterface
         fun placedWidgets(): String = Widgets.placedCounts(this@MainActivity)
 

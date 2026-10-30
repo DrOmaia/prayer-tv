@@ -20,6 +20,8 @@
         <button id="w1-btn" class="weather f" data-go="weather" aria-label="الطقس في إربد"><span id="w1-icon" class="w-icon"></span><b class="w-city">إربد</b><span id="w1-temp" class="w-temp">—</span><span id="w1-hl" class="w-hl"></span></button>
       </div>
       <div id="events" class="events"></div>
+      <!-- the TV, guest mode (turned on from the phone): a big welcome where the occasions are -->
+      <div id="guest" class="guest"><span>أهلًا وسهلًا</span><b id="guest-name"></b></div>
       <div class="top-right">
         <button id="tv-btn" class="round f phone-only" aria-label="رسالة إلى التلفزيون"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
         <button id="theme-btn" class="round f" aria-label="الوضع الداكن / الفاتح"><svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
@@ -35,6 +37,7 @@
         <div id="g-date" class="g-date"></div>
         <div class="h-date"><span id="moon" class="moon"></span><span id="h-date"></span> <span id="season-badge" class="badge-gold hidden"></span></div>
         <div id="bday" class="bday hidden"></div>
+        <div id="trip" class="trip card hidden"></div>
         <div id="ramadan" class="ramadan hidden">
           <div id="iftar-card" class="rcard"><div><b>متبقٍّ للإفطار</b><span class="muted">المغرب <span id="iftar-at"></span></span></div><span id="iftar-left" class="rnum" dir="ltr"></span></div>
           <div id="suhoor-card" class="rcard"><div><b>متبقٍّ للسحور</b><span class="muted">الإمساك <span id="suhoor-at"></span></span></div><span id="suhoor-left" class="rnum" dir="ltr"></span></div>
