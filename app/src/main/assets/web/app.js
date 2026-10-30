@@ -75,6 +75,7 @@
       trip: s.trip || { on: false }, // a journey under way (its notification is sent once)
       guest: s.guest || { on: false, name: '' }, // the TV: guest mode (until it is ended)
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
+      qMode: s.qMode || 'listen', // the Quran tab: 'read' or 'listen'
       qMark: s.qMark || null, // the reader's mark: where the reading stopped {s, i, at}
       qRemind: Object.assign({ on: false, time: '21:00' }, s.qRemind), // a daily reminder of the reading (phone)
       // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
@@ -1200,7 +1201,7 @@
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
   // the size of the text: pinch with two fingers on this screen (kept)
-  function kApplySize() { $('kahf').style.setProperty('--qz', S.qSize || 1); }
+  function kApplySize() { document.documentElement.style.setProperty('--qz', S.qSize || 1); }
   function kReadRender(i) {
     var rd = $('k-read');
     if (rd.dataset.s !== String(kahf.s)) {
@@ -1262,8 +1263,22 @@
     else kPlay(kahf.i);
   }
   // the list of the 114 surahs, and «continue» from the last verse heard
+  // the Quran tab: two main choices, «القراءة» (the page, with its mark) and «الصوت» (the recitation)
   function quranRender() {
-    var L = S.qLast;
+    var mode = S.qMode || 'listen', read = mode === 'read', L = S.qLast;
+    $('q-m-read').classList.toggle('on', read); $('q-m-listen').classList.toggle('on', !read);
+    $('q-reciters').classList.toggle('hidden', read);
+    $('q-list').classList.toggle('hidden', read);
+    $('q-readlist').classList.toggle('hidden', !read);
+    if (read) {
+      var M = S.qMark;
+      $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + '">أكمل من سورة ' + QURAN[M.s - 1][0] + ' · الآية ' + M.i + '</button>' : '';
+      $('q-sub').textContent = 'اختر سورة واقرأ بهدوء، وعلّم موضعك';
+      if (!$('q-readlist').firstChild) $('q-readlist').innerHTML = QURAN.map(function (q, k) {
+        return '<button class="sura f" data-rsura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, 'آية', 'آيتان', 'آيات', 'آية') + '</span></button>';
+      }).join('');
+      return;
+    }
     $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
       'متابعة سورة ' + QURAN[L.s - 1][0] + ' · الآية ' + L.i + '</button>' : '';
     $('q-sub').textContent = 'اختر سورة · بصوت الشيخ ' + reciter().name;
@@ -1982,7 +1997,7 @@
     if (box.dataset.s !== String(rd.s)) { box.dataset.s = rd.s; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
     $('r-mark').innerHTML = m ? '<span>توقفت عند سورة ' + QURAN[m.s - 1][0] + ' · الآية ' + m.i + '</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>' : '<span class="muted">لم تحدّد موضعك بعد</span>';
-    rdHl();
+    kApplySize(); rdHl();
   }
   function rdHl() {
     var m = S.qMark;
@@ -2438,6 +2453,8 @@
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
     if (el.dataset.kread) { kReadToggle(); return; }
     if (el.dataset.rnav) { rdNav(+el.dataset.rnav); return; }
+    if (el.dataset.rsura) { rdOpen({ s: +el.dataset.rsura, i: +(el.dataset.rfrom || 0) }); return; }
+    if (el.dataset.qmode) { S.qMode = el.dataset.qmode; save(); quranRender(); focusFirst(document.querySelector('#quran .f')); return; }
     if (el.dataset.rmark) { rdMark(); return; }
     if (el.dataset.rclear) { rdClear(); return; }
     if (el.dataset.rgo) { rdSet(S.qMark); rdRender(); return; }
@@ -2516,13 +2533,13 @@
     var d0 = 0, z0 = 1, raf = 0, kq = false;
     function dist(e) { var a = e.touches[0], b = e.touches[1]; return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
     document.addEventListener('touchstart', function (e) {
-      if (e.touches.length === 2 && screen === 'kahf') { d0 = dist(e); z0 = S.qSize || 1; kq = true; }
+      if (e.touches.length === 2 && (screen === 'kahf' || screen === 'reader')) { d0 = dist(e); z0 = S.qSize || 1; kq = true; }
       else if (e.touches.length === 2 && stage.classList.contains('portrait')) { d0 = dist(e); z0 = zoomOf(); }
     }, { passive: true });
     document.addEventListener('touchmove', function (e) {
       if (e.touches.length !== 2 || !d0) return;
       e.preventDefault();
-      if (kq) { S.qSize = Math.round(Math.max(.7, Math.min(2.4, z0 * dist(e) / d0)) * 100) / 100; kApplySize(); return; }
+      if (kq) { S.qSize = Math.round(Math.max(.7, Math.min(3, z0 * dist(e) / d0)) * 100) / 100; kApplySize(); return; }
       var z = Math.max(.8, Math.min(1.6, z0 * dist(e) / d0));
       if (Math.abs(z - zoomOf()) < .01) return;
       S.zoom = Math.round(z * 100) / 100;

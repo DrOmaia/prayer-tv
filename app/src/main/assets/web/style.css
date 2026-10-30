@@ -201,8 +201,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* kahf */
 #kahf { padding: 56px 96px; }
 .kahf-text { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; text-align: center; }
-.k-side { font-size: calc(38px * var(--qz, 1)); line-height: 1.8; color: var(--faint); max-width: 1500px; max-height: 140px; overflow: hidden; }
-.k-cur { font-size: calc(70px * var(--qz, 1)); line-height: 1.8; max-width: 1650px; }
+.k-side { font-size: calc(52px * var(--qz, 1)); line-height: 1.8; color: var(--faint); max-width: 1500px; max-height: 140px; overflow: hidden; }
+.k-cur { font-size: calc(96px * var(--qz, 1)); line-height: 1.8; max-width: 1650px; }
 .kahf-bar { display: flex; flex-direction: column; gap: 20px; }
 .k-info { display: flex; justify-content: space-between; font-size: 22px; }
 .k-track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
@@ -873,7 +873,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* Surah Al-Kahf: reading mode (the whole surah as a page; a tap on a verse plays it) and the size by pinch */
 .k-readbtn { margin-inline-start: auto; height: 80px; padding: 0 34px; font-size: 28px; }
 .k-readbtn.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
-.kahf-read { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(46px * var(--qz, 1)); line-height: 2.1; }
+.kahf-read { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(64px * var(--qz, 1)); line-height: 2.1; }
 .kahf-read::-webkit-scrollbar { display: none; }
 .kv { display: inline; background: none; border: none; padding: 0 2px; font: inherit; color: var(--ink); border-radius: 12px; cursor: pointer; }
 .kv.on { background: rgba(226,185,105,.28); color: var(--ink); }
@@ -881,10 +881,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 /* reading without audio: the page, the mark and the bar */
 .r-mark { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 26px; padding: 0 40px 12px; }
-.r-text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(46px * var(--qz, 1)); line-height: 2.2; }
+.r-text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(64px * var(--qz, 1)); line-height: 2.2; }
 .r-text::-webkit-scrollbar { display: none; }
 .rv { border-radius: 14px; padding: 0 2px; }
 .rv.cur { background: rgba(226,185,105,.3); }
 .rv.mk::after { content: ' ★'; color: var(--gold); font-size: .6em; }
 .r-bar { display: flex; justify-content: center; gap: 18px; padding: 16px 20px 26px; flex-wrap: wrap; }
 .r-bar .pill, .r-bar .gold-btn { height: 80px; font-size: 28px; padding: 0 30px; }
+.q-modes { display: flex; gap: 20px; padding: 0 40px 20px; }
+.q-mode { flex: 1; height: 120px; font-size: 40px; font-weight: 700; border-radius: 30px; background: var(--card2); border: 2px solid var(--line); color: var(--ink); }
+.q-mode.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
