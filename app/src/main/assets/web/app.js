@@ -75,6 +75,8 @@
       trip: s.trip || { on: false }, // a journey under way (its notification is sent once)
       guest: s.guest || { on: false, name: '' }, // the TV: guest mode (until it is ended)
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
+      qMark: s.qMark || null, // the reader's mark: where the reading stopped {s, i, at}
+      qRemind: Object.assign({ on: false, time: '21:00' }, s.qRemind), // a daily reminder of the reading (phone)
       // alert sound: 'tone' (soft tone), 'adhan' (full, Masjid an-Nabawi), 'short' (the opening takbir), 'none'
       theme: s.theme || 'auto', // 'auto' (dark at night) · 'light' · 'dark'
       // each prayer its own sound (older settings had one for all and one for Fajr)
@@ -359,6 +361,15 @@
       if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: 'بعد ساعة: صلاة الجمعة ' + P.full(T.at.dhuhr),
         sub: 'اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ', snd: 'tone' });
     }
+    // the phone: a daily reminder of the reading at the chosen time (the place of the mark is in its text)
+    if (!TV && S.qRemind.on) {
+      var hm = S.qRemind.time.split(':'), mk = S.qMark;
+      for (var k = 0; k < 60; k++) {
+        var dd = P.addDays(r.y, r.m, r.d, k), at = P.noonOf(dd.y, dd.m, dd.d) - 12 * HR + (+hm[0] * 60 + +hm[1]) * MIN;
+        if (at > t) ev.push({ at: at, title: 'ورد القراءة', snd: 'tone',
+          sub: mk ? 'توقفت عند سورة ' + QURAN[mk.s - 1][0] + ' · الآية ' + mk.i + '. هل تكمل الآن؟' : 'ابدأ وردك اليوم من المصحف' });
+      }
+    }
     if (S.alerts.kaaba) [r.y, r.y + 1].forEach(function (y) {
       P.kaabaSun(y).forEach(function (at) {
         var sub = 'استقبل الشمس واجعل ظلّك خلفك: هذا اتجاه القبلة بالضبط';
@@ -395,6 +406,7 @@
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
     try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, styles: S.wstyle, months: months,
+      mark: S.qMark ? { s: S.qMark.s, name: QURAN[S.qMark.s - 1][0], i: S.qMark.i } : null,
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
         var W = S.timerWg;
@@ -1308,7 +1320,10 @@
       .concat(TV ? [] : [['travel', 'وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ' + S.home.name]])
       .concat([['kaaba', 'تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة']]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
-    }).join('');
+    }).join('') +
+      (TV ? '' : '<div class="srow"><span class="sname">تذكير ورد القراءة' + (S.qRemind.on ? ' <span class="muted">· الساعة ' + S.qRemind.time + '</span>' : '') + '</span>' +
+        (S.qRemind.on ? '<button class="sbtn f" data-k="remm">−30 د</button><button class="sbtn f" data-k="remp">+30 د</button>' : '') +
+        '<button class="sbtn al f' + (S.qRemind.on ? ' on' : '') + '" data-k="rem">' + (S.qRemind.on ? 'يعمل' : 'متوقف') + '</button></div>');
     $('set-prayers').innerHTML = ORDER.map(function (k) {
       var off = S.offsets[k];
       return '<div class="srow"><span class="sname">' + P.name(k) + '</span><span class="stime">' + P.full(T.at[k]) + '</span>' +
@@ -1953,6 +1968,56 @@
     tick();
     if (screen === 'settings') setRender();
   }
+  // ---------- reading without audio (the whole Quran as a page; one mark keeps the place) ----------
+  var rd = { s: 1, i: 0 };
+  function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
+  function rdText(s) {
+    var v = QURAN[s - 1][1], h = '<span class="rv" data-i="0">' + BASMALA + '</span> ';
+    for (var k = 0; k < v.length; k++) h += '<span class="rv" data-i="' + (k + 1) + '">' + v[k] + ' ﴿' + arNum(k + 1) + '﴾</span> ';
+    return h;
+  }
+  function rdRender() {
+    var box = $('r-text');
+    $('r-title').textContent = 'سورة ' + QURAN[rd.s - 1][0];
+    if (box.dataset.s !== String(rd.s)) { box.dataset.s = rd.s; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
+    var m = S.qMark;
+    $('r-mark').innerHTML = m ? '<span>توقفت عند سورة ' + QURAN[m.s - 1][0] + ' · الآية ' + m.i + '</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>' : '<span class="muted">لم تحدّد موضعك بعد</span>';
+    rdHl();
+  }
+  function rdHl() {
+    var m = S.qMark;
+    Array.prototype.forEach.call($('r-text').querySelectorAll('.rv'), function (v) {
+      var i = +v.dataset.i;
+      v.classList.toggle('cur', i === rd.i);
+      v.classList.toggle('mk', !!m && m.s === rd.s && m.i === i);
+    });
+    var cur = $('r-text').querySelector('.rv.cur');
+    if (cur && !rdScrolling) cur.scrollIntoView({ block: 'center' });
+  }
+  var rdScrolling = false, rdT = 0;
+  // the verse at the middle of the page is the one being read (scrolling moves the highlight)
+  function rdNear() {
+    var box = $('r-text'), mid = box.getBoundingClientRect().top + box.clientHeight * .4, best = null, bd = 1e9;
+    Array.prototype.forEach.call(box.querySelectorAll('.rv'), function (v) {
+      var d = Math.abs(v.getBoundingClientRect().top - mid); if (d < bd) { bd = d; best = v; }
+    });
+    if (best && +best.dataset.i !== rd.i) { rd.i = +best.dataset.i; rdHl(); }
+  }
+  $('r-text').addEventListener('scroll', function () {
+    rdScrolling = true; clearTimeout(rdT);
+    requestAnimationFrame(rdNear);
+    rdT = setTimeout(function () { rdScrolling = false; }, 300);
+  }, { passive: true });
+  function rdMark() {
+    S.qMark = { s: rd.s, i: rd.i, at: Date.now() }; save(); sendWidget(); sendSchedule(); rdRender();
+  }
+  function rdClear() { S.qMark = null; save(); sendWidget(); sendSchedule(); rdRender(); }
+  function rdNav(d) {
+    var n = rd.s + d; if (n < 1 || n > 114) return;
+    rd.s = n; rd.i = 0; $('r-text').dataset.s = ''; rdRender(); $('r-text').scrollTop = 0;
+  }
+  function rdOpen(m) { rdSet(m); if (screen === 'reader') rdRender(); else go('reader'); }
+
   // ---------- guest mode on the TV: a big welcome instead of the occasions; no private family messages ----------
   function guestApply() {
     stage.classList.toggle('g-mode', !!S.guest.on);
@@ -2148,6 +2213,11 @@
       S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
       P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
     }
+    if (a === 'rem') { S.qRemind.on = !S.qRemind.on; save(); sendSchedule(); setRender(); return; }
+    if (a === 'remm' || a === 'remp') {
+      var hm = S.qRemind.time.split(':'), mins = ((+hm[0] * 60 + +hm[1]) + (a === 'remp' ? 30 : -30) + 1440) % 1440;
+      S.qRemind.time = pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60); save(); sendSchedule(); setRender(); return;
+    }
     if (a === 'guest') { S.guest = { on: !S.guest.on, name: S.guest.name }; save(); guestApply(); setRender(); return; }
     if (a === 'home') { S.home = { name: S.loc.name, lat: S.loc.lat, lon: S.loc.lon }; S.trip = { on: false }; save(); tripMin = -1; tick(); setRender(); return; }
     if (a === 'syncnow') { syncNow(true); setRender(); return; }
@@ -2273,6 +2343,7 @@
     if (name === 'imsak') { imYear = null; imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
     if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
+    if (name === 'reader') { rdRender(); focusFirst(document.querySelector('#reader .f')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
     if (name === 'apps') { appsRender(); focusFirst(document.querySelector('#apps-grid .f')); return; }
     if (name === 'settings') setRender();
@@ -2360,10 +2431,16 @@
   });
 
   document.addEventListener('click', function (e) {
+    var rv = e.target.closest && e.target.closest('.rv');
+    if (rv && screen === 'reader') { rd.i = +rv.dataset.i; rdHl(); return; }
     var el = e.target.closest('button');
     if (!el) return;
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
     if (el.dataset.kread) { kReadToggle(); return; }
+    if (el.dataset.rnav) { rdNav(+el.dataset.rnav); return; }
+    if (el.dataset.rmark) { rdMark(); return; }
+    if (el.dataset.rclear) { rdClear(); return; }
+    if (el.dataset.rgo) { rdSet(S.qMark); rdRender(); return; }
     if (el.dataset.tab) {
       // bottom bar (phone): go straight to that screen
       if (el.dataset.tab === screen) return;
@@ -2376,6 +2453,7 @@
     }
     if (el.hasAttribute('data-go')) {
       if (el.dataset.go === 'apps') appsMode = 'launch';
+      if (el.dataset.go === 'reader') rdSet(S.qMark || { s: 1, i: 0 });
       if (el.dataset.go === 'kahf') { kahf.s = +(el.dataset.sura || 18); kahf.from = +(el.dataset.from || 0); }
       go(el.dataset.go); return;
     }
@@ -2481,7 +2559,10 @@
     },
     sync: function () { syncTake(); },
     message: function (title, text) { showMessage(title, text); },
-    open: function (name) { if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); } },
+    open: function (name) {
+      if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return; }
+      if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); }
+    },
     onResume: function () {
       appsCache = null;
       if (screen === 'home') renderShortcuts();

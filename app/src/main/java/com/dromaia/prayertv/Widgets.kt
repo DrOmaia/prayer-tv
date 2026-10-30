@@ -68,7 +68,7 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
-        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java)
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, ReaderWidget::class.java)
 
     // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
     fun timers(ctx: Context): List<Pair<String, String>> {
@@ -321,6 +321,7 @@ object Widgets {
         each(MonthWidget::class.java) { monthViews(ctx, d, styleOf("month"), st, now) }
         each(ConvertWidget::class.java) { convertViews(ctx, styleOf("convert"), st) }
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
+        each(ReaderWidget::class.java) { readerViews(ctx, d) }
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
@@ -672,6 +673,21 @@ object Widgets {
         return b
     }
 
+    // the reading widget: where the reading stopped (the page's mark); a tap opens the reader there
+    private fun readerViews(ctx: Context, d: JSONObject?): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_reader)
+        rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "reader", 9))
+        val m = d?.optJSONObject("mark")
+        if (m == null) {
+            rv.setTextViewText(R.id.rd_line, "اضغط للبدء")
+            rv.setTextViewText(R.id.rd_sub, "ابدأ وردك من المصحف")
+        } else {
+            rv.setTextViewText(R.id.rd_line, "سورة " + m.optString("name") + " · الآية " + m.optInt("i"))
+            rv.setTextViewText(R.id.rd_sub, "توقفت هنا، اضغط لتكمل")
+        }
+        return rv
+    }
+
     private fun eventViews(ctx: Context, d: JSONObject?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_event)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
@@ -750,6 +766,10 @@ class MonthWidget : AppWidgetProvider() {
 }
 
 class ConvertWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
+}
+
+class ReaderWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 

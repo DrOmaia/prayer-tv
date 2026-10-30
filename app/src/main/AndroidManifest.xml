@@ -110,6 +110,13 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_convert_info" />
         </receiver>
 
+        <receiver android:name=".ReaderWidget" android:exported="false" android:label="@string/widget_reader">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_reader_info" />
+        </receiver>
+
         <receiver android:name=".TimerWidget" android:exported="false" android:label="@string/widget_timer">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

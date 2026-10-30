@@ -138,6 +138,23 @@
     </div>
   </section>
 
+  <!-- Reading without audio: the whole Quran as a page; a mark keeps the place (phone) -->
+  <section id="reader" class="screen hidden">
+    <header class="top">
+      <div class="title-row">
+        <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div><div id="r-title" class="quran big-title"></div><div class="muted sub-title">اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية</div></div>
+      </div>
+    </header>
+    <div id="r-mark" class="r-mark"></div>
+    <div id="r-text" class="r-text quran"></div>
+    <div class="r-bar">
+      <button class="pill f" data-rnav="-1">السورة السابقة</button>
+      <button class="gold-btn f" data-rmark="1">علّمت هنا</button>
+      <button class="pill f" data-rnav="1">السورة التالية</button>
+    </div>
+  </section>
+
   <!-- Timers: the time since / until a date -->
   <section id="timers" class="screen hidden">
     <header class="top">
@@ -215,6 +232,7 @@
       </div>
       <div id="q-resume" class="top-right"></div>
     </header>
+    <div class="q-rec"><button class="pill f" data-go="reader">القراءة بدون صوت</button></div>
     <div id="q-reciters" class="q-rec"></div>
     <div id="q-list" class="q-list"></div>
   </section>
