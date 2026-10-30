@@ -2024,6 +2024,7 @@
     var first = window.MUSHAF_PAGES[n][0];
     rd.s = first[0]; rd.i = first[1];
     rdRender();
+    $('r-pages').scrollTop = 0; // the next page starts from its first line
   }
   function rdView(v) { S.qView = v; save(); rdRender(); }
   function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
