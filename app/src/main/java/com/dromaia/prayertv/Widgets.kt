@@ -185,6 +185,7 @@ object Widgets {
             if (cards.size == 12) break
         }
         if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, "عدّاد", "اضغط مطولًا ← الإعدادات لاختياره"))
+        rv.removeAllViews(R.id.rot_flip) // the launcher keeps the old cards between refreshes
         cards.forEachIndexed { i, c ->
             val item = RemoteViews(ctx.packageName, R.layout.widget_rotate_item)
             item.setInt(R.id.rt_bg, "setColorFilter", c.bg)
@@ -399,6 +400,8 @@ object Widgets {
         want.forEach { (lay, pos) -> if (pos in free) { placed[lay] = pos; free.remove(pos) } }
         want.forEach { (lay, _) -> if (lay !in placed) { placed[lay] = free.removeAt(0) } }
         val gravity = mapOf("r" to Gravity.START, "c" to Gravity.CENTER_HORIZONTAL, "l" to Gravity.END)
+        // the launcher keeps the widget's views between refreshes: empty the three places first, or the parts pile up
+        for (slot in intArrayOf(R.id.slot_r, R.id.slot_c, R.id.slot_l)) rv.removeAllViews(slot)
         placed.forEach { (lay, pos) ->
             rv.addView(when (pos) { "r" -> R.id.slot_r; "c" -> R.id.slot_c; else -> R.id.slot_l }, RemoteViews(ctx.packageName, lay))
         }
