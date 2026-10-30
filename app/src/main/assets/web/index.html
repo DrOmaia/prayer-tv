@@ -116,10 +116,13 @@
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
         <div><div id="k-title" class="quran big-title">سورة الكهف</div><div id="k-sub" class="muted sub-title">بصوت الشيخ مشاري العفاسي</div></div>
+        <button id="k-read-btn" class="pill f k-readbtn" data-kread="1">وضع القراءة</button>
       </div>
       <div id="kahf-clock" class="muted sub-title"></div>
     </header>
-    <div class="kahf-text">
+    <!-- reading mode: the whole surah as a page; a tap on a verse plays it from there -->
+    <div id="k-read" class="kahf-read quran hidden"></div>
+    <div id="k-text" class="kahf-text">
       <div id="k-prev" class="quran k-side"></div>
       <div id="k-cur" class="quran k-cur"></div>
       <div id="k-next" class="quran k-side"></div>

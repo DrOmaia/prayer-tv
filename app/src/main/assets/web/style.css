@@ -201,8 +201,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* kahf */
 #kahf { padding: 56px 96px; }
 .kahf-text { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; text-align: center; }
-.k-side { font-size: 38px; line-height: 1.8; color: var(--faint); max-width: 1500px; max-height: 140px; overflow: hidden; }
-.k-cur { font-size: 70px; line-height: 1.8; max-width: 1650px; }
+.k-side { font-size: calc(38px * var(--qz, 1)); line-height: 1.8; color: var(--faint); max-width: 1500px; max-height: 140px; overflow: hidden; }
+.k-cur { font-size: calc(70px * var(--qz, 1)); line-height: 1.8; max-width: 1650px; }
 .kahf-bar { display: flex; flex-direction: column; gap: 20px; }
 .k-info { display: flex; justify-content: space-between; font-size: 22px; }
 .k-track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
@@ -870,3 +870,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .trip { margin-top: 20px; padding: 26px 30px; display: flex; flex-direction: column; gap: 10px; font-size: 30px; text-align: right; }
 .trip-t { font-size: 34px; font-weight: 700; }
 .trip-n { font-size: 25px; }
+/* Surah Al-Kahf: reading mode (the whole surah as a page; a tap on a verse plays it) and the size by pinch */
+.k-readbtn { margin-inline-start: auto; height: 80px; padding: 0 34px; font-size: 28px; }
+.k-readbtn.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
+.kahf-read { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(46px * var(--qz, 1)); line-height: 2.1; }
+.kahf-read::-webkit-scrollbar { display: none; }
+.kv { display: inline; background: none; border: none; padding: 0 2px; font: inherit; color: var(--ink); border-radius: 12px; cursor: pointer; }
+.kv.on { background: rgba(226,185,105,.28); color: var(--ink); }
+#kahf { touch-action: pan-y; }

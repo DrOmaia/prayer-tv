@@ -1164,7 +1164,7 @@
   }
 
   // ---------- the Qur'an: any surah, verse by verse (Mishary Alafasy from everyayah.com), the verses on screen ----------
-  var kahf = { s: 18, i: 0, playing: false };
+  var kahf = { s: 18, i: 0, playing: false, read: false };
   var audio = new Audio(), pre = new Audio();
   pre.preload = 'auto';
   function pad3(n) { return ('00' + n).slice(-3); }
@@ -1187,8 +1187,29 @@
   }
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
+  // the size of the text: pinch with two fingers on this screen (kept)
+  function kApplySize() { $('kahf').style.setProperty('--qz', S.qSize || 1); }
+  function kReadRender(i) {
+    var rd = $('k-read');
+    if (rd.dataset.s !== String(kahf.s)) {
+      rd.dataset.s = kahf.s;
+      var h = '<button class="kv" data-i="0">' + kText(0) + '</button>';
+      for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kText(v) + '</button>';
+      rd.innerHTML = h;
+    }
+    Array.prototype.forEach.call(rd.querySelectorAll('.kv'), function (b) { b.classList.toggle('on', +b.dataset.i === i); });
+    var cv = rd.querySelector('.kv.on');
+    if (cv && kahf.playing) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  function kReadToggle() { kahf.read = !kahf.read; kRender(); }
   function kRender() {
     var i = kahf.i, cur = kText(i), n = kCount();
+    kApplySize();
+    $('k-read').classList.toggle('hidden', !kahf.read);
+    $('k-text').classList.toggle('hidden', kahf.read);
+    $('k-read-btn').classList.toggle('on', kahf.read);
+    $('k-read-btn').textContent = kahf.read ? 'وضع التلاوة' : 'وضع القراءة';
+    if (kahf.read) kReadRender(i);
     $('k-title').textContent = 'سورة ' + QURAN[kahf.s - 1][0];
     $('k-sub').textContent = 'بصوت الشيخ ' + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
@@ -2341,6 +2362,8 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest('button');
     if (!el) return;
+    if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
+    if (el.dataset.kread) { kReadToggle(); return; }
     if (el.dataset.tab) {
       // bottom bar (phone): go straight to that screen
       if (el.dataset.tab === screen) return;
@@ -2412,21 +2435,23 @@
 
   // pinch with two fingers (phone, upright): everything larger or smaller; the size is kept
   (function () {
-    var d0 = 0, z0 = 1, raf = 0;
+    var d0 = 0, z0 = 1, raf = 0, kq = false;
     function dist(e) { var a = e.touches[0], b = e.touches[1]; return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
     document.addEventListener('touchstart', function (e) {
-      if (e.touches.length === 2 && stage.classList.contains('portrait')) { d0 = dist(e); z0 = zoomOf(); }
+      if (e.touches.length === 2 && screen === 'kahf') { d0 = dist(e); z0 = S.qSize || 1; kq = true; }
+      else if (e.touches.length === 2 && stage.classList.contains('portrait')) { d0 = dist(e); z0 = zoomOf(); }
     }, { passive: true });
     document.addEventListener('touchmove', function (e) {
       if (e.touches.length !== 2 || !d0) return;
       e.preventDefault();
+      if (kq) { S.qSize = Math.round(Math.max(.7, Math.min(2.4, z0 * dist(e) / d0)) * 100) / 100; kApplySize(); return; }
       var z = Math.max(.8, Math.min(1.6, z0 * dist(e) / d0));
       if (Math.abs(z - zoomOf()) < .01) return;
       S.zoom = Math.round(z * 100) / 100;
       if (!raf) raf = requestAnimationFrame(function () { raf = 0; fit(); });
     }, { passive: false });
     document.addEventListener('touchend', function (e) {
-      if (d0 && e.touches.length < 2) { d0 = 0; save(); if (screen === 'settings') setRender(); }
+      if (d0 && e.touches.length < 2) { d0 = 0; kq = false; save(); if (screen === 'settings') setRender(); }
     }, { passive: true });
   })();
 
