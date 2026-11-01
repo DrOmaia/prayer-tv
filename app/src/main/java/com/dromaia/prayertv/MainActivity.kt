@@ -109,6 +109,9 @@ class MainActivity : Activity() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                 loader.shouldInterceptRequest(request.url)
 
+            // the page is ready: show the screen a widget or a notification asked for
+            override fun onPageFinished(view: WebView, url: String?) { openPending() }
+
             // the page never leaves the app's own files
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                 request.url.host != "appassets.androidplatform.net"
@@ -127,6 +130,7 @@ class MainActivity : Activity() {
         w.addJavascriptInterface(Bridge(), "Android")
         setContentView(w)
         val sc = intent?.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        pendingScreen = sc // applied once the page is ready (the hash below covers the first load too)
         w.loadUrl("https://appassets.androidplatform.net/assets/web/index.html" + if (sc.isNullOrEmpty()) "" else "#$sc")
         w.requestFocus()
         web = w
@@ -135,14 +139,23 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val sc = intent.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
-        if (!sc.isNullOrEmpty()) web?.evaluateJavascript("window.App && App.open('$sc')", null)
+        // kept: the page may not be ready yet (the app was in the background); applied again on resume
+        pendingScreen = intent.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        openPending()
+    }
+
+    private var pendingScreen: String? = null
+    private fun openPending() {
+        val sc = pendingScreen ?: return
+        if (sc.isEmpty()) { pendingScreen = null; return }
+        web?.evaluateJavascript("window.App && App.open('$sc') ? 1 : 0") { r -> if (r == "1") pendingScreen = null }
     }
 
     override fun onResume() {
         super.onResume()
         visible = true
         web?.evaluateJavascript("window.App && App.onResume()", null)
+        openPending()
     }
 
     override fun onPause() {

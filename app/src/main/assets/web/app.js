@@ -2642,9 +2642,11 @@
     },
     sync: function () { syncTake(); },
     message: function (title, text) { showMessage(title, text); },
+    // a widget or a notification asks for a screen; true once it is shown
     open: function (name) {
-      if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return; }
-      if (/^(convert|calendar|timers|weather)$/.test(name) && screen !== name) { if (iqOpen()) iqDismiss(); go(name); }
+      if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return true; }
+      if (/^(convert|calendar|timers|weather)$/.test(name)) { if (iqOpen()) iqDismiss(); if (screen !== name) go(name); return true; }
+      return false;
     },
     onResume: function () {
       appsCache = null;
