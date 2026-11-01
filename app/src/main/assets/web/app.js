@@ -2669,5 +2669,5 @@
   loadWeather();
   setInterval(loadWeather, 15 * MIN);
   focusFirst();
-  if (/^#(convert|calendar|timers|weather)$/.test(location.hash)) window.App.open(location.hash.slice(1));
+  if (/^#(convert|calendar|timers|weather|reader)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();
