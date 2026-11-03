@@ -146,7 +146,7 @@ window.I18N_EN = {
   'بعد 5 دقائق (': 'In 5 minutes (', ') تتعامد الشمس على الكعبة': ') the sun will be over the Kaaba', 'الآن تتعامد الشمس على الكعبة': 'The sun is over the Kaaba now',
   // ---- misc
   'الرئيسية': 'Home', 'مواقيت الصلاة': 'Prayer Times', 'شاهد': 'Shahid', 'الحرارة الآن': 'Temperature now', 'الطقس في إربد': 'Weather in Irbid', 'الطقس في الرياض': 'Weather in Riyadh',
-  'وفاة الوالد أبي أسامة': 'Passing of father Abu Osama', 'أمية': 'Omaia', 'الزواج': 'Wedding', 'العودة للدوام': 'Back to work', 'رند': 'Rand', 'حسان': 'Hassan', 'سلمى': 'Salma', 'عبود': 'Aboud', 'إجازة الصيف': 'Summer holiday',
+  'وفاة الوالد أبي أسامة': 'the passing of father Abu Osama', 'أمية': 'Omaia', 'الزواج': 'the wedding', 'العودة للدوام': 'back to work', 'رند': 'Rand', 'حسان': 'Hassan', 'سلمى': 'Salma', 'عبود': 'Aboud', 'إجازة الصيف': 'summer holiday', 'عبد الملك': 'Abdulmalik',
   'الأسبوع': 'Week', 'ثانية': 'seconds', 'ثانيتين': 'two seconds', 'ثوانٍ': 'seconds', 'ساعة': 'hours', 'ساعتين': 'two hours', 'دقيقة': 'minutes', 'دقيقة واحدة': 'one minute', 'دقيقتين': 'two minutes',
   'يومًا': 'days', 'يوم': 'days', 'يومان': 'two days', 'يومين': 'two days', 'أسبوع': 'weeks', 'أسبوعان': 'two weeks', 'أسبوعًا': 'weeks', 'يوم عمل': 'workdays', 'يوما عمل': 'two workdays',
   'شهر': 'months', 'شهران': 'two months', 'شهرًا': 'months', 'سنة': 'years', 'سنتان': 'two years', 'سنوات': 'years', 'دقيقتان': 'two minutes', 'ساعتان': 'two hours',

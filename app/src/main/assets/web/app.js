@@ -207,7 +207,7 @@
     if (!TV) { box.innerHTML = ''; return; }
     var idx = Array.prototype.indexOf.call(box.children, document.activeElement);
     box.innerHTML = shortcutApps().map(tileHtml).join('') +
-      '<button class="tile f" data-go="apps">' + ICON_ALL + '<span>كل التطبيقات</span></button>';
+      '<button class="tile f" data-go="apps">' + ICON_ALL + tr('<span>كل التطبيقات</span></button>');
     if (idx >= 0) (box.children[idx] || box.lastElementChild).focus();
   }
 
@@ -232,16 +232,18 @@
     wind: svg('<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>'),
     feel: svg('<path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/>')
   };
+  // the hour on the weather strip: 18:00 in Arabic, 6 PM in English
+  function hourLabel(hm) { if (!EN) return hm; var h = +hm.slice(0, 2); return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
   function weatherInfo(code, day) {
-    if (code === 0) return [day ? 'sun' : 'moon', 'صافٍ'];
-    if (code === 1) return [day ? 'sun' : 'moon', 'صافٍ غالبًا'];
-    if (code === 2) return ['partly', 'غائم جزئيًا'];
-    if (code === 3) return ['cloud', 'غائم'];
-    if (code === 45 || code === 48) return ['fog', 'ضباب'];
-    if (code >= 51 && code <= 57) return ['rain', 'رذاذ'];
-    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['rain', 'ماطر'];
-    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['snow', 'ثلج'];
-    if (code >= 95) return ['storm', 'عاصفة رعدية'];
+    if (code === 0) return [day ? 'sun' : 'moon', tr('صافٍ')];
+    if (code === 1) return [day ? 'sun' : 'moon', tr('صافٍ غالبًا')];
+    if (code === 2) return ['partly', tr('غائم جزئيًا')];
+    if (code === 3) return ['cloud', tr('غائم')];
+    if (code === 45 || code === 48) return ['fog', tr('ضباب')];
+    if (code >= 51 && code <= 57) return ['rain', tr('رذاذ')];
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['rain', tr('ماطر')];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['snow', tr('ثلج')];
+    if (code >= 95) return ['storm', tr('عاصفة رعدية')];
     return ['cloud', ''];
   }
   function wIcon(code, day, cls) { var k = weatherInfo(code, day)[0]; return '<span class="wi wi-' + k + ' ' + (cls || '') + '">' + W_ICONS[k] + '</span>'; }
@@ -250,9 +252,9 @@
   var WX = [null, null], DUST = [0, 0], wxAt = 0;
   // alerts inside the weather card: dust in the air now (µg/m³) and extreme heat
   function wAlert(i, w) {
-    if (DUST[i] >= 1000) return 'عاصفة غبارية';
-    if (DUST[i] >= 400) return 'غبار';
-    if (Math.max(w.t, w.hi || 0) >= 45) return 'حرارة شديدة';
+    if (DUST[i] >= 1000) return tr('عاصفة غبارية');
+    if (DUST[i] >= 400) return tr('غبار');
+    if (Math.max(w.t, w.hi || 0) >= 45) return tr('حرارة شديدة');
     return '';
   }
   // a smooth colour scale: blue (cold) → teal → green (mild) → amber → orange → red (40° and above)
@@ -337,14 +339,14 @@
   function weatherRender() {
     $('wx-body').innerHTML = CITIES.map(function (c, i) {
       var w = WX[i];
-      if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + c.name + tr('</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>');
+      if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + tr(c.name) + tr('</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>');
       var info = weatherInfo(w.code, w.day);
       return '<div class="card wx-col">' +
-        '<div class="wx-now">' + wIcon(w.code, w.day, 'big') + '<div><div class="wx-city">' + c.name + '</div><div class="wx-temp">' + w.t + '°</div>' +
+        '<div class="wx-now">' + wIcon(w.code, w.day, 'big') + '<div><div class="wx-city">' + tr(c.name) + '</div><div class="wx-temp">' + w.t + '°</div>' +
         '<div class="muted wx-desc">' + info[1] + tr(' · المحسوسة ') + w.feels + '° · ' + hiLo(w) + '</div></div></div>' +
         '<div class="wx-stats">' + stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + tr(' كم/س')) + '</div>' +
         '<div class="wx-hours">' + w.hours.map(function (x, k) {
-          return '<div class="wx-h"><span class="muted">' + (k === 0 ? tr('الآن') : x.h) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
+          return '<div class="wx-h"><span class="muted">' + (k === 0 ? tr('الآن') : hourLabel(x.h)) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
         }).join('') + '</div>' +
         '<div class="wx-days">' + w.days.map(function (x) {
           return '<div class="wx-d"><span class="wx-dn">' + x.name + '</span>' + wIcon(x.code, 1) + '<span class="wx-p">' + x.p + '%</span><b>' + x.max + '°</b><span class="muted">' + x.min + '°</span></div>';
@@ -360,7 +362,7 @@
 
   // ---------- prayer alerts sent to Android (30 days ahead) ----------
   // Arabic number–noun agreement
-  function minutesWord(n) { if (EN) return n + (n === 1 ? ' minute' : ' minutes'); return n === 1 ? 'دقيقة واحدة' : n === 2 ? 'دقيقتين' : n >= 3 && n <= 10 ? n + ' دقائق' : n + ' دقيقة'; }
+  function minutesWord(n) { if (EN) return n + (n === 1 ? ' minute' : ' minutes'); return n === 1 ? tr('دقيقة واحدة') : n === 2 ? tr('دقيقتين') : n >= 3 && n <= 10 ? n + tr(' دقائق') : n + tr(' دقيقة'); }
   // Arabic number agreement; in English: n + the plural word (the dictionary maps the Arabic plural to the English word)
   function countWord(n, one, two, few, many) {
     if (EN) { var w = tr(many) || tr(few); return n + ' ' + (n === 1 ? (tr(one).replace(/^(one|a|an) /, '') || w.replace(/s$/, '')) : w); }
@@ -442,7 +444,7 @@
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
         var W = S.timerWg;
-        return { id: x.id, name: x.name, at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
+        return { id: x.id, name: tr(x.name), at: tAt(x), unit: x.unit, color: T_COLORS[x.color] || '#1E2A78', ink: tInk(x.color),
           date: x.showDate ? fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '',
           dua: W.dua && x.rip ? '«' + RIP[x.rip][0] + '» ' + RIP[x.rip][1] : '' };
       }) })); } catch (e) {}
@@ -518,7 +520,7 @@
     var H = function (n) { return unitWord(n, tr('ساعة'), tr('ساعتين'), tr('ساعات'), tr('ساعة')); };
     var M = function (n) { return unitWord(n, tr('دقيقة'), tr('دقيقتين'), tr('دقائق'), tr('دقيقة')); };
     var X = function (n) { return unitWord(n, tr('ثانية'), tr('ثانيتين'), tr('ثوانٍ'), tr('ثانية')); };
-    var J = EN ? 'and ' : 'و';
+    var J = EN ? 'and ' : tr('و');
     if (h) { main = H(h); if (m) sub = J + M(m); }
     else if (m) { main = M(m); if (x) sub = J + X(x); }
     else main = X(x);
@@ -1024,7 +1026,7 @@
       });
     }
     // birthdays and the wedding anniversary, every year
-    fam().members.map(function (x) { return { auto: 'b-' + x.id, name: tr('ميلاد ') + x.name, m: x.m, d: x.d }; })
+    fam().members.map(function (x) { return { auto: 'b-' + x.id, name: tr('ميلاد ') + tr(x.name), m: x.m, d: x.d }; })
       .concat(fam().anniversary ? [{ auto: 'anniv', name: tr('ذكرى الزواج'), m: fam().anniversary.m, d: fam().anniversary.d }] : [])
       .forEach(function (x) {
         var y = r.y;
@@ -1036,7 +1038,7 @@
   }
   function daysTo(e, r) { return Math.round((Date.UTC(e.y, e.m - 1, e.d) - Date.UTC(r.y, r.m - 1, r.d)) / 86400000); }
   // days left, in words: اليوم · غدًا · بعد غد · 5 أيام · 107 يومًا
-  function daysText(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === 2 ? tr('بعد غد') : EN ? n + ' days' : countWord(n, '', '', 'أيام', 'يومًا'); }
+  function daysText(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === 2 ? tr('بعد غد') : EN ? n + ' days' : countWord(n, '', '', tr('أيام'), tr('يومًا')); }
   // dates as numbers read from the right: day, then month, then year (the marks keep the order in Arabic text)
   function fd(d, m, y) { if (EN) return d + '/' + m + (y ? '/' + y : ''); var R = '\u200F'; return d + R + '/' + m + (y ? R + '/' + y : ''); }
   function dmy(e) { return fd(e.d, e.m, e.y); }
@@ -1636,12 +1638,12 @@
   }
   function tLine(x, now) {
     var past = tAt(x) <= now;
-    return (past ? tr('منذ ') : tr('حتى ')) + x.name + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
+    return (past ? tr('منذ ') : tr('حتى ')) + tr(x.name) + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function tInk(c) { return c === 'white' ? '#3A3A3A' : '#FFFFFF'; }
   var RIP = { m: [tr('اللهم اغفر له وارحمه، وعافه واعفُ عنه'), tr('رواه مسلم')], f: [tr('اللهم اغفر لها وارحمها، وعافها واعفُ عنها'), tr('رواه مسلم')] };
-  function tYears(n) { if (EN) return n + (n === 1 ? ' year' : ' years'); return n === 1 ? 'سنة' : n === 2 ? 'سنتان' : n <= 10 ? n + ' سنوات' : n + ' سنة'; }
+  function tYears(n) { if (EN) return n + (n === 1 ? ' year' : ' years'); return n === 1 ? tr('سنة') : n === 2 ? tr('سنتان') : n <= 10 ? n + tr(' سنوات') : n + tr(' سنة'); }
   function tIn(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : tr('بعد ') + countWord(n, tr('يوم'), tr('يومين'), tr('أيام'), tr('يومًا')); }
   function tNum(n) { return n.toLocaleString('en-US'); }
   // the Hijri date, and the time since it in Hijri years and months

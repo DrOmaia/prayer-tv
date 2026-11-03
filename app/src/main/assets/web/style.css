@@ -88,7 +88,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wx-none { font-size: 24px; margin-top: 20px; }
 .wx-stats { display: flex; gap: 28px; font-size: 24px; }
 .wx-stats .ws .ic { width: 28px; height: 28px; }
-.wx-hours { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+/* the coming hours: one row that scrolls sideways (like a weather site), the same in both directions */
+.wx-hours { display: flex; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.wx-hours::-webkit-scrollbar { display: none; }
+.wx-hours .wx-h { flex: 0 0 auto; min-width: 150px; }
 .wx-h { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 20px; }
 .wx-h .wi .ic { width: 36px; height: 36px; }
 .wx-h b { font-size: 24px; direction: ltr; }
@@ -514,7 +517,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .wx-desc { font-size: 36px; }
 .portrait .wx-stats { font-size: 36px; flex-wrap: wrap; gap: 30px; }
 .portrait .wx-stats .ws .ic { width: 40px; height: 40px; }
-.portrait .wx-hours { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 24px; }
+.portrait .wx-hours { gap: 20px; }
+.portrait .wx-hours .wx-h { min-width: 190px; width: 190px; }
+.wx-hours .wx-h { width: 150px; }
+.wx-hours { direction: inherit; }
 .portrait .wx-h { font-size: 32px; }
 .portrait .wx-h b { font-size: 40px; }
 .portrait .wx-h .wi .ic { width: 56px; height: 56px; }
