@@ -45,6 +45,8 @@
   }
   var ORDER = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
   var NAMES = { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' };
+  // the English interface (chosen in the app's settings): the names in English
+  try { if ((JSON.parse(localStorage.getItem('prayertv-settings') || '{}').lang) === 'en') NAMES = { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' }; } catch (e) {}
   // Ministry of Islamic Affairs: 10 min between adhan and iqamah, Fajr 20; in Ramadan Fajr and Isha also 10
   var IQ_NORMAL = { fajr: 20, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
   var IQ_RAMADAN = { fajr: 10, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
@@ -139,7 +141,7 @@
     return out;
   }
 
-  function name(k, friday) { return k === 'dhuhr' && friday ? 'الجمعة' : NAMES[k]; }
+  function name(k, friday) { return k === 'dhuhr' && friday ? (NAMES.fajr === 'Fajr' ? "Jumu'ah" : 'الجمعة') : NAMES[k]; }
   // 24-hour clock: 04:37, 15:45
   function full(ts) { var t = ymd(ts); return pad(t.h) + ':' + pad(t.mi); }
   // time left without seconds: 2:05

@@ -2,17 +2,42 @@
   var P = window.Prayer, MIN = P.MIN, HR = P.HR, ORDER = P.ORDER;
   var FIVE = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   var A = window.Android || null; // the Android app; absent when the page is opened in a browser
+  // ---------- language: Arabic (default) or English for the interface; religious texts stay in Arabic ----------
+  var LANG = 'ar';
+  try { LANG = (JSON.parse(localStorage.getItem('prayertv-settings') || '{}').lang) || 'ar'; } catch (e) {}
+  var EN = LANG === 'en';
+  // t(text): the English of an interface text, or the text itself. HTML is translated piece by piece, so markup stays.
+  function tr(x) {
+    if (!EN || !x) return x;
+    var D = window.I18N_EN || {};
+    if (D[x] !== undefined) return D[x];
+    var tm = x.trim(), lead = x.slice(0, x.length - x.replace(/^\s+/, '').length), tail = x.slice(x.replace(/\s+$/, '').length);
+    if (D[tm] !== undefined) return lead + D[tm] + tail;
+    if (x.indexOf('<') >= 0) return x.replace(/>([^<]*[\u0600-\u06FF][^<]*)</g, function (m, p) { return '>' + tr(p) + '<'; })
+      .replace(/(placeholder|aria-label|title)="([^"]*[\u0600-\u06FF][^"]*)"/g, function (m, a, p) { return a + '="' + tr(p) + '"'; });
+    return x;
+  }
+  // the static texts of index.html
+  if (EN) (function () {
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), nd;
+    while ((nd = w.nextNode())) if (/[\u0600-\u06FF]/.test(nd.nodeValue)) nd.nodeValue = tr(nd.nodeValue);
+    ['placeholder', 'aria-label', 'title'].forEach(function (at) {
+      Array.prototype.forEach.call(document.querySelectorAll('[' + at + ']'), function (el) { var v = el.getAttribute(at); if (/[\u0600-\u06FF]/.test(v)) el.setAttribute(at, tr(v)); });
+    });
+  })();
+  document.documentElement.lang = EN ? 'en' : 'ar';
+  document.documentElement.dir = EN ? 'ltr' : 'rtl';
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage');
   // dates in the chosen city's time zone (made again when the city changes)
   var fGFull, fHFull, fHDay, fHMY, fGMY, fHMD;
   function makeFormats() {
     var TZO = { timeZone: P.zone() };
-    fGFull = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, TZO));
-    fHFull = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO)));
-    fHDay = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO)));
-    fHMY = hijriShift(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO)));
-    fGMY = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
+    fGFull = new Intl.DateTimeFormat((EN ? 'en-GB' : 'ar-SA') + '-u-ca-gregory-nu-latn', Object.assign({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, TZO));
+    fHFull = hijriShift(new Intl.DateTimeFormat((EN ? 'en-GB' : 'ar-SA') + '-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, TZO)));
+    fHDay = hijriShift(new Intl.DateTimeFormat((EN ? 'en-GB' : 'ar-SA') + '-u-ca-islamic-umalqura-nu-latn', Object.assign({ day: 'numeric', month: 'short' }, TZO)));
+    fHMY = hijriShift(new Intl.DateTimeFormat((EN ? 'en-GB' : 'ar-SA') + '-u-ca-islamic-umalqura-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO)));
+    fGMY = new Intl.DateTimeFormat((EN ? 'en-GB' : 'ar-SA') + '-u-ca-gregory-nu-latn', Object.assign({ month: 'long', year: 'numeric' }, TZO));
     fHMD = hijriShift(new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', Object.assign({ year: 'numeric', month: 'numeric', day: 'numeric' }, TZO)));
   }
   // Hijri dates follow the ±days adjustment of the settings
@@ -75,6 +100,7 @@
       trip: s.trip || { on: false }, // a journey under way (its notification is sent once)
       guest: s.guest || { on: false, name: '' }, // the TV: guest mode (until it is ended)
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
+      lang: s.lang || 'ar', // interface language: 'ar' or 'en' (religious texts stay Arabic)
       qView: s.qView || 'page', // the reader: 'page' (Mushaf pages) or 'text' (continuous)
       qMode: s.qMode || 'listen', // the Quran tab: 'read' or 'listen'
       qMark: s.qMark || null, // the reader's mark: where the reading stopped {s, i, at}
@@ -187,8 +213,8 @@
 
   // ---------- weather (Open-Meteo, every 30 minutes): now, today, next hours, next days ----------
   // the first city follows the prayer-times city; Irbid stays
-  var CITIES = [{ name: S.loc.name, lat: S.loc.lat, lon: S.loc.lon }, { name: 'إربد', lat: 32.5556, lon: 35.85 }];
-  var DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  var CITIES = [{ name: tr(S.loc.name), lat: S.loc.lat, lon: S.loc.lon }, { name: tr('إربد'), lat: 32.5556, lon: 35.85 }];
+  var DAY_NAMES = EN ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] : ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   function svg(body) { return '<svg viewBox="0 0 24 24" class="ic">' + body + '</svg>'; }
   var CLOUD = '<path d="M6.5 19h11a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 11.5 3.75 3.75 0 0 0 6.5 19z"/>';
   var W_ICONS = {
@@ -257,11 +283,11 @@
     if (i === 0) {
       $('wbig-icon').innerHTML = wIcon(w.code, w.day); $('wbig-temp').textContent = w.t + '°'; tempPaint();
       $('wb-c0').innerHTML = '<b>' + esc(CITIES[0].name) + '</b>' + (w.hi != null ? ' <span class="muted"><span class="ltr">' + w.hi + '° / ' + w.lo + '°</span></span>' : '') +
-        (w.hum != null ? '<span class="muted">· رطوبة <span class="ltr">' + w.hum + '%</span></span>' : '') +
+        (w.hum != null ? tr('<span class="muted">· رطوبة <span class="ltr">') + w.hum + '%</span></span>' : '') +
         (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
       $('wbig').classList.toggle('w-alert', !!al);
     } else $('wb-c1').innerHTML = wIcon(w.code, w.day) + '<b>' + CITIES[1].name + '</b> <span class="ltr">' + w.t + '°</span>' +
-      (w.hum != null ? '<span class="muted">· رطوبة <span class="ltr">' + w.hum + '%</span></span>' : '') + (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
+      (w.hum != null ? tr('<span class="muted">· رطوبة <span class="ltr">') + w.hum + '%</span></span>' : '') + (al ? '<span class="w-al">⚠ ' + al + '</span>' : '');
     $('w' + i + '-btn').classList.toggle('w-alert', !!al);
     $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
       (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');
@@ -276,7 +302,7 @@
     }
     var days = d.time.slice(0, 6).map(function (x, k) {
       var p = x.split('-');
-      return { name: k === 0 ? 'اليوم' : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], max: Math.round(d.temperature_2m_max[k]),
+      return { name: k === 0 ? tr('اليوم') : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], max: Math.round(d.temperature_2m_max[k]),
         min: Math.round(d.temperature_2m_min[k]), code: d.weather_code[k], p: d.precipitation_probability_max[k] || 0 };
     });
     return { t: Math.round(c.temperature_2m), feels: Math.round(c.apparent_temperature), hum: Math.round(c.relative_humidity_2m),
@@ -311,14 +337,14 @@
   function weatherRender() {
     $('wx-body').innerHTML = CITIES.map(function (c, i) {
       var w = WX[i];
-      if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + c.name + '</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>';
+      if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + c.name + tr('</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>');
       var info = weatherInfo(w.code, w.day);
       return '<div class="card wx-col">' +
         '<div class="wx-now">' + wIcon(w.code, w.day, 'big') + '<div><div class="wx-city">' + c.name + '</div><div class="wx-temp">' + w.t + '°</div>' +
-        '<div class="muted wx-desc">' + info[1] + ' · المحسوسة ' + w.feels + '° · ' + hiLo(w) + '</div></div></div>' +
-        '<div class="wx-stats">' + stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + ' كم/س') + '</div>' +
+        '<div class="muted wx-desc">' + info[1] + tr(' · المحسوسة ') + w.feels + '° · ' + hiLo(w) + '</div></div></div>' +
+        '<div class="wx-stats">' + stat('hum', w.hum + '%') + stat('umb', w.rain + '%') + stat('wind', w.wind + tr(' كم/س')) + '</div>' +
         '<div class="wx-hours">' + w.hours.map(function (x, k) {
-          return '<div class="wx-h"><span class="muted">' + (k === 0 ? 'الآن' : x.h) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
+          return '<div class="wx-h"><span class="muted">' + (k === 0 ? tr('الآن') : x.h) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
         }).join('') + '</div>' +
         '<div class="wx-days">' + w.days.map(function (x) {
           return '<div class="wx-d"><span class="wx-dn">' + x.name + '</span>' + wIcon(x.code, 1) + '<span class="wx-p">' + x.p + '%</span><b>' + x.max + '°</b><span class="muted">' + x.min + '°</span></div>';
@@ -334,19 +360,23 @@
 
   // ---------- prayer alerts sent to Android (30 days ahead) ----------
   // Arabic number–noun agreement
-  function minutesWord(n) { return n === 1 ? 'دقيقة واحدة' : n === 2 ? 'دقيقتين' : n >= 3 && n <= 10 ? n + ' دقائق' : n + ' دقيقة'; }
-  function countWord(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many; }
-  function alertTitle(k, T) { return k === 'dhuhr' && T.friday ? 'حان الآن وقت صلاة الجمعة' : 'حان الآن وقت صلاة ' + P.name(k); }
+  function minutesWord(n) { if (EN) return n + (n === 1 ? ' minute' : ' minutes'); return n === 1 ? 'دقيقة واحدة' : n === 2 ? 'دقيقتين' : n >= 3 && n <= 10 ? n + ' دقائق' : n + ' دقيقة'; }
+  // Arabic number agreement; in English: n + the plural word (the dictionary maps the Arabic plural to the English word)
+  function countWord(n, one, two, few, many) {
+    if (EN) { var w = tr(many) || tr(few); return n + ' ' + (n === 1 ? (tr(one).replace(/^(one|a|an) /, '') || w.replace(/s$/, '')) : w); }
+    return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many;
+  }
+  function alertTitle(k, T) { return k === 'dhuhr' && T.friday ? tr('حان الآن وقت صلاة الجمعة') : tr('حان الآن وقت صلاة ') + P.name(k); }
   function alertSub(k, T) {
-    var s = (k === 'maghrib' && T.ramadan ? 'موعد الإفطار · ' : '') + 'الأذان ' + P.full(T.at[k]);
-    if (T.iqamah[k]) s += ' · الإقامة ' + P.full(T.iqamah[k]) + ' (بعد ' + minutesWord(Math.round((T.iqamah[k] - T.at[k]) / MIN)) + ')';
+    var s = (k === 'maghrib' && T.ramadan ? tr('موعد الإفطار · ') : '') + tr('الأذان ') + P.full(T.at[k]);
+    if (T.iqamah[k]) s += tr(' · الإقامة ') + P.full(T.iqamah[k]) + tr(' (بعد ') + minutesWord(Math.round((T.iqamah[k] - T.at[k]) / MIN)) + ')';
     return s;
   }
   // the phone's notification, like «صلاتك»: «الفجر (04:38)» over «الرياض | وقت صلاة الفجر · الإقامة 04:58»
-  function phoneTitle(k, T) { return (k === 'dhuhr' && T.friday ? 'الجمعة' : P.name(k)) + ' (' + P.full(T.at[k]) + ')'; }
+  function phoneTitle(k, T) { return (k === 'dhuhr' && T.friday ? tr('الجمعة') : P.name(k)) + ' (' + P.full(T.at[k]) + ')'; }
   function phoneSub(k, T) {
-    var what = k === 'sunrise' ? 'وقت الشروق' : k === 'dhuhr' && T.friday ? 'وقت صلاة الجمعة' : 'وقت صلاة ' + P.name(k);
-    return S.loc.name + ' | ' + what + (k === 'maghrib' && T.ramadan ? ' · موعد الإفطار' : '') + (T.iqamah[k] ? ' · الإقامة ' + P.full(T.iqamah[k]) : '');
+    var what = k === 'sunrise' ? tr('وقت الشروق') : k === 'dhuhr' && T.friday ? tr('وقت صلاة الجمعة') : tr('وقت صلاة ') + P.name(k);
+    return S.loc.name + ' | ' + what + (k === 'maghrib' && T.ramadan ? tr(' · موعد الإفطار') : '') + (T.iqamah[k] ? tr(' · الإقامة ') + P.full(T.iqamah[k]) : '');
   }
   function sendSchedule() {
     if (!A) return;
@@ -360,23 +390,23 @@
       // the phone: a silent note at sunrise (the end of Fajr's time)
       if (!TV && S.alerts.sunrise && T.at.sunrise > t) ev.push({ at: T.at.sunrise, title: phoneTitle('sunrise', T), sub: phoneSub('sunrise', T), snd: 'none' });
       // the phone: an hour before Jumu'ah
-      if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: 'بعد ساعة: صلاة الجمعة ' + P.full(T.at.dhuhr),
-        sub: 'اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ', snd: 'tone' });
+      if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: tr('بعد ساعة: صلاة الجمعة ') + P.full(T.at.dhuhr),
+        sub: tr('اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ'), snd: 'tone' });
     }
     // the phone: a daily reminder of the reading at the chosen time (the place of the mark is in its text)
     if (!TV && S.qRemind.on) {
       var hm = S.qRemind.time.split(':'), mk = S.qMark;
       for (var k = 0; k < 60; k++) {
         var dd = P.addDays(r.y, r.m, r.d, k), at = P.noonOf(dd.y, dd.m, dd.d) - 12 * HR + (+hm[0] * 60 + +hm[1]) * MIN;
-        if (at > t) ev.push({ at: at, title: 'ورد القراءة', snd: 'tone',
-          sub: mk ? 'توقفت عند سورة ' + QURAN[mk.s - 1][0] + ' · الآية ' + mk.i + '. هل تكمل الآن؟' : 'ابدأ وردك اليوم من المصحف' });
+        if (at > t) ev.push({ at: at, title: tr('ورد القراءة'), snd: 'tone',
+          sub: mk ? tr('توقفت عند سورة ') + QURAN[mk.s - 1][0] + tr(' · الآية ') + mk.i + tr('. هل تكمل الآن؟') : tr('ابدأ وردك اليوم من المصحف') });
       }
     }
     if (S.alerts.kaaba) [r.y, r.y + 1].forEach(function (y) {
       P.kaabaSun(y).forEach(function (at) {
-        var sub = 'استقبل الشمس واجعل ظلّك خلفك: هذا اتجاه القبلة بالضبط';
-        if (at - 5 * MIN > t) ev.push({ at: at - 5 * MIN, title: 'بعد 5 دقائق (' + P.full(at) + ') تتعامد الشمس على الكعبة', sub: sub, snd: 'tone' });
-        if (at > t) ev.push({ at: at, title: 'الآن تتعامد الشمس على الكعبة', sub: sub, snd: 'tone' });
+        var sub = tr('استقبل الشمس واجعل ظلّك خلفك: هذا اتجاه القبلة بالضبط');
+        if (at - 5 * MIN > t) ev.push({ at: at - 5 * MIN, title: tr('بعد 5 دقائق (') + P.full(at) + tr(') تتعامد الشمس على الكعبة'), sub: sub, snd: 'tone' });
+        if (at > t) ev.push({ at: at, title: tr('الآن تتعامد الشمس على الكعبة'), sub: sub, snd: 'tone' });
       });
     });
     ev.sort(function (a, b) { return a.at - b.at; });
@@ -400,14 +430,14 @@
       days.push({
         names: ORDER.map(function (k) { return P.name(k, T.friday); }), at: ORDER.map(function (k) { return T.at[k]; }),
         // the Hijri month's number beside its name: «16 جمادى الأولى (5) 1448 هـ»
-        ram: !!T.ramadan, hijri: h.day + ' ' + H_MONTHS[h.month - 1] + ' (' + h.month + ') ' + h.year + ' هـ', hday: h.day, greg: fGFull.format(noon).replace('،', ''),
+        ram: !!T.ramadan, hijri: h.day + ' ' + H_MONTHS[h.month - 1] + ' (' + h.month + ') ' + h.year + tr(' هـ'), hday: h.day, greg: fGFull.format(noon).replace(tr('،'), ''),
         dua: (du.q ? quranText(du.q) : '«' + du.x + '»') + ' · ' + du.s
       });
     }
     var events = allEvents(r).slice(0, 30).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d), date: fd(e.d, e.m, e.y) }; });
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: S.loc.name, style: S.widget, styles: S.wstyle, months: months,
+    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: tr(S.loc.name), lang: S.lang, style: S.widget, styles: S.wstyle, months: months,
       mark: S.qMark ? { s: S.qMark.s, name: QURAN[S.qMark.s - 1][0], i: S.qMark.i } : null,
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
@@ -445,7 +475,7 @@
       }
       var sub = dd.m === last.m ? G_MONTHS[dd.m - 1] + ' ' + dd.y : dd.y === last.y ? G_MONTHS[dd.m - 1] + ' – ' + G_MONTHS[last.m - 1] + ' ' + dd.y :
         G_MONTHS[dd.m - 1] + ' ' + dd.y + ' – ' + G_MONTHS[last.m - 1] + ' ' + last.y;
-      out.push({ title: H_MONTHS[hm.m - 1] + ' ' + hm.y + ' هـ', sub: sub, first: new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay(),
+      out.push({ title: H_MONTHS[hm.m - 1] + ' ' + hm.y + tr(' هـ'), sub: sub, first: new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay(),
         cells: cells, seasons: seasons, white: white, events: events });
       dd = x;
     }
@@ -482,19 +512,20 @@
   });
 
   // the next prayer's countdown in words, so it is not read as a clock time: «بعد 9 ساعات» «و16 دقيقة»
-  function unitWord(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many; }
+  function unitWord(n, one, two, few, many) { if (EN) return n + ' ' + (n === 1 ? many.replace(/s$/, '') : many); return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many; }
   function putWords(el, ms) {
     var sec = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60, main, sub = '';
-    var H = function (n) { return unitWord(n, 'ساعة', 'ساعتين', 'ساعات', 'ساعة'); };
-    var M = function (n) { return unitWord(n, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة'); };
-    var X = function (n) { return unitWord(n, 'ثانية', 'ثانيتين', 'ثوانٍ', 'ثانية'); };
-    if (h) { main = H(h); if (m) sub = 'و' + M(m); }
-    else if (m) { main = M(m); if (x) sub = 'و' + X(x); }
+    var H = function (n) { return unitWord(n, tr('ساعة'), tr('ساعتين'), tr('ساعات'), tr('ساعة')); };
+    var M = function (n) { return unitWord(n, tr('دقيقة'), tr('دقيقتين'), tr('دقائق'), tr('دقيقة')); };
+    var X = function (n) { return unitWord(n, tr('ثانية'), tr('ثانيتين'), tr('ثوانٍ'), tr('ثانية')); };
+    var J = EN ? 'and ' : 'و';
+    if (h) { main = H(h); if (m) sub = J + M(m); }
+    else if (m) { main = M(m); if (x) sub = J + X(x); }
     else main = X(x);
-    var html = '<span class="cd-pre">بعد</span><span class="cd-main">' + main + '</span><span class="cd-sub">' + sub + '</span>';
+    var html = tr('<span class="cd-pre">بعد</span><span class="cd-main">') + main + '</span><span class="cd-sub">' + sub + '</span>';
     if (el.dataset.v === html) return;
     el.dataset.v = html;
-    el.dir = 'rtl';
+    el.dir = EN ? 'ltr' : 'rtl';
     el.classList.add('words');
     el.innerHTML = html;
   }
@@ -510,7 +541,7 @@
   var lastFact = -1;
   // the «هل تعلم؟» box: adhkar at their times; on Friday, in the ten days of Dhul-Hijjah and on Eid
   // the season's texts in turn with «هل تعلم؟»; otherwise «هل تعلم؟» (a new one every 10 minutes)
-  var ADHKAR_HEAD = { after: 'أذكار بعد الصلاة', morning: 'أذكار الصباح', evening: 'أذكار المساء', sleep: 'أذكار النوم' };
+  var ADHKAR_HEAD = { after: tr('أذكار بعد الصلاة'), morning: tr('أذكار الصباح'), evening: tr('أذكار المساء'), sleep: tr('أذكار النوم') };
   function adhkarNow(t, today, yest) {
     var w = null;
     FIVE.forEach(function (k) {
@@ -540,7 +571,7 @@
   }
   var lastFact = '', fridayMorning = false;
   function showFact(t, today, yest) {
-    var card = document.querySelector('#home .next'), w = adhkarNow(t, today, yest), item, head = 'هل تعلم؟', key;
+    var card = document.querySelector('#home .next'), w = adhkarNow(t, today, yest), item, head = tr('هل تعلم؟'), key;
     card.classList.toggle('no-fact', !S.showFact && !w);
     if (!S.showFact && !w) return;
     if (w) {
@@ -549,12 +580,12 @@
     } else {
       // a new one every 3 minutes; each day starts at a different place so they don't come at the same hours
       var slot = Math.floor(t / (3 * MIN)), sl = seasonList();
-      if (sl && slot % 2 === 0) { item = sl[(slot / 2) % sl.length]; head = 'فضل هذه الأيام'; key = 's' + slot; }
+      if (sl && slot % 2 === 0) { item = sl[(slot / 2) % sl.length]; head = tr('فضل هذه الأيام'); key = 's' + slot; }
       else {
         // stepping 67 places at a time mixes the sections (67 shares no factor with the list length)
         var fi = ((slot + Math.floor(t / 86400000) * 61) * 67) % FACTS.length;
         item = FACTS[fi]; key = 'f' + fi;
-        if (item.k === 'myth') head = 'تصحيح خطأ شائع';
+        if (item.k === 'myth') head = tr('تصحيح خطأ شائع');
       }
     }
     if (key === lastFact) return;
@@ -568,7 +599,7 @@
       $('fact-x').textContent = x;
       $('fact-x').classList.toggle('quran', !!item.q);
       // adhkar are read from afar: as big as the box allows
-      var dh = head !== 'هل تعلم؟' && head !== 'تصحيح خطأ شائع' && head !== 'فضل هذه الأيام';
+      var dh = head !== tr('هل تعلم؟') && head !== tr('تصحيح خطأ شائع') && head !== tr('فضل هذه الأيام');
       $('fact').classList.toggle('dhikr', dh);
       var fs = dh ? (x.length > 600 ? 24 : x.length > 420 ? 27 : x.length > 250 ? 31 : x.length > 120 ? 36 : 42) : (x.length > 450 ? 19 : x.length > 250 ? 21 : 0);
       // the phone shows the box full width: bigger text
@@ -597,20 +628,20 @@
 
     var label, name, cd, cdMs, detail;
     if (iq) {
-      label = 'متبقٍّ على الإقامة';
-      name = 'صلاة ' + P.name(iq, today.friday);
+      label = tr('متبقٍّ على الإقامة');
+      name = tr('صلاة ') + P.name(iq, today.friday);
       cd = P.left(today.iqamah[iq] - t); cdMs = today.iqamah[iq] - t;
-      detail = 'الأذان ' + P.full(today.at[iq]) + ' · الإقامة ' + P.full(today.iqamah[iq]);
+      detail = tr('الأذان ') + P.full(today.at[iq]) + tr(' · الإقامة ') + P.full(today.iqamah[iq]);
     } else if (nextK === 'sunrise') {
-      label = 'متبقٍّ على الشروق';
-      name = 'الشروق';
+      label = tr('متبقٍّ على الشروق');
+      name = tr('الشروق');
       cd = P.left(nextTs - t); cdMs = nextTs - t;
-      detail = 'الشروق ' + P.full(nextTs);
+      detail = tr('الشروق ') + P.full(nextTs);
     } else {
-      label = nd.ramadan && nextK === 'maghrib' ? 'متبقٍّ على الإفطار' : 'الصلاة القادمة';
+      label = nd.ramadan && nextK === 'maghrib' ? tr('متبقٍّ على الإفطار') : tr('الصلاة القادمة');
       name = P.name(nextK, nd.friday);
       cd = P.left(nextTs - t); cdMs = nextTs - t;
-      detail = 'الأذان ' + P.full(nextTs) + (nd.iqamah[nextK] ? ' · الإقامة ' + P.full(nd.iqamah[nextK]) : '');
+      detail = tr('الأذان ') + P.full(nextTs) + (nd.iqamah[nextK] ? tr(' · الإقامة ') + P.full(nd.iqamah[nextK]) : '');
     }
     $('next-label').textContent = label;
     $('next-name').textContent = name;
@@ -628,22 +659,22 @@
       var c = cards[k];
       c.className = 'pc' + (k === nextK ? ' next-p' : '') + (k === seq[ci][0] && k !== 'imsak' ? ' pc-now' : '');
       c.querySelector('.pc-bar').style.width = k === seq[ci + 1][0] ? (p * 100).toFixed(2) + '%' : '0';
-      setAll(c, '.pc-name', k === 'imsak' ? 'الإمساك' : P.name(k, day.friday));
+      setAll(c, '.pc-name', k === 'imsak' ? tr('الإمساك') : P.name(k, day.friday));
       setAll(c, '.pc-time', P.full(k === 'imsak' ? day.imsak : day.at[k]));
       // every day until Maghrib the Imsak card shows the time left to Maghrib (the end of the fast)
       // Duha under sunrise; under Isha after its iqamah, the start of the last third of the night (Maghrib → Fajr)
-      if (k === 'sunrise') { setAll(c, '.pc-iq', 'الضحى ' + P.full(day.at.sunrise + 15 * MIN)); return; }
+      if (k === 'sunrise') { setAll(c, '.pc-iq', tr('الضحى ') + P.full(day.at.sunrise + 15 * MIN)); return; }
       if (k === 'isha' && (t >= (today.iqamah.isha || today.at.isha) || t < today.at.fajr)) {
         var m0 = t < today.at.fajr ? yest.at.maghrib : today.at.maghrib, f0 = t < today.at.fajr ? today.at.fajr : tom.at.fajr;
-        setAll(c, '.pc-iq', 'ثلث الليل ' + P.full(m0 + (f0 - m0) * 2 / 3)); return;
+        setAll(c, '.pc-iq', tr('ثلث الليل ') + P.full(m0 + (f0 - m0) * 2 / 3)); return;
       }
       // Imsak: in turn every 5 seconds, the time left to the next Maghrib, the length of the fast (Fajr → Maghrib)
       // and the shortest fast of this Hijri year with its date
       var alt = Math.floor(t / 5000) % 3, fd = t < today.at.maghrib ? today : tom, sh = alt === 2 && shortestFast(P.ymd(t));
-      var fastLen = 'مدة الصيام ' + P.leftHM(fd.at.maghrib - fd.at.fajr);
-      setAll(c, '.pc-iq', k === 'imsak' ? (sh ? 'أقصر صيام ' + sh.d + ' ' + G_MONTHS[sh.m - 1] + ' · ' + P.leftHM(sh.len) :
-        alt === 1 ? fastLen : (fd.ramadan ? 'متبقٍّ للإفطار ' : 'متبقٍّ للمغرب ') + P.leftHM(fd.at.maghrib - t)) :
-        day.iqamah[k] ? 'الإقامة ' + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? 'بعد الخطبة' : ''));
+      var fastLen = tr('مدة الصيام ') + P.leftHM(fd.at.maghrib - fd.at.fajr);
+      setAll(c, '.pc-iq', k === 'imsak' ? (sh ? tr('أقصر صيام ') + sh.d + ' ' + G_MONTHS[sh.m - 1] + ' · ' + P.leftHM(sh.len) :
+        alt === 1 ? fastLen : (fd.ramadan ? tr('متبقٍّ للإفطار ') : tr('متبقٍّ للمغرب ')) + P.leftHM(fd.at.maghrib - t)) :
+        day.iqamah[k] ? tr('الإقامة ') + P.full(day.iqamah[k]) : (k === 'dhuhr' && day.friday ? tr('بعد الخطبة') : ''));
       Array.prototype.forEach.call(c.querySelectorAll('.pc-iq'), function (e) { e.classList.toggle('pc-iq-s', k === 'imsak' && !!sh); });
     });
 
@@ -664,7 +695,7 @@
   }
 
   // a second city (Irbid): its five prayer times in a small line under the cards, its own method and time zone
-  var CITY2 = { name: 'إربد', lat: 32.5556, lon: 35.85, tz: 'Asia/Amman', cc: 'JO' };
+  var CITY2 = { name: tr('إربد'), lat: 32.5556, lon: 35.85, tz: 'Asia/Amman', cc: 'JO' };
   function renderCity2(r) {
     var line = P.withLocation(CITY2, function () {
       var n = P.ymd(Date.now()), T = P.dayTimes(n.y, n.m, n.d);
@@ -688,7 +719,7 @@
     stage.classList.toggle('s-bday', !!sp && !season.ramadan && !season.eid && !season.hajj);
     $('bday').textContent = sp ? '✦ ' + sp.type + ' ✦' : '';
     $('bday').classList.toggle('hidden', !sp);
-    var badge = season.eid ? 'عيدكم مبارك' : season.arafah && h.day === 9 ? 'يوم عرفة' : season.hajj ? 'عشر ذي الحجة' : season.ramadan ? 'رمضان كريم' : today.friday ? 'جمعة مباركة' : '';
+    var badge = season.eid ? tr('عيدكم مبارك') : season.arafah && h.day === 9 ? tr('يوم عرفة') : season.hajj ? tr('عشر ذي الحجة') : season.ramadan ? tr('رمضان كريم') : today.friday ? tr('جمعة مباركة') : '';
     $('season-badge').textContent = badge;
     $('season-badge').classList.toggle('hidden', !badge);
     lastFact = '';
@@ -704,8 +735,8 @@
       '<path class="moon-lit" d="M12 3A9 9 0 0 ' + outer + ' 12 21A' + rx.toFixed(2) + ' 9 0 0 ' + inner + ' 12 3Z"/></svg>';
   }
 
-  var H_MONTHS = ['محرّم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
-  var G_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  var H_MONTHS = [tr('محرّم'), tr('صفر'), tr('ربيع الأول'), tr('ربيع الآخر'), tr('جمادى الأولى'), tr('جمادى الآخرة'), tr('رجب'), tr('شعبان'), tr('رمضان'), tr('شوال'), tr('ذو القعدة'), tr('ذو الحجة')];
+  var G_MONTHS = [tr('يناير'), tr('فبراير'), tr('مارس'), tr('أبريل'), tr('مايو'), tr('يونيو'), tr('يوليو'), tr('أغسطس'), tr('سبتمبر'), tr('أكتوبر'), tr('نوفمبر'), tr('ديسمبر')];
   // the shortest fast (Fajr → Maghrib) of the current Hijri year; worked out once a day
   var shortCache = {};
   function shortestFast(r) {
@@ -742,8 +773,8 @@
     var box = $('im-years'), y0 = imYear || imDefaultYear(), now = imDefaultYear();
     if (!box.dataset.built) {
       var html = '<div class="cv-pad"></div>';
-      for (var y = CV_H[0]; y <= CV_H[1]; y++) { var g = hToG(y, 9, 1); html += '<div class="cv-it" data-v="' + y + '">' + y + ' هـ' + (g ? ' · ' + g.y : '') + '</div>'; }
-      box.innerHTML = '<div class="cv-wrap"><div id="im-wheel" class="cv-wheel f" tabindex="0" data-wf="imy" aria-label="السنة">' + html + '<div class="cv-pad"></div></div></div>';
+      for (var y = CV_H[0]; y <= CV_H[1]; y++) { var g = hToG(y, 9, 1); html += '<div class="cv-it" data-v="' + y + '">' + y + tr(' هـ') + (g ? ' · ' + g.y : '') + '</div>'; }
+      box.innerHTML = tr('<div class="cv-wrap"><div id="im-wheel" class="cv-wheel f" tabindex="0" data-wf="imy" aria-label="السنة">') + html + '<div class="cv-pad"></div></div></div>';
       box.dataset.built = '1';
       var w = $('im-wheel');
       w.addEventListener('scroll', function () {
@@ -776,9 +807,9 @@
       days.push(dd);
     }
     if (!days.length) { $('imsak-body').innerHTML = ''; return; }
-    $('imsak-title').textContent = 'إمساكية ' + fHMY.format(new Date(P.noonOf(days[0].y, days[0].m, days[0].d)));
+    $('imsak-title').textContent = tr('إمساكية ') + fHMY.format(new Date(P.noonOf(days[0].y, days[0].m, days[0].d)));
     $('imsak-sub').textContent = S.loc.name + ' · ' + P.method().name;
-    var head = '<div class="im-tr im-th"><span>رمضان</span><span>اليوم</span><span>الإمساك</span><span>الفجر</span><span>المغرب</span><span>مدة الصيام</span></div>';
+    var head = tr('<div class="im-tr im-th"><span>رمضان</span><span>اليوم</span><span>الإمساك</span><span>الفجر</span><span>المغرب</span><span>مدة الصيام</span></div>');
     var rows = days.map(function (dd, k) {
       var T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), wd = DAY_NAMES[new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay()];
       var today = dd.y === r.y && dd.m === r.m && dd.d === r.d;
@@ -795,9 +826,9 @@
   // ---------- the month's prayer times (the month shown in the calendar), today marked ----------
   function monthRender() {
     var r = P.ymd(Date.now()), y = cal.vy || r.y, m = cal.vm || r.m, n = new Date(Date.UTC(y, m, 0)).getUTCDate(), rows = [];
-    $('month-title').textContent = 'مواقيت ' + fGMY.format(new Date(P.noonOf(y, m, 1)));
+    $('month-title').textContent = tr('مواقيت ') + fGMY.format(new Date(P.noonOf(y, m, 1)));
     $('month-sub').textContent = S.loc.name + ' · ' + P.method().name;
-    var head = '<div class="mt-tr mt-th"><span>اليوم</span><span>هجري</span>' + ORDER.map(function (k) { return '<span>' + P.name(k) + '</span>'; }).join('') + '</div>';
+    var head = tr('<div class="mt-tr mt-th"><span>اليوم</span><span>هجري</span>') + ORDER.map(function (k) { return '<span>' + P.name(k) + '</span>'; }).join('') + '</div>';
     for (var d = 1; d <= n; d++) {
       var T = P.dayTimes(y, m, d, S.offsets), dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(), today = y === r.y && m === r.m && d === r.d;
       rows.push('<div class="mt-tr' + (today ? ' im-today' : '') + (dow === 5 ? ' mt-fri' : '') + '"><span>' + DAY_NAMES[dow] + ' ' + d + '</span><span class="muted">' +
@@ -836,15 +867,15 @@
   function member(id) {
     var d = (fam().departed || []).filter(function (x) { return 'd-' + x.id === id; })[0];
     if (d) return { id: id, name: d.name, kind: 'departed', dep: d };
-    return fam().members.filter(function (x) { return x.id === id; })[0] || { id: 'all', name: 'العائلة', kind: 'all' };
+    return fam().members.filter(function (x) { return x.id === id; })[0] || { id: 'all', name: tr('العائلة'), kind: 'all' };
   }
   function sign(x) {
-    if (x.kind === 'wife') return 'زوجك';
-    if (x.kind === 'husband') return 'زوجتك';
-    if (x.kind === 'all') return 'مع المحبة';
-    if (x.kind === 'self') return fam().parent === 'mother' ? 'زوجك وأولادك' : 'زوجتك وأولادك';
-    if (x.kind === 'departed') return 'اللهم آمين';
-    return fam().parent === 'mother' ? 'ماما' : 'بابا';
+    if (x.kind === 'wife') return tr('زوجك');
+    if (x.kind === 'husband') return tr('زوجتك');
+    if (x.kind === 'all') return tr('مع المحبة');
+    if (x.kind === 'self') return fam().parent === 'mother' ? tr('زوجك وأولادك') : tr('زوجتك وأولادك');
+    if (x.kind === 'departed') return tr('اللهم آمين');
+    return fam().parent === 'mother' ? tr('ماما') : tr('بابا');
   }
   // which message set suits this person: sons under 13 get the children's set
   function msgKind(x) {
@@ -855,7 +886,7 @@
   }
   function fill(t, x) {
     var names = fam().members.filter(function (m) { return m.kind !== 'self'; }).map(function (m) { return m.name; });
-    var list = names.length > 1 ? names.slice(0, -1).join('، ') + ' و' + names[names.length - 1] : names.join('');
+    var list = names.length > 1 ? names.slice(0, -1).join(tr('، ')) + tr(' و') + names[names.length - 1] : names.join('');
     var d = x && x.dep, sp = spouse();
     return t.replace(/\{name\}/g, x ? x.name : '').replace(/\{names\}/g, list)
       .replace(/\{acc\}/g, d ? d.acc || d.name : '').replace(/\{gen\}/g, d ? d.gen || d.name : '').replace(/\{spouse\}/g, sp ? sp.name : '');
@@ -867,12 +898,12 @@
     // a name of Allah: one each day
     if (kind === 'asma') {
       var day = Math.floor((n * 3 * MIN) / 86400000), nm = ASMA[day % ASMA.length];
-      return { type: 'من أسماء الله الحسنى', text: nm[0] + ': ' + nm[1], src: '﴿وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَا﴾ الأعراف 180' };
+      return { type: tr('من أسماء الله الحسنى'), text: nm[0] + ': ' + nm[1], src: tr('﴿وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَا﴾ الأعراف 180') };
     }
     // a supplication: one each day
     if (kind === 'dua') {
       var dd = ADHKAR.dua[Math.floor((n * 3 * MIN) / 86400000) % ADHKAR.dua.length];
-      return { type: 'دعاء اليوم', text: dd.q ? quranText(dd.q) : '«' + dd.x + '»', src: dd.s, quran: !!dd.q };
+      return { type: tr('دعاء اليوم'), text: dd.q ? quranText(dd.q) : '«' + dd.x + '»', src: dd.s, quran: !!dd.q };
     }
     var list = REMINDERS[kind];
     return list[(round * per + before) % list.length];
@@ -899,27 +930,27 @@
   // on the Eid days the family messages become Eid greetings, to each one by name
   function eidMessage(n) {
     var ms = fam().members.filter(function (x) { return x.kind !== 'self'; }), x = ms[n % (ms.length + 1)];
-    if (!x) return { type: 'عيدكم مبارك', text: 'عيدكم مبارك، وكل عام وأنتم بخير، تقبّل الله منا ومنكم', src: '— مع المحبة', fam: true };
+    if (!x) return { type: tr('عيدكم مبارك'), text: tr('عيدكم مبارك، وكل عام وأنتم بخير، تقبّل الله منا ومنكم'), src: tr('— مع المحبة'), fam: true };
     var she = x.kind === 'wife' || x.kind === 'daughter';
-    return { type: 'عيدك مبارك يا ' + x.name, text: she ? 'عيدكِ مبارك يا ' + x.name + '، وكل عام وأنتِ بخير، تقبّل الله منا ومنكِ' :
-      'عيدك مبارك يا ' + x.name + '، وكل عام وأنت بخير، تقبّل الله منا ومنك', src: '— ' + sign(x), fam: true };
+    return { type: tr('عيدك مبارك يا ') + x.name, text: she ? tr('عيدكِ مبارك يا ') + x.name + tr('، وكل عام وأنتِ بخير، تقبّل الله منا ومنكِ') :
+      tr('عيدك مبارك يا ') + x.name + tr('، وكل عام وأنت بخير، تقبّل الله منا ومنك'), src: '— ' + sign(x), fam: true };
   }
   function famMessage(n) {
     if (season.eid) return eidMessage(n);
     var pool = famPool(), m = pool[n % pool.length], who = member(m.to);
-    var type = m.to === 'all' ? 'رسالة إلى العائلة' : who.kind === 'departed' ?
-      (who.dep.kind === 'father' ? 'دعاء لوالدي رحمه الله' : 'دعاء ل' + who.name + ' رحمها الله') :
-      'رسالة إلى ' + who.name;
+    var type = m.to === 'all' ? tr('رسالة إلى العائلة') : who.kind === 'departed' ?
+      (who.dep.kind === 'father' ? tr('دعاء لوالدي رحمه الله') : tr('دعاء ل') + who.name + tr(' رحمها الله')) :
+      tr('رسالة إلى ') + who.name;
     return { type: type, text: m.text, src: '— ' + sign(who), fam: true };
   }
   function spouse() { return fam().members.filter(function (x) { return x.kind === 'wife' || x.kind === 'husband'; })[0]; }
   // birthday or wedding anniversary today: its greeting stays all day
   function special(r) {
     var b = fam().members.filter(function (x) { return x.m === r.m && x.d === r.d; })[0];
-    if (b) return { id: 'b-' + b.id, type: 'يوم ميلاد ' + b.name, text: fill(FAMILY.birthday[msgKind(b)], b), src: '— ' + sign(b), fam: true };
+    if (b) return { id: 'b-' + b.id, type: tr('يوم ميلاد ') + b.name, text: fill(FAMILY.birthday[msgKind(b)], b), src: '— ' + sign(b), fam: true };
     var a = fam().anniversary, sp = spouse();
     if (a && sp && a.m === r.m && a.d === r.d) {
-      return { id: 'anniv', type: 'ذكرى زواجنا', text: fill(FAMILY.anniversary[fam().parent === 'mother' ? 'mother' : 'father'], sp), src: '— ' + sign(sp), fam: true };
+      return { id: 'anniv', type: tr('ذكرى زواجنا'), text: fill(FAMILY.anniversary[fam().parent === 'mother' ? 'mother' : 'father'], sp), src: '— ' + sign(sp), fam: true };
     }
     return null;
   }
@@ -969,7 +1000,7 @@
     showReminder(t);
     if (!TV && Math.floor(t / MIN) !== tripMin) { tripMin = Math.floor(t / MIN); tripCheck(today); }
     fridayMorning = today.friday && t >= today.at.sunrise && t < today.at.dhuhr;
-    if (today.friday) $('fr-left').textContent = t < today.at.dhuhr ? 'متبقٍّ على الجمعة ' + P.leftHM(today.at.dhuhr - t) : '';
+    if (today.friday) $('fr-left').textContent = t < today.at.dhuhr ? tr('متبقٍّ على الجمعة ') + P.leftHM(today.at.dhuhr - t) : '';
     showFact(t, today, yest);
     if (screen === 'home') renderHome(t, today, tom, yest);
     nightCare(t, today);
@@ -979,7 +1010,7 @@
   }
 
   // ---------- occasion countdowns (days left): own dates + Ramadan and the two Eids (Umm al-Qura) ----------
-  var AUTO = [{ id: 'ramadan', name: 'دخول رمضان', m: 9, d: 1 }, { id: 'fitr', name: 'عيد الفطر', m: 10, d: 1 }, { id: 'adha', name: 'عيد الأضحى', m: 12, d: 10 }];
+  var AUTO = [{ id: 'ramadan', name: tr('دخول رمضان'), m: 9, d: 1 }, { id: 'fitr', name: tr('عيد الفطر'), m: 10, d: 1 }, { id: 'adha', name: tr('عيد الأضحى'), m: 12, d: 10 }];
   var autoCache = { key: '', list: [] };
   function autoEvents(r) {
     var key = r.y + '-' + r.m + '-' + r.d;
@@ -993,8 +1024,8 @@
       });
     }
     // birthdays and the wedding anniversary, every year
-    fam().members.map(function (x) { return { auto: 'b-' + x.id, name: 'ميلاد ' + x.name, m: x.m, d: x.d }; })
-      .concat(fam().anniversary ? [{ auto: 'anniv', name: 'ذكرى الزواج', m: fam().anniversary.m, d: fam().anniversary.d }] : [])
+    fam().members.map(function (x) { return { auto: 'b-' + x.id, name: tr('ميلاد ') + x.name, m: x.m, d: x.d }; })
+      .concat(fam().anniversary ? [{ auto: 'anniv', name: tr('ذكرى الزواج'), m: fam().anniversary.m, d: fam().anniversary.d }] : [])
       .forEach(function (x) {
         var y = r.y;
         if (daysTo({ y: y, m: x.m, d: x.d }, r) < 0) y++;
@@ -1005,9 +1036,9 @@
   }
   function daysTo(e, r) { return Math.round((Date.UTC(e.y, e.m - 1, e.d) - Date.UTC(r.y, r.m - 1, r.d)) / 86400000); }
   // days left, in words: اليوم · غدًا · بعد غد · 5 أيام · 107 يومًا
-  function daysText(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === 2 ? 'بعد غد' : countWord(n, '', '', 'أيام', 'يومًا'); }
+  function daysText(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === 2 ? tr('بعد غد') : EN ? n + ' days' : countWord(n, '', '', 'أيام', 'يومًا'); }
   // dates as numbers read from the right: day, then month, then year (the marks keep the order in Arabic text)
-  function fd(d, m, y) { var R = '\u200F'; return d + R + '/' + m + (y ? R + '/' + y : ''); }
+  function fd(d, m, y) { if (EN) return d + '/' + m + (y ? '/' + y : ''); var R = '\u200F'; return d + R + '/' + m + (y ? R + '/' + y : ''); }
   function dmy(e) { return fd(e.d, e.m, e.y); }
   function allEvents(r) {
     var own = S.events.filter(function (e) { return daysTo(e, r) >= 0; });
@@ -1038,7 +1069,7 @@
     }).join('');
   }
   // the card of an occasion: chosen in the settings, or by default Ramadan and the Eids أ, birthdays and the anniversary ب
-  var SEASON = { ramadan: 1, fitr: 1, adha: 1 }, CARD_LETTERS = ['', 'a', 'b', 'c'], CARD_NAMES = { '': 'منفردة', a: 'أ', b: 'ب', c: 'ج' };
+  var SEASON = { ramadan: 1, fitr: 1, adha: 1 }, CARD_LETTERS = ['', 'a', 'b', 'c'], CARD_NAMES = { '': tr('منفردة'), a: tr('أ'), b: tr('ب'), c: tr('ج') };
   var evCards = [], evTurn = {};
   function evKey(e) { return e.auto || 'o:' + e.name + ':' + e.y + '-' + e.m + '-' + e.d; }
   function cardOf(e) {
@@ -1050,12 +1081,12 @@
     if (e.timer) {
       // a timer (from the phone): its first number large, the rest small; «منذ / حتى» and its name
       var x = e.timer, pt = tParts(x, Date.now()), past = tAt(x) <= Date.now(), first = pt[0];
-      return '<span class="ev-n">' + (first[0] >= 10000 ? tNum(first[0]) : first[0]) + '</span><div class="ev-t"><b>' + (past ? 'منذ ' : 'حتى ') + esc(x.name) +
-        '</b><span>' + first[1] + (pt[1] ? ' و' + pt[1][0] + ' ' + pt[1][1] : '') + '</span></div>';
+      return '<span class="ev-n">' + (first[0] >= 10000 ? tNum(first[0]) : first[0]) + '</span><div class="ev-t"><b>' + (past ? tr('منذ ') : tr('حتى ')) + esc(x.name) +
+        '</b><span>' + first[1] + (pt[1] ? tr(' و') + pt[1][0] + ' ' + pt[1][1] : '') + '</span></div>';
     }
     var big = e.left <= 2 ? daysText(e.left) : e.left;
     return '<span class="ev-n">' + big + '</span><div class="ev-t"><b>' + esc(e.name) +
-      '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? 'أيام' : 'يومًا') + ' · ') + dmy(e) + '</span></div>';
+      '</b><span>' + (e.left <= 2 ? '' : (e.left <= 10 ? tr('أيام') : tr('يومًا')) + ' · ') + dmy(e) + '</span></div>';
   }
   setInterval(function () {
     evCards.slice(0, 6).forEach(function (c, n) {
@@ -1075,14 +1106,14 @@
     FIVE.forEach(function (k) { if (S.alerts[k] && T.iqamah[k] && t >= T.at[k] && t < T.iqamah[k]) on = k; });
     if (on) {
       key = 'iq' + T.at[on];
-      label = 'متبقٍّ على إقامة صلاة ' + P.name(on, T.friday);
+      label = tr('متبقٍّ على إقامة صلاة ') + P.name(on, T.friday);
       target = T.iqamah[on];
-      detail = 'الأذان ' + P.full(T.at[on]) + ' · الإقامة ' + P.full(T.iqamah[on]);
+      detail = tr('الأذان ') + P.full(T.at[on]) + tr(' · الإقامة ') + P.full(T.iqamah[on]);
     } else if (T.ramadan && t >= T.at.maghrib - 15 * MIN && t < T.at.maghrib) {
       key = 'if' + T.at.maghrib;
-      label = 'متبقٍّ على أذان المغرب · الإفطار';
+      label = tr('متبقٍّ على أذان المغرب · الإفطار');
       target = T.at.maghrib;
-      detail = 'أذان المغرب ' + P.full(T.at.maghrib) + ' · اللهم تقبّل صيامنا';
+      detail = tr('أذان المغرب ') + P.full(T.at.maghrib) + tr(' · اللهم تقبّل صيامنا');
     }
     if (key && !iqDismissed[key]) {
       if (!iqOpen()) {
@@ -1119,12 +1150,12 @@
   function seasonOfDay(ts) {
     var h = {};
     fHMD.formatToParts(new Date(ts)).forEach(function (x) { h[x.type] = +x.value; });
-    if (h.month === 9) return ['ram', 'رمضان'];
-    if (h.month === 10 && h.day <= 3) return ['eid', 'عيد الفطر'];
-    if (h.month === 12 && h.day === 9) return ['arafah', 'يوم عرفة'];
-    if (h.month === 12 && h.day <= 8) return ['hajj', 'عشر ذي الحجة'];
-    if (h.month === 12 && h.day <= 13) return ['eid', h.day === 10 ? 'عيد الأضحى' : 'أيام التشريق'];
-    if (h.month === 1 && h.day === 10) return ['ashura', 'عاشوراء'];
+    if (h.month === 9) return ['ram', tr('رمضان')];
+    if (h.month === 10 && h.day <= 3) return ['eid', tr('عيد الفطر')];
+    if (h.month === 12 && h.day === 9) return ['arafah', tr('يوم عرفة')];
+    if (h.month === 12 && h.day <= 8) return ['hajj', tr('عشر ذي الحجة')];
+    if (h.month === 12 && h.day <= 13) return ['eid', h.day === 10 ? tr('عيد الأضحى') : tr('أيام التشريق')];
+    if (h.month === 1 && h.day === 10) return ['ashura', tr('عاشوراء')];
     return null;
   }
   function calRender() {
@@ -1164,7 +1195,7 @@
     $('cal-is-today').classList.toggle('hidden', !(cal.sy === cal.ty && cal.sm === cal.tm && cal.sd === cal.td));
     $('cal-rows').innerHTML = ['imsak'].concat(ORDER).map(function (k) {
       var at = k === 'imsak' ? T.imsak : T.at[k], iq = k === 'imsak' ? null : T.iqamah[k];
-      return '<div class="cal-tr"><span class="n">' + (k === 'imsak' ? 'الإمساك' : P.name(k, T.friday)) + '</span><span class="a">' + P.full(at) +
+      return '<div class="cal-tr"><span class="n">' + (k === 'imsak' ? tr('الإمساك') : P.name(k, T.friday)) + '</span><span class="a">' + P.full(at) +
         '</span><span class="i">' + (iq ? P.full(iq) : '—') + '</span></div>';
     }).join('');
   }
@@ -1187,11 +1218,11 @@
   function kFirst() { return kahf.s === 1 || kahf.s === 9 ? 1 : 0; }
   // reciters (everyayah.com folders; a second folder is tried if the first does not play)
   var RECITERS = [
-    { id: 'alafasy', name: 'مشاري العفاسي', dirs: ['Alafasy_128kbps', 'Alafasy_64kbps'] },
-    { id: 'sudais', name: 'عبد الرحمن السديس', dirs: ['Abdurrahmaan_As-Sudais_192kbps', 'Abdurrahmaan_As-Sudais_64kbps'] },
-    { id: 'shuraym', name: 'سعود الشريم', dirs: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'] },
-    { id: 'muaiqly', name: 'ماهر المعيقلي', dirs: ['MaherAlMuaiqly128kbps', 'Maher_AlMuaiqly_64kbps'] },
-    { id: 'dossary', name: 'ياسر الدوسري', dirs: ['Yasser_Ad-Dussary_128kbps'] }
+    { id: 'alafasy', name: tr('مشاري العفاسي'), dirs: ['Alafasy_128kbps', 'Alafasy_64kbps'] },
+    { id: 'sudais', name: tr('عبد الرحمن السديس'), dirs: ['Abdurrahmaan_As-Sudais_192kbps', 'Abdurrahmaan_As-Sudais_64kbps'] },
+    { id: 'shuraym', name: tr('سعود الشريم'), dirs: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'] },
+    { id: 'muaiqly', name: tr('ماهر المعيقلي'), dirs: ['MaherAlMuaiqly128kbps', 'Maher_AlMuaiqly_64kbps'] },
+    { id: 'dossary', name: tr('ياسر الدوسري'), dirs: ['Yasser_Ad-Dussary_128kbps'] }
   ];
   var dirTry = 0;
   function reciter() { return RECITERS.filter(function (r) { return r.id === S.reciter; })[0] || RECITERS[0]; }
@@ -1231,15 +1262,15 @@
     $('k-read').classList.toggle('hidden', !kahf.read);
     $('k-text').classList.toggle('hidden', kahf.read);
     $('k-read-btn').classList.toggle('on', kahf.read);
-    $('k-read-btn').textContent = kahf.read ? 'وضع التلاوة' : 'وضع القراءة';
+    $('k-read-btn').textContent = kahf.read ? tr('وضع التلاوة') : tr('وضع القراءة');
     if (kahf.read) kReadRender(i);
-    $('k-title').textContent = 'سورة ' + QURAN[kahf.s - 1][0];
-    $('k-sub').textContent = 'بصوت الشيخ ' + reciter().name;
+    $('k-title').textContent = tr('سورة ') + QURAN[kahf.s - 1][0];
+    $('k-sub').textContent = tr('بصوت الشيخ ') + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').textContent = cur;
     $('k-next').textContent = kText(i + 1);
     $('k-cur').style.fontSize = cur.length > 900 ? '28px' : cur.length > 600 ? '34px' : cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
-    $('k-pos').textContent = i === 0 ? 'البسملة' : 'الآية ' + i + ' من ' + n;
+    $('k-pos').textContent = i === 0 ? tr('البسملة') : tr('الآية ') + i + tr(' من ') + n;
     $('k-fill').style.width = (i / n * 100) + '%';
     $('k-ic-pause').classList.toggle('hidden', !kahf.playing);
     $('k-ic-play').classList.toggle('hidden', kahf.playing);
@@ -1258,13 +1289,13 @@
   function kPrev() { if (kahf.i > kFirst()) kPlay(kahf.i - 1); }
   audio.addEventListener('ended', function () {
     if (kahf.i < kCount()) kPlay(kahf.i + 1);
-    else { kahf.playing = false; $('k-msg').textContent = 'انتهت السورة'; kRender(); }
+    else { kahf.playing = false; $('k-msg').textContent = tr('انتهت السورة'); kRender(); }
   });
   audio.addEventListener('error', function () {
     if (!audio.src) return;
     if (dirTry < reciter().dirs.length - 1) { dirTry++; kPlay(kahf.i); return; }
     kahf.playing = false;
-    $('k-msg').textContent = 'تعذّر التشغيل، تأكد من اتصال الإنترنت';
+    $('k-msg').textContent = tr('تعذّر التشغيل، تأكد من اتصال الإنترنت');
     kRender();
   });
   function kToggle() {
@@ -1282,21 +1313,21 @@
     $('q-readlist').classList.toggle('hidden', !read);
     if (read) {
       var M = S.qMark;
-      $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + '">أكمل من سورة ' + QURAN[M.s - 1][0] + ' · الآية ' + M.i + '</button>' : '';
-      $('q-sub').textContent = 'اختر سورة واقرأ بهدوء، وعلّم موضعك';
+      $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + tr('">أكمل من سورة ') + QURAN[M.s - 1][0] + tr(' · الآية ') + M.i + '</button>' : '';
+      $('q-sub').textContent = tr('اختر سورة واقرأ بهدوء، وعلّم موضعك');
       if (!$('q-readlist').firstChild) $('q-readlist').innerHTML = QURAN.map(function (q, k) {
-        return '<button class="sura f" data-rsura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, 'آية', 'آيتان', 'آيات', 'آية') + '</span></button>';
+        return '<button class="sura f" data-rsura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, tr('آية'), tr('آيتان'), tr('آيات'), tr('آية')) + '</span></button>';
       }).join('');
       return;
     }
     $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
-      'متابعة سورة ' + QURAN[L.s - 1][0] + ' · الآية ' + L.i + '</button>' : '';
-    $('q-sub').textContent = 'اختر سورة · بصوت الشيخ ' + reciter().name;
+      tr('متابعة سورة ') + QURAN[L.s - 1][0] + tr(' · الآية ') + L.i + '</button>' : '';
+    $('q-sub').textContent = tr('اختر سورة · بصوت الشيخ ') + reciter().name;
     $('q-reciters').innerHTML = RECITERS.map(function (r) {
       return '<button class="sbtn f' + (r.id === reciter().id ? ' on' : '') + '" data-rec="' + r.id + '">' + r.name + '</button>';
     }).join('');
     if (!$('q-list').firstChild) $('q-list').innerHTML = QURAN.map(function (q, k) {
-      return '<button class="sura f" data-go="kahf" data-sura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, 'آية', 'آيتان', 'آيات', 'آية') + '</span></button>';
+      return '<button class="sura f" data-go="kahf" data-sura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, tr('آية'), tr('آيتان'), tr('آيات'), tr('آية')) + '</span></button>';
     }).join('');
   }
   function kStop() { audio.pause(); kahf.playing = false; }
@@ -1306,8 +1337,8 @@
   function appsRender() {
     var list = apps();
     if (appsMode === 'pick') list = list.filter(function (a) { return (S.shortcuts || []).indexOf(a.pkg) < 0; });
-    $('apps-title').textContent = appsMode === 'pick' ? 'اختر تطبيقًا للاختصارات' : 'كل التطبيقات';
-    $('apps-sub').textContent = countWord(list.length, 'تطبيق واحد', 'تطبيقان', 'تطبيقات', 'تطبيقًا');
+    $('apps-title').textContent = appsMode === 'pick' ? tr('اختر تطبيقًا للاختصارات') : tr('كل التطبيقات');
+    $('apps-sub').textContent = countWord(list.length, tr('تطبيق واحد'), tr('تطبيقان'), tr('تطبيقات'), tr('تطبيقًا'));
     $('apps-grid').innerHTML = list.map(tileHtml).join('');
   }
 
@@ -1317,141 +1348,143 @@
     var r = P.ymd(Date.now()), T = P.dayTimes(r.y, r.m, r.d, S.offsets);
     $('set-loc').innerHTML =
       '<div class="srow"><span class="sname">' + esc(S.loc.name) + (S.loc.country ? ' <span class="muted">· ' + esc(S.loc.country) + '</span>' : '') +
-        '<br><span class="muted set-note">طريقة الحساب: ' + P.method().name + (S.loc.mode === 'auto' ? ' · ' + (S.loc.gps ? 'من موقع الجوال' : 'من اتصال الإنترنت') : '') + '</span></span>' +
-        '<button class="sbtn al f' + (S.loc.mode === 'auto' ? ' on' : '') + '" data-k="loc-auto">' + (S.loc.mode === 'auto' ? 'تلقائي' : 'تحديد تلقائي') + '</button></div>' +
-      '<div class="srow"><input id="loc-q" class="inp f" placeholder="ابحث عن مدينة، مثل: جدة أو عمّان" value="' + esc(locQ) + '"><button id="loc-find" class="sbtn f">بحث</button></div>' +
+        tr('<br><span class="muted set-note">طريقة الحساب: ') + P.method().name + (S.loc.mode === 'auto' ? ' · ' + (S.loc.gps ? tr('من موقع الجوال') : tr('من اتصال الإنترنت')) : '') + '</span></span>' +
+        '<button class="sbtn al f' + (S.loc.mode === 'auto' ? ' on' : '') + '" data-k="loc-auto">' + (S.loc.mode === 'auto' ? tr('تلقائي') : tr('تحديد تلقائي')) + '</button></div>' +
+      tr('<div class="srow"><input id="loc-q" class="inp f" placeholder="ابحث عن مدينة، مثل: جدة أو عمّان" value="') + esc(locQ) + tr('"><button id="loc-find" class="sbtn f">بحث</button></div>') +
       (locMsg ? '<div class="muted set-note">' + locMsg + '</div>' : '') +
       locResults.map(function (g, i) {
-        return '<div class="srow"><span class="sname">' + esc(g.name) + ' <span class="muted">· ' + esc([g.admin1, g.country].filter(Boolean).join('، ')) + '</span></span>' +
-          '<button class="sbtn al f" data-k="loc-' + i + '">اختيار</button></div>';
+        return '<div class="srow"><span class="sname">' + esc(g.name) + ' <span class="muted">· ' + esc([g.admin1, g.country].filter(Boolean).join(tr('، '))) + '</span></span>' +
+          '<button class="sbtn al f" data-k="loc-' + i + tr('">اختيار</button></div>');
       }).join('') +
-      (TV ? '' : '<div class="srow"><span class="sname">البيت (لوضع المسافر): ' + esc(S.home.name) + '</span>' +
-        (S.home.name !== S.loc.name ? '<button class="sbtn al f" data-k="home">اجعل ' + esc(S.loc.name) + ' البيت</button>' : '') + '</div>');
-    $('set-sound').innerHTML = '<div class="muted set-note">صوت التنبيه لكل صلاة</div>' + FIVE.map(function (k) { return [k, P.name(k)]; }).map(function (x) {
+      (TV ? '' : tr('<div class="srow"><span class="sname">البيت (لوضع المسافر): ') + esc(S.home.name) + '</span>' +
+        (S.home.name !== S.loc.name ? tr('<button class="sbtn al f" data-k="home">اجعل ') + esc(S.loc.name) + tr(' البيت</button>') : '') + '</div>');
+    $('set-sound').innerHTML = tr('<div class="muted set-note">صوت التنبيه لكل صلاة</div>') + FIVE.map(function (k) { return [k, P.name(k)]; }).map(function (x) {
       return '<div class="srow snd-row"><span class="sname">' + x[1] + '</span><span class="snd-opts">' + SOUNDS.map(function (o) {
         return '<button class="sbtn f' + (S.sound[x[0]] === o[0] ? ' on' : '') + '" data-k="snd-' + x[0] + '-' + o[0] + '">' + o[1] + '</button>';
-      }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + '">▶ تجربة</button>' : '') + '</span></div>';
+      }).join('') + (A && A.previewSound && S.sound[x[0]] !== 'none' ? '<button class="sbtn f" data-k="sndt-' + x[0] + tr('">▶ تجربة</button>') : '') + '</span></div>';
     }).join('');
     // the phone's other notifications
     var sAt = 0; try { sAt = +localStorage.getItem('prayertv-synced-at') || 0; } catch (e) {}
     var same = syncData() === syncLast();
-    $('set-sync').innerHTML = '<div class="srow"><span class="sname">' + (syncState === 'send' ? 'جارٍ الإرسال…' :
-      syncState === 'none' ? '<span class="w-al">لم أجد التلفزيون على الشبكة، سأحاول عند فتح التطبيق مرة أخرى</span>' :
-      syncState === 'fail' ? '<span class="w-al">التلفزيون لم يرد، سأحاول لاحقًا</span>' :
-      same && sAt ? 'التلفزيون مثل الجوال ✓ <span class="muted">(آخر إرسال ' + P.full(sAt) + ')</span>' : 'لم يُرسل بعد') + '</span>' +
-      '<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>';
+    $('set-sync').innerHTML = '<div class="srow"><span class="sname">' + (syncState === 'send' ? tr('جارٍ الإرسال…') :
+      syncState === 'none' ? tr('<span class="w-al">لم أجد التلفزيون على الشبكة، سأحاول عند فتح التطبيق مرة أخرى</span>') :
+      syncState === 'fail' ? tr('<span class="w-al">التلفزيون لم يرد، سأحاول لاحقًا</span>') :
+      same && sAt ? tr('التلفزيون مثل الجوال ✓ <span class="muted">(آخر إرسال ') + P.full(sAt) + ')</span>' : tr('لم يُرسل بعد')) + '</span>' +
+      tr('<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>');
     $('sum-sync').textContent = same && sAt ? '✓' : '';
-    $('set-more-al').innerHTML = (TV ? [] : [['friday', 'تذكير قبل الجمعة بساعة'], ['weather', 'تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)']])
-      .concat(TV ? [] : [['travel', 'وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ' + S.home.name]])
-      .concat([['kaaba', 'تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة']]).map(function (o) {
-      return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? 'يعمل' : 'متوقف') + '</button></div>';
+    $('set-more-al').innerHTML = (TV ? [] : [['friday', tr('تذكير قبل الجمعة بساعة')], ['weather', tr('تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)')]])
+      .concat(TV ? [] : [['travel', tr('وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ') + S.home.name]])
+      .concat([['kaaba', tr('تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة')]]).map(function (o) {
+      return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? tr('يعمل') : tr('متوقف')) + '</button></div>';
     }).join('') +
-      (TV ? '' : '<div class="srow"><span class="sname">تذكير ورد القراءة' + (S.qRemind.on ? ' <span class="muted">· الساعة ' + S.qRemind.time + '</span>' : '') + '</span>' +
-        (S.qRemind.on ? '<button class="sbtn f" data-k="remm">−30 د</button><button class="sbtn f" data-k="remp">+30 د</button>' : '') +
-        '<button class="sbtn al f' + (S.qRemind.on ? ' on' : '') + '" data-k="rem">' + (S.qRemind.on ? 'يعمل' : 'متوقف') + '</button></div>');
+      (TV ? '' : tr('<div class="srow"><span class="sname">تذكير ورد القراءة') + (S.qRemind.on ? tr(' <span class="muted">· الساعة ') + S.qRemind.time + '</span>' : '') + '</span>' +
+        (S.qRemind.on ? tr('<button class="sbtn f" data-k="remm">−30 د</button><button class="sbtn f" data-k="remp">+30 د</button>') : '') +
+        '<button class="sbtn al f' + (S.qRemind.on ? ' on' : '') + '" data-k="rem">' + (S.qRemind.on ? tr('يعمل') : tr('متوقف')) + '</button></div>');
     $('set-prayers').innerHTML = ORDER.map(function (k) {
       var off = S.offsets[k];
       return '<div class="srow"><span class="sname">' + P.name(k) + '</span><span class="stime">' + P.full(T.at[k]) + '</span>' +
-        '<button class="sbtn f" data-k="m-' + k + '" aria-label="ناقص دقيقة">−</button>' +
+        '<button class="sbtn f" data-k="m-' + k + tr('" aria-label="ناقص دقيقة">−</button>') +
         '<span class="soff">' + (off > 0 ? '+' : '') + off + '</span>' +
-        '<button class="sbtn f" data-k="p-' + k + '" aria-label="زائد دقيقة">+</button>' +
+        '<button class="sbtn f" data-k="p-' + k + tr('" aria-label="زائد دقيقة">+</button>') +
         (k === 'sunrise' && TV ? '<span class="sbtn al" style="visibility:hidden"></span>' :
-          '<button class="sbtn al f' + (S.alerts[k] ? ' on' : '') + '" data-k="a-' + k + '">' + (S.alerts[k] ? 'التنبيه يعمل' : 'التنبيه متوقف') + '</button>') +
+          '<button class="sbtn al f' + (S.alerts[k] ? ' on' : '') + '" data-k="a-' + k + '">' + (S.alerts[k] ? tr('التنبيه يعمل') : tr('التنبيه متوقف')) + '</button>') +
         '</div>';
     }).join('');
     var sc = TV ? shortcutApps() : [];
     $('set-shortcuts').innerHTML = sc.length ? sc.map(function (a, i) {
       return '<div class="srow">' + (a.icon ? '<img src="' + a.icon + '" alt="">' : '') + '<span class="sname">' + esc(a.label) + '</span>' +
-        '<button class="sbtn f" data-k="u-' + i + '" aria-label="إلى الأعلى">▲</button>' +
-        '<button class="sbtn f" data-k="d-' + i + '" aria-label="إلى الأسفل">▼</button>' +
-        '<button class="sbtn f" data-k="x-' + i + '">حذف</button></div>';
-    }).join('') : '<div class="muted set-note">لا توجد اختصارات</div>';
+        '<button class="sbtn f" data-k="u-' + i + tr('" aria-label="إلى الأعلى">▲</button>') +
+        '<button class="sbtn f" data-k="d-' + i + tr('" aria-label="إلى الأسفل">▼</button>') +
+        '<button class="sbtn f" data-k="x-' + i + tr('">حذف</button></div>');
+    }).join('') : tr('<div class="muted set-note">لا توجد اختصارات</div>');
     var overlay = !A || A.canOverlay();
     $('set-general').innerHTML =
-      '<div class="srow"><span class="sname">وضع الضيوف' + (S.guest.on ? ' <span class="muted">· ' + esc(S.guest.name || 'ضيوفنا الكرام') + '</span>' : '') + '</span><button class="sbtn f' + (S.guest.on ? ' on' : '') + '" data-k="guest">' + (S.guest.on ? 'يعمل · إنهاء' : 'متوقف') + '</button></div>' +
-      '<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f' + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? 'يعمل' : 'متوقف') + '</button></div>' +
-      (A && A.dreamOn ? '<div class="srow"><span class="sname">شاشة التوقف (Screensaver)</span><button class="sbtn f' + (A.dreamOn() ? ' on' : '') + '" data-k="dream">' + (A.dreamOn() ? 'يعمل' : 'متوقف') + '</button>' +
-        (A.dreamOn() ? '<button class="sbtn f" data-k="dreamset">اختيارها في إعدادات التلفزيون</button>' : '') + '</div>' : '') +
-      '<div class="srow"><span class="sname">إبقاء الشاشة مضاءة دائمًا (يمنع شاشة التوقف)</span><button class="sbtn al f' + (S.keepOn ? ' on' : '') + '" data-k="keep">' + (S.keepOn ? 'يعمل' : 'متوقف') + '</button></div>' +
-      '<div class="srow"><span class="sname">تخفيت الشاشة ليلًا (من بعد العشاء بساعتين حتى الفجر)</span><button class="sbtn f' + (S.nightDim ? ' on' : '') + '" data-k="ndim">' + (S.nightDim ? 'يعمل' : 'متوقف') + '</button></div>' +
-      '<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>' +
-      (overlay ? '<span class="sbtn al on">مسموح</span>' : (A && A.overlaySettingsAvailable && !A.overlaySettingsAvailable() ?
-        '<span class="muted adb">هذا التلفزيون لا يعرض صفحة السماح. من كمبيوتر على نفس الشبكة:<br><span dir="ltr">adb shell appops set com.dromaia.prayertv SYSTEM_ALERT_WINDOW allow</span></span>' :
-        '<button class="sbtn al f" data-k="overlay">السماح</button>')) + '</div>';
+      tr('<div class="srow"><span class="sname">وضع الضيوف') + (S.guest.on ? ' <span class="muted">· ' + esc(S.guest.name || tr('ضيوفنا الكرام')) + '</span>' : '') + '</span><button class="sbtn f' + (S.guest.on ? ' on' : '') + '" data-k="guest">' + (S.guest.on ? tr('يعمل · إنهاء') : tr('متوقف')) + '</button></div>' +
+      tr('<div class="srow"><span class="sname">فتح هذه الشاشة عند تشغيل التلفزيون</span><button class="sbtn f') + (S.openOnBoot ? ' on' : '') + '" data-k="boot">' + (S.openOnBoot ? tr('يعمل') : tr('متوقف')) + '</button></div>' +
+      (A && A.dreamOn ? tr('<div class="srow"><span class="sname">شاشة التوقف (Screensaver)</span><button class="sbtn f') + (A.dreamOn() ? ' on' : '') + '" data-k="dream">' + (A.dreamOn() ? tr('يعمل') : tr('متوقف')) + '</button>' +
+        (A.dreamOn() ? tr('<button class="sbtn f" data-k="dreamset">اختيارها في إعدادات التلفزيون</button>') : '') + '</div>' : '') +
+      tr('<div class="srow"><span class="sname">إبقاء الشاشة مضاءة دائمًا (يمنع شاشة التوقف)</span><button class="sbtn al f') + (S.keepOn ? ' on' : '') + '" data-k="keep">' + (S.keepOn ? tr('يعمل') : tr('متوقف')) + '</button></div>' +
+      tr('<div class="srow"><span class="sname">تخفيت الشاشة ليلًا (من بعد العشاء بساعتين حتى الفجر)</span><button class="sbtn f') + (S.nightDim ? ' on' : '') + '" data-k="ndim">' + (S.nightDim ? tr('يعمل') : tr('متوقف')) + '</button></div>' +
+      tr('<div class="srow"><span class="sname">التنبيه فوق التطبيقات الأخرى (مثل يوتيوب)</span>') +
+      (overlay ? tr('<span class="sbtn al on">مسموح</span>') : (A && A.overlaySettingsAvailable && !A.overlaySettingsAvailable() ?
+        tr('<span class="muted adb">هذا التلفزيون لا يعرض صفحة السماح. من كمبيوتر على نفس الشبكة:<br><span dir="ltr">adb shell appops set com.dromaia.prayertv SYSTEM_ALERT_WINDOW allow</span></span>') :
+        tr('<button class="sbtn al f" data-k="overlay">السماح</button>'))) + '</div>';
     // phone: what the adhan alerts need
     var ph = A && !TV && A.notifOk;
     $('set-phone').innerHTML = !ph ? '' :
-      '<div class="srow"><span class="sname">الإشعارات</span>' + (A.notifOk() ? '<span class="sbtn al on">مسموحة</span>' : '<button class="sbtn al f" data-k="notif">السماح</button>') + '</div>' +
-      '<div class="srow"><span class="sname">التنبيه في الوقت بالضبط</span>' + (A.exactOk() ? '<span class="sbtn al on">يعمل</span>' : '<span class="sbtn al">قد يتأخر قليلًا</span>') + '</div>' +
-      '<div class="srow"><span class="sname">استثناء من توفير البطارية (مهم في سامسونج)</span>' + (A.batteryOk() ? '<span class="sbtn al on">مستثنى</span>' : '<button class="sbtn al f" data-k="battery">استثناء</button>') + '</div>';
+      tr('<div class="srow"><span class="sname">الإشعارات</span>') + (A.notifOk() ? tr('<span class="sbtn al on">مسموحة</span>') : tr('<button class="sbtn al f" data-k="notif">السماح</button>')) + '</div>' +
+      tr('<div class="srow"><span class="sname">التنبيه في الوقت بالضبط</span>') + (A.exactOk() ? tr('<span class="sbtn al on">يعمل</span>') : tr('<span class="sbtn al">قد يتأخر قليلًا</span>')) + '</div>' +
+      tr('<div class="srow"><span class="sname">استثناء من توفير البطارية (مهم في سامسونج)</span>') + (A.batteryOk() ? tr('<span class="sbtn al on">مستثنى</span>') : tr('<button class="sbtn al f" data-k="battery">استثناء</button>')) + '</div>';
     // the Isha interval is a setting only where Isha is a time after Maghrib (Umm al-Qura)
-    $('set-isha').innerHTML = !(P.method().ishaMin && !P.method().fixed) ? '' : [['normal', 'العشاء بعد المغرب'], ['ramadan', 'العشاء بعد المغرب في رمضان']].map(function (x) {
+    $('set-isha').innerHTML = !(P.method().ishaMin && !P.method().fixed) ? '' : [['normal', tr('العشاء بعد المغرب')], ['ramadan', tr('العشاء بعد المغرب في رمضان')]].map(function (x) {
       return '<div class="srow"><span class="sname">' + x[1] + '</span>' +
-        '<button class="sbtn f" data-k="im-' + x[0] + '" aria-label="ناقص دقيقة">−</button>' +
+        '<button class="sbtn f" data-k="im-' + x[0] + tr('" aria-label="ناقص دقيقة">−</button>') +
         '<span class="soff">' + S.ishaMin[x[0]] + '</span>' +
-        '<button class="sbtn f" data-k="ip-' + x[0] + '" aria-label="زائد دقيقة">+</button>' +
-        '<span class="sbtn al muted" style="border:none;background:none">دقيقة</span></div>';
+        '<button class="sbtn f" data-k="ip-' + x[0] + tr('" aria-label="زائد دقيقة">+</button>') +
+        tr('<span class="sbtn al muted" style="border:none;background:none">دقيقة</span></div>');
     }).join('');
-    $('set-iq').innerHTML = '<div class="srow muted"><span class="sname"></span><span class="iqh">الأيام العادية</span><span class="iqh">رمضان</span></div>' +
+    $('set-iq').innerHTML = tr('<div class="srow muted"><span class="sname"></span><span class="iqh">الأيام العادية</span><span class="iqh">رمضان</span></div>') +
       FIVE.map(function (k) {
         function st(mode) {
-          return '<span class="iqs"><button class="sbtn f" data-k="q' + mode + 'm-' + k + '" aria-label="ناقص دقيقة">−</button><span class="soff">' + S.iqMin[mode === 'n' ? 'normal' : 'ramadan'][k] +
-            '</span><button class="sbtn f" data-k="q' + mode + 'p-' + k + '" aria-label="زائد دقيقة">+</button></span>';
+          return '<span class="iqs"><button class="sbtn f" data-k="q' + mode + 'm-' + k + tr('" aria-label="ناقص دقيقة">−</button><span class="soff">') + S.iqMin[mode === 'n' ? 'normal' : 'ramadan'][k] +
+            '</span><button class="sbtn f" data-k="q' + mode + 'p-' + k + tr('" aria-label="زائد دقيقة">+</button></span>');
         }
         return '<div class="srow"><span class="sname">' + P.name(k) + '</span>' + st('n') + st('r') + '</div>';
       }).join('');
-    $('set-hijri').innerHTML = '<div class="srow"><span class="sname">تعديل التاريخ الهجري <span class="muted">(' + fHFull.format(Date.now()) + ')</span></span>' +
-      '<button class="sbtn f" data-k="hadj-m" aria-label="يوم قبل">−</button><span class="soff">' + (S.hijriAdj > 0 ? '+' : '') + S.hijriAdj + '</span>' +
-      '<button class="sbtn f" data-k="hadj-p" aria-label="يوم بعد">+</button><span class="sbtn al muted" style="border:none;background:none">يوم</span></div>';
-    $('set-show').innerHTML = (stage.classList.contains('portrait') ? '<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">' +
-      [['small', 'صغير'], ['normal', 'عادي'], ['large', 'كبير'], ['xlarge', 'كبير جدًا']].map(function (o) {
+    $('set-hijri').innerHTML = tr('<div class="srow"><span class="sname">تعديل التاريخ الهجري <span class="muted">(') + fHFull.format(Date.now()) + ')</span></span>' +
+      tr('<button class="sbtn f" data-k="hadj-m" aria-label="يوم قبل">−</button><span class="soff">') + (S.hijriAdj > 0 ? '+' : '') + S.hijriAdj + '</span>' +
+      tr('<button class="sbtn f" data-k="hadj-p" aria-label="يوم بعد">+</button><span class="sbtn al muted" style="border:none;background:none">يوم</span></div>');
+    $('set-show').innerHTML = '<div class="srow snd-row"><span class="sname">' + tr('اللغة') + '</span><span class="snd-opts">' +
+      [['ar', 'العربية'], ['en', 'English']].map(function (o) { return '<button class="sbtn f' + (S.lang === o[0] ? ' on' : '') + '" data-k="lang-' + o[0] + '">' + o[1] + '</button>'; }).join('') +
+      '</span></div>' + (stage.classList.contains('portrait') ? tr('<div class="srow snd-row"><span class="sname">حجم الخط</span><span class="snd-opts">') +
+      [['small', tr('صغير')], ['normal', tr('عادي')], ['large', tr('كبير')], ['xlarge', tr('كبير جدًا')]].map(function (o) {
         return '<button class="sbtn f' + (Math.abs(zoomOf() - FONT_SCALE[o[0]]) < .04 ? ' on' : '') + '" data-k="fsz-' + o[0] + '">' + o[1] + '</button>';
-      }).join('') + '</span></div>' : '') + '<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">' +
-      [['auto', 'تلقائي (داكن ليلًا)'], ['light', 'فاتح'], ['dark', 'داكن']].map(function (o) {
+      }).join('') + '</span></div>' : '') + tr('<div class="srow snd-row"><span class="sname">المظهر</span><span class="snd-opts">') +
+      [['auto', tr('تلقائي (داكن ليلًا)')], ['light', tr('فاتح')], ['dark', tr('داكن')]].map(function (o) {
         return '<button class="sbtn f' + (S.theme === o[0] ? ' on' : '') + '" data-k="theme-' + o[0] + '">' + o[1] + '</button>';
-      }).join('') + '</span></div>' + '<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f' +
-      (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? 'يظهر' : 'مخفي') + '</button></div>';
+      }).join('') + '</span></div>' + tr('<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f') +
+      (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? tr('يظهر') : tr('مخفي')) + '</button></div>';
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
       return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
-        '<button class="sbtn al f" data-k="fx-' + i + '">حذف</button></div>';
+        '<button class="sbtn al f" data-k="fx-' + i + tr('">حذف</button></div>');
     }).join('');
     var F = fam();
     function steps(pre, o, fields) {
       return fields.map(function (f) {
-        return '<span>' + f[1] + ' <button class="sbtn f" data-k="' + pre + '-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + o[f[0]] +
-          '</b><button class="sbtn f" data-k="' + pre + '-' + f[0] + 'p" aria-label="زائد">+</button></span>';
+        return '<span>' + f[1] + ' <button class="sbtn f" data-k="' + pre + '-' + f[0] + tr('m" aria-label="ناقص">−</button><b>') + o[f[0]] +
+          '</b><button class="sbtn f" data-k="' + pre + '-' + f[0] + tr('p" aria-label="زائد">+</button></span>');
       }).join('');
     }
     $('set-family').innerHTML =
-      '<div class="srow"><span class="sname">كاتب الرسائل</span><button class="sbtn al f on" data-k="fpar">' + (F.parent === 'mother' ? 'الأم' : 'الأب') + '</button></div>' +
+      tr('<div class="srow"><span class="sname">كاتب الرسائل</span><button class="sbtn al f on" data-k="fpar">') + (F.parent === 'mother' ? tr('الأم') : tr('الأب')) + '</button></div>' +
       F.members.map(function (x, i) {
         return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FAMILY.KINDS[x.kind] + ' · ' + fd(x.d, x.m, x.y) + '</span></span>' +
-          '<button class="sbtn al f" data-k="fmx-' + i + '">حذف</button></div>';
+          '<button class="sbtn al f" data-k="fmx-' + i + tr('">حذف</button></div>');
       }).join('') +
-      '<div class="srow"><span class="sname">ذكرى الزواج</span>' +
-      (F.anniversary ? '<span class="ev-date">' + steps('fan', F.anniversary, [['d', 'اليوم'], ['m', 'الشهر']]) + '</span>' : '') +
-      '<button class="sbtn f' + (F.anniversary ? ' on' : '') + '" data-k="fan-on">' + (F.anniversary ? 'تظهر' : 'مخفية') + '</button></div>';
-    $('fm-kind').textContent = 'الصلة: ' + FAMILY.KINDS[fmDraft.kind];
-    $('fm-date').innerHTML = steps('fmd', fmDraft, [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']]);
+      tr('<div class="srow"><span class="sname">ذكرى الزواج</span>') +
+      (F.anniversary ? '<span class="ev-date">' + steps('fan', F.anniversary, [['d', tr('اليوم')], ['m', tr('الشهر')]]) + '</span>' : '') +
+      '<button class="sbtn f' + (F.anniversary ? ' on' : '') + '" data-k="fan-on">' + (F.anniversary ? tr('تظهر') : tr('مخفية')) + '</button></div>';
+    $('fm-kind').textContent = tr('الصلة: ') + FAMILY.KINDS[fmDraft.kind];
+    $('fm-date').innerHTML = steps('fmd', fmDraft, [['d', tr('اليوم')], ['m', tr('الشهر')], ['y', tr('السنة')]]);
     if (famOrder().indexOf(famTo) < 0) famTo = famOrder()[0];
-    $('fam-to').textContent = 'إلى: ' + member(famTo).name;
-    function cardBtn(k, e) { var g = cardOf(e); return '<button class="sbtn f' + (g ? ' on' : '') + '" data-k="' + k + '">البطاقة: ' + CARD_NAMES[g] + '</button>'; }
+    $('fam-to').textContent = tr('إلى: ') + member(famTo).name;
+    function cardBtn(k, e) { var g = cardOf(e); return '<button class="sbtn f' + (g ? ' on' : '') + '" data-k="' + k + tr('">البطاقة: ') + CARD_NAMES[g] + '</button>'; }
     $('set-events').innerHTML = autoEvents(r).map(function (e, i) {
       var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
-        cardBtn('evca-' + i, e) + '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? 'يظهر' : 'مخفي') + '</button></div>';
+        cardBtn('evca-' + i, e) + '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? tr('يظهر') : tr('مخفي')) + '</button></div>';
     }).join('') + S.events.map(function (e, i) {
       var n = daysTo(e, r);
       return '<div class="srow"><span class="sname">' + esc(e.name) + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
-        cardBtn('evco-' + i, e) + '<button class="sbtn al f" data-k="evx-' + i + '">حذف</button></div>';
+        cardBtn('evco-' + i, e) + '<button class="sbtn al f" data-k="evx-' + i + tr('">حذف</button></div>');
     }).join('');
-    $('ev-date').innerHTML = [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']].map(function (f) {
-      return '<span>' + f[1] + ' <button class="sbtn f" data-k="evd-' + f[0] + 'm" aria-label="ناقص">−</button><b>' + evDraft[f[0]] +
-        '</b><button class="sbtn f" data-k="evd-' + f[0] + 'p" aria-label="زائد">+</button></span>';
+    $('ev-date').innerHTML = [['d', tr('اليوم')], ['m', tr('الشهر')], ['y', tr('السنة')]].map(function (f) {
+      return '<span>' + f[1] + ' <button class="sbtn f" data-k="evd-' + f[0] + tr('m" aria-label="ناقص">−</button><b>') + evDraft[f[0]] +
+        '</b><button class="sbtn f" data-k="evd-' + f[0] + tr('p" aria-label="زائد">+</button></span>');
     }).join('');
     var wErr = '';
     try { wErr = A && A.widgetError ? A.widgetError() : ''; } catch (e) {}
-    $('set-version').textContent = (A ? 'الإصدار ' + A.version() : '') + (wErr ? ' · آخر خطأ في الويدجت: ' + wErr : '');
+    $('set-version').textContent = (A ? tr('الإصدار ') + A.version() : '') + (wErr ? tr(' · آخر خطأ في الويدجت: ') + wErr : '');
     $('sum-loc').textContent = S.loc.name + ' · ' + P.method().name;
     $('sum-hijri').textContent = fHFull.format(Date.now());
     $('sum-update').textContent = myVersion();
@@ -1499,7 +1532,7 @@
   function cvLabel(f, v) { return f === 'm' ? v + ' · ' + (cv.from === 'g' ? G_MONTHS : H_MONTHS)[v - 1] : String(v); }
   function cvBuild() {
     var keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.wf : '';
-    $('cv-fields').innerHTML = [['d', 'اليوم'], ['m', 'الشهر'], ['y', 'السنة']].map(function (x) {
+    $('cv-fields').innerHTML = [['d', tr('اليوم')], ['m', tr('الشهر')], ['y', tr('السنة')]].map(function (x) {
       return '<div class="cv-f cv-f-' + x[0] + '"><span class="muted">' + x[1] + '</span><div class="cv-wrap">' +
         '<div class="cv-wheel f" tabindex="0" data-wf="' + x[0] + '"><div class="cv-pad"></div>' +
         cvValues(x[0]).map(function (v) { return '<div class="cv-it" data-v="' + v + '">' + cvLabel(x[0], v) + '</div>'; }).join('') +
@@ -1548,15 +1581,15 @@
     else {
       g = hToG(cv.y, cv.m, cv.d);
       if (g) h = { y: cv.y, m: cv.m, d: cv.d };
-      else bad = 'شهر ' + H_MONTHS[cv.m - 1] + ' ' + cv.y + ' هـ تسعة وعشرون يومًا';
+      else bad = tr('شهر ') + H_MONTHS[cv.m - 1] + ' ' + cv.y + tr(' هـ تسعة وعشرون يومًا');
     }
     $('cv-g').classList.toggle('on', cv.from === 'g');
     $('cv-h').classList.toggle('on', cv.from === 'h');
     if (!g || !h) { $('cv-out').innerHTML = '<div class="cv-day muted">' + bad + '</div>'; return; }
     var r = P.ymd(Date.now()), n = daysTo(g, r), dow = new Date(Date.UTC(g.y, g.m - 1, g.d)).getUTCDay();
-    var when = n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === -1 ? 'أمس' : n === 2 ? 'بعد غد' : n === -2 ? 'قبل يومين' :
-      (n > 0 ? 'بعد ' : 'قبل ') + countWord(Math.abs(n), '', '', 'أيام', 'يومًا');
-    var big = cv.from === 'g' ? h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + ' هـ' : g.d + ' ' + G_MONTHS[g.m - 1] + ' ' + g.y + ' م';
+    var when = n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === -1 ? tr('أمس') : n === 2 ? tr('بعد غد') : n === -2 ? tr('قبل يومين') :
+      (n > 0 ? tr('بعد ') : tr('قبل ')) + countWord(Math.abs(n), '', '', tr('أيام'), tr('يومًا'));
+    var big = cv.from === 'g' ? h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + tr(' هـ') : g.d + ' ' + G_MONTHS[g.m - 1] + ' ' + g.y + tr(' م');
     var num = cv.from === 'g' ? fd(h.d, h.m, h.y) : fd(g.d, g.m, g.y);
     var sn = seasonOfDay(P.noonOf(g.y, g.m, g.d));
     $('cv-out').innerHTML = '<div class="cv-day">' + DAY_NAMES[dow] + '</div><div class="cv-big">' + big + '</div>' +
@@ -1565,60 +1598,60 @@
 
   // ---------- timers: the time since (or until) a date, in the unit chosen; also as home-screen widgets ----------
   // three ways to count; an older timer keeps its own unit (minutes, hours, work days, weeks) as a fourth choice
-  var T_UNITS = [['timer', 'سنوات وأيام'], ['days', 'أيام'], ['months', 'أشهر']];
-  var T_OLD = { minutes: 'دقائق', hours: 'ساعات', workdays: 'أيام عمل', weeks: 'أسابيع' };
+  var T_UNITS = [['timer', tr('سنوات وأيام')], ['days', tr('أيام')], ['months', tr('أشهر')]];
+  var T_OLD = { minutes: tr('دقائق'), hours: tr('ساعات'), workdays: tr('أيام عمل'), weeks: tr('أسابيع') };
   var T_COLORS = { white: '#FFFFFF', navy: '#1E2A78', pink: '#C2185B', green: '#2E7D5B', gold: '#A8792A', black: '#16181B' };
-  var T_COLOR_NAMES = [['white', 'أبيض'], ['navy', 'كحلي'], ['pink', 'فوشيا'], ['green', 'أخضر'], ['gold', 'ذهبي'], ['black', 'أسود']];
+  var T_COLOR_NAMES = [['white', tr('أبيض')], ['navy', tr('كحلي')], ['pink', tr('فوشيا')], ['green', tr('أخضر')], ['gold', tr('ذهبي')], ['black', tr('أسود')]];
   function tAt(x) { return Date.UTC(x.y, x.m - 1, x.d, x.h >= 0 ? x.h : 0, x.h >= 0 ? x.mi : 0) - P.offH(Date.UTC(x.y, x.m - 1, x.d, 12)) * HR; }
   // the counted parts: [[number, unit word], …] (Arabic number agreement)
-  function tW(n, one, two, few, many) { return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? few : many; }
+  function tW(n, one, two, few, many) { if (EN) return n === 1 ? tr(many).replace(/s$/, '') : tr(many); return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? few : many; }
   function tParts(x, now) {
     var at = tAt(x), from = Math.min(at, now), to = Math.max(at, now), ms = to - from, out = [];
     var DAY = 86400000;
-    if (x.unit === 'minutes') return [[Math.floor(ms / MIN), tW(Math.floor(ms / MIN), 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')]];
-    if (x.unit === 'hours') return [[Math.floor(ms / HR), tW(Math.floor(ms / HR), 'ساعة', 'ساعتان', 'ساعات', 'ساعة')]];
-    if (x.unit === 'days') { var dd = Math.floor(ms / DAY); return [[dd, tW(dd, 'يوم', 'يومان', 'أيام', 'يومًا')]]; }
-    if (x.unit === 'weeks') { var ww = Math.floor(ms / DAY / 7); return [[ww, tW(ww, 'أسبوع', 'أسبوعان', 'أسابيع', 'أسبوعًا')]]; }
+    if (x.unit === 'minutes') return [[Math.floor(ms / MIN), tW(Math.floor(ms / MIN), tr('دقيقة'), tr('دقيقتان'), tr('دقائق'), tr('دقيقة'))]];
+    if (x.unit === 'hours') return [[Math.floor(ms / HR), tW(Math.floor(ms / HR), tr('ساعة'), tr('ساعتان'), tr('ساعات'), tr('ساعة'))]];
+    if (x.unit === 'days') { var dd = Math.floor(ms / DAY); return [[dd, tW(dd, tr('يوم'), tr('يومان'), tr('أيام'), tr('يومًا'))]]; }
+    if (x.unit === 'weeks') { var ww = Math.floor(ms / DAY / 7); return [[ww, tW(ww, tr('أسبوع'), tr('أسبوعان'), tr('أسابيع'), tr('أسبوعًا'))]]; }
     if (x.unit === 'workdays') {
       // Sunday to Thursday (the Saudi working week), the days between
       var a = new Date(from + P.offH(from) * HR), b = new Date(to + P.offH(to) * HR), n = 0;
       var da = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate()), db = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
       var days = Math.round((db - da) / DAY), wk = Math.floor(days / 7); n = wk * 5;
       for (var k = 1; k <= days % 7; k++) { var dw = new Date(da + (wk * 7 + k) * DAY).getUTCDay(); if (dw !== 5 && dw !== 6) n++; }
-      return [[n, tW(n, 'يوم عمل', 'يوما عمل', 'أيام عمل', 'يوم عمل')]];
+      return [[n, tW(n, tr('يوم عمل'), tr('يوما عمل'), tr('أيام عمل'), tr('يوم عمل'))]];
     }
     // whole months / years by the calendar, then what is left
     var f = new Date(from + P.offH(from) * HR), t = new Date(to + P.offH(to) * HR);
     var months = (t.getUTCFullYear() - f.getUTCFullYear()) * 12 + t.getUTCMonth() - f.getUTCMonth();
     var addM = function (m) { var d = new Date(f.getTime()); d.setUTCMonth(d.getUTCMonth() + m); return d; };
     if (addM(months) > t) months--;
-    if (x.unit === 'months') return [[months, tW(months, 'شهر', 'شهران', 'أشهر', 'شهرًا')]];
+    if (x.unit === 'months') return [[months, tW(months, tr('شهر'), tr('شهران'), tr('أشهر'), tr('شهرًا'))]];
     var years = Math.floor(months / 12), rest = t - addM(years * 12);
     var D = Math.floor(rest / DAY), H = Math.floor(rest % DAY / HR), M = Math.floor(rest % HR / MIN);
-    if (years) out.push([years, tW(years, 'سنة', 'سنتان', 'سنوات', 'سنة')]);
-    if (years || D) out.push([D, tW(D, 'يوم', 'يومان', 'أيام', 'يومًا')]);
-    out.push([H, tW(H, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')]);
-    out.push([M, tW(M, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')]);
+    if (years) out.push([years, tW(years, tr('سنة'), tr('سنتان'), tr('سنوات'), tr('سنة'))]);
+    if (years || D) out.push([D, tW(D, tr('يوم'), tr('يومان'), tr('أيام'), tr('يومًا'))]);
+    out.push([H, tW(H, tr('ساعة'), tr('ساعتان'), tr('ساعات'), tr('ساعة'))]);
+    out.push([M, tW(M, tr('دقيقة'), tr('دقيقتان'), tr('دقائق'), tr('دقيقة'))]);
     return out;
   }
   function tLine(x, now) {
     var past = tAt(x) <= now;
-    return (past ? 'منذ ' : 'حتى ') + x.name + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
+    return (past ? tr('منذ ') : tr('حتى ')) + x.name + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) + (x.h >= 0 ? ' · ' + pad2(x.h) + ':' + pad2(x.mi) : '') : '');
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function tInk(c) { return c === 'white' ? '#3A3A3A' : '#FFFFFF'; }
-  var RIP = { m: ['اللهم اغفر له وارحمه، وعافه واعفُ عنه', 'رواه مسلم'], f: ['اللهم اغفر لها وارحمها، وعافها واعفُ عنها', 'رواه مسلم'] };
-  function tYears(n) { return n === 1 ? 'سنة' : n === 2 ? 'سنتان' : n <= 10 ? n + ' سنوات' : n + ' سنة'; }
-  function tIn(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : 'بعد ' + countWord(n, 'يوم', 'يومين', 'أيام', 'يومًا'); }
+  var RIP = { m: [tr('اللهم اغفر له وارحمه، وعافه واعفُ عنه'), tr('رواه مسلم')], f: [tr('اللهم اغفر لها وارحمها، وعافها واعفُ عنها'), tr('رواه مسلم')] };
+  function tYears(n) { if (EN) return n + (n === 1 ? ' year' : ' years'); return n === 1 ? 'سنة' : n === 2 ? 'سنتان' : n <= 10 ? n + ' سنوات' : n + ' سنة'; }
+  function tIn(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : tr('بعد ') + countWord(n, tr('يوم'), tr('يومين'), tr('أيام'), tr('يومًا')); }
   function tNum(n) { return n.toLocaleString('en-US'); }
   // the Hijri date, and the time since it in Hijri years and months
   function tHijri(x, past) {
-    var h = hOf(x.y, x.m, x.d), out = h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + ' هـ';
+    var h = hOf(x.y, x.m, x.d), out = h.d + ' ' + H_MONTHS[h.m - 1] + ' ' + h.y + tr(' هـ');
     if (!past) return out;
     var r = P.ymd(Date.now()), t = hOf(r.y, r.m, r.d), yy = t.y - h.y, mm = t.m - h.m;
     if (t.d < h.d) mm--;
     if (mm < 0) { yy--; mm += 12; }
-    if (yy >= 1) out += ' · بالهجري ' + tYears(yy) + (mm ? ' و' + countWord(mm, 'شهر', 'شهران', 'أشهر', 'شهرًا') : '');
+    if (yy >= 1) out += tr(' · بالهجري ') + tYears(yy) + (mm ? tr(' و') + countWord(mm, tr('شهر'), tr('شهران'), tr('أشهر'), tr('شهرًا')) : '');
     return out;
   }
   // the next anniversary of a past date: «تكتمل 43 سنة بعد 131 يومًا · 6 مارس»
@@ -1628,11 +1661,11 @@
     var n = y - x.y;
     if (n < 1) return null;
     var d = x.m === 2 && x.d === 29 && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? 1 : x.d, m = d === 1 && x.d === 29 ? 3 : x.m;
-    return { t: 'تكتمل ' + tYears(n), at: P.noonOf(y, m, d), date: d + ' ' + G_MONTHS[m - 1] + ' ' + y, left: daysTo({ y: y, m: m, d: d }, r) };
+    return { t: tr('تكتمل ') + tYears(n), at: P.noonOf(y, m, d), date: d + ' ' + G_MONTHS[m - 1] + ' ' + y, left: daysTo({ y: y, m: m, d: d }, r) };
   }
   function tAnniv(x) {
     var o = tAnnivObj(x);
-    return !o ? '' : o.left === 0 ? 'اليوم ' + o.t : o.t + ' ' + tIn(o.left) + ' · ' + o.date;
+    return !o ? '' : o.left === 0 ? tr('اليوم ') + o.t : o.t + ' ' + tIn(o.left) + ' · ' + o.date;
   }
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   // the timers tab: each card shows the count and one line; a tap opens its editor (with the Hijri date and the
@@ -1641,18 +1674,18 @@
   function tGDate(y, m, d) { return d + ' ' + G_MONTHS[m - 1] + ' ' + y; }
   function tCard(x, i, now, preview) {
     var past = tAt(x) <= now, an = past && !x.rip ? tAnnivObj(x) : null;
-    var chip = !preview && an && an.left <= 7 ? '<span class="tm-chip">' + (an.left === 0 ? 'اليوم ' + an.t : tIn(an.left) + ' ' + an.t) + '</span>' : '';
+    var chip = !preview && an && an.left <= 7 ? '<span class="tm-chip">' + (an.left === 0 ? tr('اليوم ') + an.t : tIn(an.left) + ' ' + an.t) + '</span>' : '';
     var head = '<span class="tm-num">' + tCount(x, now) + '</span>' +
-      '<span class="tm-line">' + esc(x.name ? tLine(x, now) : (past ? 'منذ …' : 'حتى …')) + '</span>' + chip +
+      '<span class="tm-line">' + esc(x.name ? tLine(x, now) : (past ? tr('منذ …') : tr('حتى …'))) + '</span>' + chip +
       (x.rip ? '<span class="tm-dua">«' + RIP[x.rip][0] + '» <small>' + RIP[x.rip][1] + '</small></span>' : '');
     return '<div class="tm-card' + (x.color === 'white' ? ' tm-light' : '') + '" style="background:' + T_COLORS[x.color] + ';color:' + tInk(x.color) + '">' +
       (preview ? '<div class="tm-head">' + head + '</div>' : '<button class="tm-head f" data-tm="' + i + '">' + head + '</button>') + '</div>';
   }
   // above the editor's fields: the Hijri date and the next anniversary (or the day of a coming date)
   function tInfo(x) {
-    var past = tAt(x) <= Date.now(), an = past && !x.rip ? tAnnivObj(x) : null, r = [['الهجري', tHijri(x, past)]];
-    if (an) r.push(['الذكرى القادمة', (an.left === 0 ? 'اليوم ' + an.t : an.t + ' ' + tIn(an.left)) + ' · ' + an.date]);
-    if (!past) r.push(['الموعد', DAY_NAMES[new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay()] + ' ' + tGDate(x.y, x.m, x.d)]);
+    var past = tAt(x) <= Date.now(), an = past && !x.rip ? tAnnivObj(x) : null, r = [[tr('الهجري'), tHijri(x, past)]];
+    if (an) r.push([tr('الذكرى القادمة'), (an.left === 0 ? tr('اليوم ') + an.t : an.t + ' ' + tIn(an.left)) + ' · ' + an.date]);
+    if (!past) r.push([tr('الموعد'), DAY_NAMES[new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay()] + ' ' + tGDate(x.y, x.m, x.d)]);
     return r.map(function (q) { return '<div class="tm-row"><span>' + q[0] + '</span><b>' + esc(q[1]) + '</b></div>'; }).join('');
   }
   // the count stays on one line: smaller when it is long
@@ -1696,25 +1729,25 @@
   }
   function tEditRender(sh) {
     var x = tEdit, date = x.y + '-' + pad2(x.m) + '-' + pad2(x.d), time = x.h >= 0 ? pad2(x.h) + ':' + pad2(x.mi) : '';
-    sh.innerHTML = '<div class="tm-bar"><button class="f" data-tk="cancel">إلغاء</button><b>' + (x.isNew ? 'عدّاد جديد' : 'تعديل العدّاد') + '</b>' +
-      '<button class="gold-btn f" data-tk="save">حفظ</button></div>' +
+    sh.innerHTML = tr('<div class="tm-bar"><button class="f" data-tk="cancel">إلغاء</button><b>') + (x.isNew ? tr('عدّاد جديد') : tr('تعديل العدّاد')) + '</b>' +
+      tr('<button class="gold-btn f" data-tk="save">حفظ</button></div>') +
       '<div class="tm-sheet-body">' +
       '<div class="tm-preview">' + tCard(x, -1, Date.now(), true) + '</div>' +
       '<div class="tm-rows">' + tInfo(x) + '</div>' +
-      '<label class="tm-lbl" for="tm-name">الاسم</label><input id="tm-name" class="inp f" maxlength="30" placeholder="مثل: إجازة الصيف" value="' + esc(x.name) + '">' +
-      '<div class="tm-two"><div><label class="tm-lbl" for="tm-date">التاريخ</label><input id="tm-date" class="inp f" type="date" value="' + date + '"></div>' +
-      '<div><label class="tm-lbl" for="tm-time">الوقت (اختياري)</label><div class="tm-timebox"><input id="tm-time" class="inp f" type="time" value="' + time + '">' +
-      (time ? '<button class="tm-x f" data-tk="notime" aria-label="بلا وقت">×</button>' : '') + '</div></div></div>' +
-      '<div class="tm-lbl">طريقة العدّ</div>' + tSeg('unit', T_UNITS.concat(T_OLD[x.unit] ? [[x.unit, T_OLD[x.unit]]] : []), x.unit) +
-      '<div class="tm-lbl">اللون</div><div class="tm-swatches">' + T_COLOR_NAMES.map(function (c) {
+      tr('<label class="tm-lbl" for="tm-name">الاسم</label><input id="tm-name" class="inp f" maxlength="30" placeholder="مثل: إجازة الصيف" value="') + esc(x.name) + '">' +
+      tr('<div class="tm-two"><div><label class="tm-lbl" for="tm-date">التاريخ</label><input id="tm-date" class="inp f" type="date" value="') + date + '"></div>' +
+      tr('<div><label class="tm-lbl" for="tm-time">الوقت (اختياري)</label><div class="tm-timebox"><input id="tm-time" class="inp f" type="time" value="') + time + '">' +
+      (time ? tr('<button class="tm-x f" data-tk="notime" aria-label="بلا وقت">×</button>') : '') + '</div></div></div>' +
+      tr('<div class="tm-lbl">طريقة العدّ</div>') + tSeg('unit', T_UNITS.concat(T_OLD[x.unit] ? [[x.unit, T_OLD[x.unit]]] : []), x.unit) +
+      tr('<div class="tm-lbl">اللون</div><div class="tm-swatches">') + T_COLOR_NAMES.map(function (c) {
         return '<button class="tm-dot f' + (x.color === c[0] ? ' on' : '') + '" data-tk="color-' + c[0] + '" aria-label="' + c[1] + '" style="background:' + T_COLORS[c[0]] + '"></button>';
       }).join('') + '</div>' +
-      tSwitch('data-tk="showdate"', x.showDate, 'إظهار التاريخ تحت العدّ') +
-      '<div class="tm-lbl">دعاء للراحل</div>' + tSeg('rip', [['', 'بلا'], ['m', 'له'], ['f', 'لها']], x.rip || '') +
-      (x.isNew ? '' : '<button class="tm-del f" data-tk="del">حذف العدّاد</button>') + '</div>';
+      tSwitch('data-tk="showdate"', x.showDate, tr('إظهار التاريخ تحت العدّ')) +
+      tr('<div class="tm-lbl">دعاء للراحل</div>') + tSeg('rip', [['', tr('بلا')], ['m', tr('له')], ['f', tr('لها')]], x.rip || '') +
+      (x.isNew ? '' : tr('<button class="tm-del f" data-tk="del">حذف العدّاد</button>')) + '</div>';
     tFit(sh);
   }
-  var TW_LINES = [['name', 'الاسم والتاريخ'], ['dua', 'الدعاء للراحل']];
+  var TW_LINES = [['name', tr('الاسم والتاريخ')], ['dua', tr('الدعاء للراحل')]];
   // «+ ويدجت»: tick timers (and occasions), then the phone asks «إضافة؟» and puts the widget on the home screen
   function tPinItems() {
     var seen = {}, out = S.timers.map(function (x) { return ['t:' + x.id, x.name]; });
@@ -1722,9 +1755,9 @@
     return out;
   }
   function tPinRender(sh) {
-    sh.innerHTML = '<div class="tm-bar"><button class="f" data-tp="cancel">إلغاء</button><b>ويدجت جديد</b>' +
-      '<button class="gold-btn f" data-tp="go">ضعه على الشاشة</button></div>' +
-      '<div class="tm-sheet-body"><p class="muted tm-note">ضع ✓ على عدّاد واحد (يثبت) أو أكثر (يتقلّب كل 5 ثوانٍ)، ثم «ضعه على الشاشة» واضغط «إضافة» في رسالة الجوال.</p>' +
+    sh.innerHTML = tr('<div class="tm-bar"><button class="f" data-tp="cancel">إلغاء</button><b>ويدجت جديد</b>') +
+      tr('<button class="gold-btn f" data-tp="go">ضعه على الشاشة</button></div>') +
+      tr('<div class="tm-sheet-body"><p class="muted tm-note">ضع ✓ على عدّاد واحد (يثبت) أو أكثر (يتقلّب كل 5 ثوانٍ)، ثم «ضعه على الشاشة» واضغط «إضافة» في رسالة الجوال.</p>') +
       tPinItems().map(function (o, i) { return tSwitch('data-tp="' + i + '"', !!tPin.keys[o[0]], esc(o[1])); }).join('') +
       (tPin.msg ? '<p class="tm-note tm-warn">' + tPin.msg + '</p>' : '') + '</div>';
   }
@@ -1733,11 +1766,11 @@
     var items = tPinItems();
     if (k === 'go') {
       var keys = items.filter(function (o) { return tPin.keys[o[0]]; }).map(function (o) { return o[0]; }), r = 'no';
-      if (!keys.length) tPin.msg = 'اختر عدّادًا واحدًا على الأقل';
+      if (!keys.length) tPin.msg = tr('اختر عدّادًا واحدًا على الأقل');
       else {
         try { r = A && A.pinWidget ? A.pinWidget('timer', keys.join('\n')) : 'no'; } catch (e) {}
         if (r === 'ok') { tPin = null; tSheetRender(); wgFocus('timer'); return; }
-        tPin.msg = 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة ← «عدّاد».';
+        tPin.msg = tr('جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة ← «عدّاد».');
       }
     } else { var o = items[+k]; if (o) tPin.keys[o[0]] = !tPin.keys[o[0]]; }
     var sh = $('tm-sheet'), st = sh.scrollTop;
@@ -1772,7 +1805,7 @@
     else if (k === 'del') {
       // a second press confirms (the phone's WebView shows no confirm box)
       var db = document.querySelector('#tm-sheet [data-tk="del"]');
-      if (db && !db.classList.contains('sure')) { db.classList.add('sure'); db.textContent = 'اضغط مرة أخرى لحذف «' + tEdit.name + '»'; return; }
+      if (db && !db.classList.contains('sure')) { db.classList.add('sure'); db.textContent = tr('اضغط مرة أخرى لحذف «') + tEdit.name + '»'; return; }
       S.timers = S.timers.filter(function (x) { return x.id !== tEdit.id; }); save(); sendWidget(); tEdit = null; timersRender(); return;
     }
     else if (k === 'save') {
@@ -1789,8 +1822,8 @@
 
   // ---------- the «الويدجت» screen (phone): each home-screen widget with a live preview, a button to put it there,
   // and its own look; the timer widget's choices too ----------
-  var WG_KINDS = [['prayer', 'مواقيت اليوم', '4×2'], ['ring', 'الصلاة القادمة (دائرة)', '2×2'], ['strip', 'شريط الصلاة القادمة', '4×1'],
-    ['timer', 'عدّاد', '4×1'], ['event', 'عدّاد المناسبة', '2×2'], ['month', 'الشهر الهجري', '4×4'], ['convert', 'تحويل التاريخ', '1×1']];
+  var WG_KINDS = [['prayer', tr('مواقيت اليوم'), '4×2'], ['ring', tr('الصلاة القادمة (دائرة)'), '2×2'], ['strip', tr('شريط الصلاة القادمة'), '4×1'],
+    ['timer', tr('عدّاد'), '4×1'], ['event', tr('عدّاد المناسبة'), '2×2'], ['month', tr('الشهر الهجري'), '4×4'], ['convert', tr('تحويل التاريخ'), '1×1']];
   var WG_BG = [['#2E2A6B', '#B0688F'], ['#1A5DAE', '#4AA6DC'], ['#7E3F14', '#CF8A2E'], ['#43195A', '#C9544A'], ['#0A1030', '#2B3070']];
   var WG_ACC = { gold: '#F2CF8A', white: '#FFFFFF', green: '#8FE3A8', sky: '#8FD3FF' }, WG_SC = { s: .88, m: 1, l: 1.15 };
   var wgEdit = '', wgMsg = {};
@@ -1807,7 +1840,7 @@
       cd: Math.floor(left / 3600) + ':' + pad2(Math.floor(left % 3600 / 60)) + ':' + pad2(left % 60),
       prog: Math.round(100 * Math.min(1, Math.max(0, (t - prevAt) / Math.max(1, nextAt - prevAt)))),
       per: next === 1 ? 0 : next === 2 || next === 3 ? 1 : next === 4 ? 2 : next === 5 ? 3 : 4,
-      h: h, hijri: h.d + ' ' + H_MONTHS[h.m - 1] + ' (' + h.m + ') ' + h.y + ' هـ', greg: fGFull.format(new Date(t)).replace('،', ''),
+      h: h, hijri: h.d + ' ' + H_MONTHS[h.m - 1] + ' (' + h.m + ') ' + h.y + tr(' هـ'), greg: fGFull.format(new Date(t)).replace(tr('،'), ''),
       ev: ev ? { name: ev.name, left: ev.left } : null };
   }
   function wgLook(k) { var W = S.wstyle[k]; return { bg: W.bg === 'dark' ? 'rgba(20,26,36,.95)' : null, o: (100 - W.clear) / 100, a: WG_ACC[W.accent] || WG_ACC.gold, k: WG_SC[W.font] || 1, W: W }; }
@@ -1815,7 +1848,7 @@
     return '<div class="wgp wgp-' + k + (cls ? ' ' + cls : '') + '" style="--a:' + L.a + ';--k:' + L.k + '"><i class="wgp-bg" style="background:' +
       (L.bg || 'linear-gradient(135deg,' + WG_BG[n.per][0] + ',' + WG_BG[n.per][1] + ')') + ';opacity:' + L.o + '"></i>' + inner + '</div>';
   }
-  function wgInDays(n) { return n === 0 ? 'اليوم' : n === 1 ? 'غدًا' : n === 2 ? 'بعد يومين' : n <= 10 ? 'بعد ' + n + ' أيام' : 'بعد ' + n + ' يومًا'; }
+  function wgInDays(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === 2 ? tr('بعد يومين') : n <= 10 ? tr('بعد ') + n + tr(' أيام') : tr('بعد ') + n + tr(' يومًا'); }
   function wgPreview(k, t) {
     var n = wgNow(t);
     if (k === 'prayer') {
@@ -1825,12 +1858,12 @@
       place(W.posNext, '<div class="wgp-nx" style="' + fz('fMain') + 'text-align:' + AL[W.posNext] + '">' + (W.city ? '<small>' + esc(S.loc.name) + '</small>' : '') +
         '<div><b class="wgp-big">' + n.names[n.next] + '</b> <span>' + P.full(n.nextAt) + '</span></div></div>');
       place(W.posEv, n.ev ? '<div class="wgp-ev" style="' + fz('fEv') + 'text-align:' + AL[W.posEv] + '"><b>' + esc(n.ev.name) + '</b><span>' + wgInDays(n.ev.left) + '</span></div>' : '<div></div>');
-      place(W.posLeft, '<div class="wgp-cd" style="' + fz('fLeft') + 'text-align:' + AL[W.posLeft] + '"><small>متبقٍّ</small><b class="ltr">' + n.cd + '</b></div>');
+      place(W.posLeft, '<div class="wgp-cd" style="' + fz('fLeft') + 'text-align:' + AL[W.posLeft] + tr('"><small>متبقٍّ</small><b class="ltr">') + n.cd + '</b></div>');
       return wgBox(k, L, n, '<div class="wgp-top">' + (parts.r || '<div></div>') + (parts.c || '<div></div>') + (parts.l || '<div></div>') + '</div>' +
         (W.prog ? '<div class="wgp-bar"><i style="width:' + n.prog + '%"></i></div>' : '') +
         '<div class="wgp-cols" style="' + fz('fMain') + '">' + n.names.map(function (nm, i) {
           return '<div class="' + (i === n.next ? 'on' : '') + (i === n.cur ? ' now' : '') + '"><small>' + nm + '</small><b>' + P.full(n.at[i]) + '</b></div>';
-        }).join('') + '</div>' + (W.line ? '<div class="wgp-line" style="' + fz('fLine') + 'text-align:' + AL[W.posLine] + '">«سبحان الله وبحمده، سبحان الله العظيم»</div>' : '') +
+        }).join('') + '</div>' + (W.line ? '<div class="wgp-line" style="' + fz('fLine') + 'text-align:' + AL[W.posLine] + tr('">«سبحان الله وبحمده، سبحان الله العظيم»</div>') : '') +
         (W.date ? '<div class="wgp-foot" style="' + fz('fMain') + '"><span>' + n.greg + '</span><span>' + moonSvg(n.h.d) + n.hijri + '</span></div>' : ''));
     }
     if (k === 'ring') {
@@ -1844,7 +1877,7 @@
     }
     if (k === 'convert') {
       var L4 = wgLook(k);
-      return wgBox(k, L4, n, '<b class="wgp-c">' + n.h.d + '</b><span>هجري</span>');
+      return wgBox(k, L4, n, '<b class="wgp-c">' + n.h.d + tr('</b><span>هجري</span>'));
     }
     if (k === 'month') {
       var L5 = wgLook(k), cells = '', first = null;
@@ -1854,18 +1887,18 @@
         if (!first) { first = dd; for (var e = 0; e < new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay(); e++) cells += '<i></i>'; }
         cells += '<i class="' + (i === 0 ? 'on' : '') + '"><b>' + hh.d + '</b><small>' + dd.d + '</small></i>';
       }
-      return wgBox(k, L5, n, '<div class="wgp-mt">' + H_MONTHS[n.h.m - 1] + ' ' + n.h.y + ' هـ</div><div class="wgp-grid">' +
-        ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map(function (x) { return '<em>' + x + '</em>'; }).join('') + cells + '</div>');
+      return wgBox(k, L5, n, '<div class="wgp-mt">' + H_MONTHS[n.h.m - 1] + ' ' + n.h.y + tr(' هـ</div><div class="wgp-grid">') +
+        [tr('أحد'), tr('اثنين'), tr('ثلاثاء'), tr('أربعاء'), tr('خميس'), tr('جمعة'), tr('سبت')].map(function (x) { return '<em>' + x + '</em>'; }).join('') + cells + '</div>');
     }
     if (k === 'event') {
-      return '<div class="wgp wgp-event">' + (n.ev ? '<div><b class="wgp-c">' + (n.ev.left || 'اليوم') + '</b> <span>' + (n.ev.left ? n.ev.left >= 3 && n.ev.left <= 10 ? 'أيام' : 'يوم' : '') + '</span></div><span>' + esc(n.ev.name) + '</span>' : '<span>لا توجد مناسبة</span>') + '</div>';
+      return '<div class="wgp wgp-event">' + (n.ev ? '<div><b class="wgp-c">' + (n.ev.left || tr('اليوم')) + '</b> <span>' + (n.ev.left ? n.ev.left >= 3 && n.ev.left <= 10 ? tr('أيام') : tr('يوم') : '') + '</span></div><span>' + esc(n.ev.name) + '</span>' : tr('<span>لا توجد مناسبة</span>')) + '</div>';
     }
     // timer: the first timer chosen for a widget on the screen, or the first timer
     var x = S.timers[0], tw = S.timerWg, kk = { s: .8, m: 1, l: 1.25, xl: 1.5 }[tw.font] || 1;
-    if (!x) return '<div class="wgp wgp-timer" style="background:#1E2A78;color:#fff"><b>أضف عدّادًا من تاب «العدّادات»</b></div>';
+    if (!x) return tr('<div class="wgp wgp-timer" style="background:#1E2A78;color:#fff"><b>أضف عدّادًا من تاب «العدّادات»</b></div>');
     var past = tAt(x) <= t;
     return '<div class="wgp wgp-timer" style="--k:' + kk + ';background:' + (T_COLORS[x.color] || '#1E2A78') + ';color:' + tInk(x.color) + '"><span class="wgp-c">' + tCount(x, t) + '</span>' +
-      (tw.name !== false ? '<span>' + (past ? 'منذ ' : 'حتى ') + esc(x.name) + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) : '') + '</span>' : '') +
+      (tw.name !== false ? '<span>' + (past ? tr('منذ ') : tr('حتى ')) + esc(x.name) + (x.showDate ? ' · ' + fd(x.d, x.m, x.y) : '') + '</span>' : '') +
       (tw.dua && x.rip ? '<small>«' + RIP[x.rip][0] + '»</small>' : '') + '</div>';
   }
   function wgRow(k, name, key, opts) {
@@ -1879,28 +1912,28 @@
     if (k === 'timer') {
       var placed = [];
       try { placed = A && A.timerWidgets ? JSON.parse(A.timerWidgets()) : []; } catch (e) {}
-      return wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']]) +
-        '<div class="srow snd-row"><span class="sname">يظهر تحت العدّ</span><span class="snd-opts">' + TW_LINES.map(function (o) {
+      return wgRow(k, tr('حجم الخط'), 'font', [['s', tr('صغير')], ['m', tr('عادي')], ['l', tr('كبير')], ['xl', tr('كبير جدًا')]]) +
+        tr('<div class="srow snd-row"><span class="sname">يظهر تحت العدّ</span><span class="snd-opts">') + TW_LINES.map(function (o) {
           return '<button class="sbtn f' + (S.timerWg[o[0]] ? ' on' : '') + '" data-wgs="timer-' + o[0] + '-t">' + o[1] + '</button>';
         }).join('') + '</span></div>' +
         placed.map(function (p, i) {
-          return '<div class="tm-pick"><span>الويدجت ' + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
+          return tr('<div class="tm-pick"><span>الويدجت ') + (i + 1) + '</span><select class="inp f tw-sel" data-twid="' + p.id + '">' +
             S.timers.map(function (x) { return '<option value="' + x.id + '"' + (p.n === 1 && x.id === p.timer ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') +
-            (p.n > 1 ? '<option value="" selected>' + countWord(p.n, 'عدّاد واحد', 'عدّادان', 'عدّادات', 'عدّادًا') + ' تتقلّب</option>' :
-              S.timers.some(function (x) { return x.id === p.timer; }) ? '' : '<option value="" selected>— اختر —</option>') + '</select></div>';
-        }).join('') + '<p class="muted set-note">لون كل عدّاد يُختار من تاب «العدّادات». لتغيير عدّادات ويدجت يتقلّب: اضغط عليه مطولًا ← الإعدادات.</p>';
+            (p.n > 1 ? '<option value="" selected>' + countWord(p.n, tr('عدّاد واحد'), tr('عدّادان'), tr('عدّادات'), tr('عدّادًا')) + tr(' تتقلّب</option>') :
+              S.timers.some(function (x) { return x.id === p.timer; }) ? '' : tr('<option value="" selected>— اختر —</option>')) + '</select></div>';
+        }).join('') + tr('<p class="muted set-note">لون كل عدّاد يُختار من تاب «العدّادات». لتغيير عدّادات ويدجت يتقلّب: اضغط عليه مطولًا ← الإعدادات.</p>');
     }
-    var POS = [['r', 'يمين'], ['c', 'وسط'], ['l', 'يسار']], SIZES = [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير'], ['xl', 'كبير جدًا']];
-    return wgRow(k, 'الخلفية', 'bg', [['time', 'لون حسب الوقت'], ['dark', 'داكن']]) +
-      wgRow(k, 'الشفافية', 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
-      (k === 'prayer' ? '<div class="tm-lbl wg-sub">المكان</div>' + wgRow(k, 'الصلاة القادمة', 'posNext', POS) + wgRow(k, 'المناسبات', 'posEv', POS) +
-        wgRow(k, 'المتبقي', 'posLeft', POS) + wgRow(k, 'السطر المتبدّل', 'posLine', POS) +
-        '<div class="tm-lbl wg-sub">حجم الخط</div>' + wgRow(k, 'الصلاة والمواقيت والتاريخ', 'fMain', SIZES) + wgRow(k, 'المتبقي', 'fLeft', SIZES) +
-        wgRow(k, 'المناسبات', 'fEv', SIZES) + wgRow(k, 'السطر المتبدّل', 'fLine', SIZES) + '<div class="tm-lbl wg-sub">غير ذلك</div>' :
-        wgRow(k, 'حجم الخط', 'font', [['s', 'صغير'], ['m', 'عادي'], ['l', 'كبير']])) +
-      wgRow(k, 'لون التمييز', 'accent', [['gold', 'ذهبي'], ['white', 'أبيض'], ['green', 'أخضر'], ['sky', 'سماوي']]) +
-      (k === 'prayer' ? '<div class="srow snd-row"><span class="sname">يظهر فيه</span><span class="snd-opts">' +
-        [['city', 'المدينة'], ['prog', 'شريط التقدّم'], ['line', 'السطر المتبدّل'], ['date', 'التاريخ']].map(function (o) {
+    var POS = [['r', tr('يمين')], ['c', tr('وسط')], ['l', tr('يسار')]], SIZES = [['s', tr('صغير')], ['m', tr('عادي')], ['l', tr('كبير')], ['xl', tr('كبير جدًا')]];
+    return wgRow(k, tr('الخلفية'), 'bg', [['time', tr('لون حسب الوقت')], ['dark', tr('داكن')]]) +
+      wgRow(k, tr('الشفافية'), 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
+      (k === 'prayer' ? tr('<div class="tm-lbl wg-sub">المكان</div>') + wgRow(k, tr('الصلاة القادمة'), 'posNext', POS) + wgRow(k, tr('المناسبات'), 'posEv', POS) +
+        wgRow(k, tr('المتبقي'), 'posLeft', POS) + wgRow(k, tr('السطر المتبدّل'), 'posLine', POS) +
+        tr('<div class="tm-lbl wg-sub">حجم الخط</div>') + wgRow(k, tr('الصلاة والمواقيت والتاريخ'), 'fMain', SIZES) + wgRow(k, tr('المتبقي'), 'fLeft', SIZES) +
+        wgRow(k, tr('المناسبات'), 'fEv', SIZES) + wgRow(k, tr('السطر المتبدّل'), 'fLine', SIZES) + tr('<div class="tm-lbl wg-sub">غير ذلك</div>') :
+        wgRow(k, tr('حجم الخط'), 'font', [['s', tr('صغير')], ['m', tr('عادي')], ['l', tr('كبير')]])) +
+      wgRow(k, tr('لون التمييز'), 'accent', [['gold', tr('ذهبي')], ['white', tr('أبيض')], ['green', tr('أخضر')], ['sky', tr('سماوي')]]) +
+      (k === 'prayer' ? tr('<div class="srow snd-row"><span class="sname">يظهر فيه</span><span class="snd-opts">') +
+        [['city', tr('المدينة')], ['prog', tr('شريط التقدّم')], ['line', tr('السطر المتبدّل')], ['date', tr('التاريخ')]].map(function (o) {
           return '<button class="sbtn f' + (S.wstyle.prayer[o[0]] ? ' on' : '') + '" data-wgs="prayer-' + o[0] + '-t">' + o[1] + '</button>';
         }).join('') + '</span></div>' : '');
   }
@@ -1909,10 +1942,10 @@
     $('wg-body').innerHTML = WG_KINDS.map(function (w) {
       var k = w[0], c = on[k] || 0, open = wgEdit === k;
       return '<div class="card wg-card" id="wg-' + k + '"><div class="wg-head"><b>' + w[1] + '</b><span class="muted ltr">' + w[2] + '</span>' +
-        (c ? '<span class="wg-on">على شاشتك ✓' + (c > 1 ? ' (' + c + ')' : '') + '</span>' : '') + '</div>' +
+        (c ? tr('<span class="wg-on">على شاشتك ✓') + (c > 1 ? ' (' + c + ')' : '') + '</span>' : '') + '</div>' +
         '<div class="wg-stage">' + wgPreview(k, t) + '</div>' +
-        '<div class="wg-btns">' + (A && A.pinWidget ? '<button class="gold-btn f" data-wgp="' + k + '">ضعه على الشاشة</button>' : '') +
-        (k !== 'event' ? '<button class="pill f" data-wge="' + k + '">' + (open ? 'تم' : 'تعديل الشكل') + '</button>' : '') + '</div>' +
+        '<div class="wg-btns">' + (A && A.pinWidget ? '<button class="gold-btn f" data-wgp="' + k + tr('">ضعه على الشاشة</button>') : '') +
+        (k !== 'event' ? '<button class="pill f" data-wge="' + k + '">' + (open ? tr('تم') : tr('تعديل الشكل')) + '</button>' : '') + '</div>' +
         (wgMsg[k] ? '<p class="set-note ' + (wgMsg[k].bad ? 'tm-warn' : 'muted') + '">' + wgMsg[k].text + '</p>' : '') +
         (open ? '<div class="wg-set">' + wgSettings(k) + '</div>' : '') + '</div>';
     }).join('');
@@ -1927,25 +1960,25 @@
     if (k === 'timer') { tPin = { keys: {}, msg: '' }; tEdit = null; tSheetRender(); var c0 = document.querySelector('#tm-sheet [data-tp="0"]'); if (c0) c0.focus(); return; }
     var r = 'no';
     try { r = A.pinWidget(k, ''); } catch (e) {}
-    wgMsg = {}; wgMsg[k] = r === 'ok' ? { text: 'اضغط «إضافة» في رسالة الجوال' } : { bad: 1, text: 'جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة' };
+    wgMsg = {}; wgMsg[k] = r === 'ok' ? { text: tr('اضغط «إضافة» في رسالة الجوال') } : { bad: 1, text: tr('جوالك لا يسمح بالإضافة من التطبيق: اضغط مطولًا على الشاشة الرئيسية ← الأدوات ← مواقيت الصلاة') };
     wgRender(); wgFocus(k);
   }
 
   // ---------- a message from the phone to the TV at home (same Wi-Fi): ready buttons or free text ----------
-  var TV_QUICK = ['الأكل جاهز', 'تعالوا للصلاة', 'حان وقت النوم', 'أطفئوا التلفزيون', 'أنا في الطريق، وصلت قريبًا'];
+  var TV_QUICK = [tr('الأكل جاهز'), tr('تعالوا للصلاة'), tr('حان وقت النوم'), tr('أطفئوا التلفزيون'), tr('أنا في الطريق، وصلت قريبًا')];
   var tvOpen = false, tvState = '';
-  function tvFrom() { return 'رسالة من ' + (fam().parent === 'mother' ? 'ماما' : 'بابا'); }
+  function tvFrom() { return tr('رسالة من ') + (fam().parent === 'mother' ? tr('ماما') : tr('بابا')); }
   function tvRender() {
     var sh = $('tv-sheet');
     if (!tvOpen) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
     sh.classList.remove('hidden');
-    var msg = { send: 'جارٍ الإرسال…', ok: 'وصلت إلى التلفزيون ✓', none: 'لم أجد التلفزيون: تأكد أن الجوال والتلفزيون على نفس شبكة الواي فاي وأن «مواقيت الصلاة» مفتوح على التلفزيون مرة على الأقل.', fail: 'التلفزيون لم يرد، حاول مرة أخرى.' }[tvState] || '';
-    sh.innerHTML = '<div class="tm-bar"><button class="f" data-tv="close">إغلاق</button><b>رسالة إلى التلفزيون</b><span></span></div>' +
+    var msg = { send: tr('جارٍ الإرسال…'), ok: tr('وصلت إلى التلفزيون ✓'), none: tr('لم أجد التلفزيون: تأكد أن الجوال والتلفزيون على نفس شبكة الواي فاي وأن «مواقيت الصلاة» مفتوح على التلفزيون مرة على الأقل.'), fail: tr('التلفزيون لم يرد، حاول مرة أخرى.') }[tvState] || '';
+    sh.innerHTML = tr('<div class="tm-bar"><button class="f" data-tv="close">إغلاق</button><b>رسالة إلى التلفزيون</b><span></span></div>') +
       '<div class="tm-sheet-body"><div class="tv-quick">' + TV_QUICK.map(function (q, i) { return '<button class="pill f" data-tv="q' + i + '">' + q + '</button>'; }).join('') + '</div>' +
-      '<label class="tm-lbl" for="tv-text">أو اكتب رسالتك</label><input id="tv-text" class="inp f" maxlength="120" placeholder="مثل: كل عام وأنتم بخير">' +
-      '<button class="gold-btn f tv-send" data-tv="send">إرسال</button>' +
-      '<div class="tm-lbl tv-guest-h">وضع الضيوف</div><input id="guest-in" class="inp f" maxlength="30" placeholder="ضيوفنا الكرام">' +
-      '<div class="tv-quick"><button class="pill f" data-tv="gon">تشغيل وضع الضيوف</button><button class="pill f" data-tv="goff">إنهاء وضع الضيوف</button></div>' +
+      tr('<label class="tm-lbl" for="tv-text">أو اكتب رسالتك</label><input id="tv-text" class="inp f" maxlength="120" placeholder="مثل: كل عام وأنتم بخير">') +
+      tr('<button class="gold-btn f tv-send" data-tv="send">إرسال</button>') +
+      tr('<div class="tm-lbl tv-guest-h">وضع الضيوف</div><input id="guest-in" class="inp f" maxlength="30" placeholder="ضيوفنا الكرام">') +
+      tr('<div class="tv-quick"><button class="pill f" data-tv="gon">تشغيل وضع الضيوف</button><button class="pill f" data-tv="goff">إنهاء وضع الضيوف</button></div>') +
       (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + '</div>';
   }
   function tvSend(text) {
@@ -2005,7 +2038,7 @@
     list.forEach(function (x) {
       var s = x[0], a = x[1];
       if (s !== lastS) {
-        h += '<div class="m-surah">سورة ' + QURAN[s - 1][0] + '</div>';
+        h += tr('<div class="m-surah">سورة ') + QURAN[s - 1][0] + '</div>';
         if (a === 1 && s !== 1 && s !== 9) h += '<div class="m-bism">' + BASMALA + '</div>';
         lastS = s;
       }
@@ -2045,17 +2078,17 @@
     if (pageView) {
       rdPagesRender();
       var mm = S.qMark;
-      $('r-mark').innerHTML = mm ? '<span>توقفت عند سورة ' + QURAN[mm.s - 1][0] + ' · الآية ' + mm.i + '</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>' : '<span class="muted">لم تحدّد موضعك بعد</span>';
-      $('r-title').textContent = 'سورة ' + QURAN[rd.s - 1][0] + ' · صفحة ' + rdPageNo();
-      $('r-prev').textContent = 'الصفحة السابقة'; $('r-next').textContent = 'الصفحة التالية';
+      $('r-mark').innerHTML = mm ? tr('<span>توقفت عند سورة ') + QURAN[mm.s - 1][0] + tr(' · الآية ') + mm.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : tr('<span class="muted">لم تحدّد موضعك بعد</span>');
+      $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0] + tr(' · صفحة ') + rdPageNo();
+      $('r-prev').textContent = tr('الصفحة السابقة'); $('r-next').textContent = tr('الصفحة التالية');
       return;
     }
     var box = $('r-text');
-    $('r-prev').textContent = 'السورة السابقة'; $('r-next').textContent = 'السورة التالية';
-    $('r-title').textContent = 'سورة ' + QURAN[rd.s - 1][0];
+    $('r-prev').textContent = tr('السورة السابقة'); $('r-next').textContent = tr('السورة التالية');
+    $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0];
     if (box.dataset.s !== String(rd.s)) { box.dataset.s = rd.s; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
-    $('r-mark').innerHTML = m ? '<span>توقفت عند سورة ' + QURAN[m.s - 1][0] + ' · الآية ' + m.i + '</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>' : '<span class="muted">لم تحدّد موضعك بعد</span>';
+    $('r-mark').innerHTML = m ? tr('<span>توقفت عند سورة ') + QURAN[m.s - 1][0] + tr(' · الآية ') + m.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : tr('<span class="muted">لم تحدّد موضعك بعد</span>');
     kApplySize(); rdHl();
   }
   function rdHl() {
@@ -2097,7 +2130,7 @@
   // ---------- guest mode on the TV: a big welcome instead of the occasions; no private family messages ----------
   function guestApply() {
     stage.classList.toggle('g-mode', !!S.guest.on);
-    $('guest-name').textContent = S.guest.name || 'ضيوفنا الكرام';
+    $('guest-name').textContent = S.guest.name || tr('ضيوفنا الكرام');
     lastQ = '';
   }
   function guestSend(on) {
@@ -2119,15 +2152,15 @@
     $('trip').classList.toggle('hidden', !away);
     if (away) {
       var T = today.at;
-      $('trip').innerHTML = '<div class="gold trip-t">أنت مسافر · <span class="ltr">' + d + '</span> كم عن ' + esc(S.home.name) + '</div>' +
-        '<div>تُقصر الظهر والعصر والعشاء ركعتين</div>' +
-        '<div><b>جمع تقديم:</b> الظهر والعصر ' + P.full(T.dhuhr) + ' · المغرب والعشاء ' + P.full(T.maghrib) + '</div>' +
-        '<div><b>جمع تأخير:</b> في وقت العصر ' + P.full(T.asr) + ' · وفي وقت العشاء ' + P.full(T.isha) + '</div>' +
-        '<div class="muted trip-n">إن نويت الإقامة أربعة أيام غير يومي الدخول والخروج انقطع سفرك · منهاج الطالبين</div>';
+      $('trip').innerHTML = tr('<div class="gold trip-t">أنت مسافر · <span class="ltr">') + d + tr('</span> كم عن ') + esc(S.home.name) + '</div>' +
+        tr('<div>تُقصر الظهر والعصر والعشاء ركعتين</div>') +
+        tr('<div><b>جمع تقديم:</b> الظهر والعصر ') + P.full(T.dhuhr) + tr(' · المغرب والعشاء ') + P.full(T.maghrib) + '</div>' +
+        tr('<div><b>جمع تأخير:</b> في وقت العصر ') + P.full(T.asr) + tr(' · وفي وقت العشاء ') + P.full(T.isha) + '</div>' +
+        tr('<div class="muted trip-n">إن نويت الإقامة أربعة أيام غير يومي الدخول والخروج انقطع سفرك · منهاج الطالبين</div>');
     }
     if (away && !S.trip.on) {
       S.trip = { on: true, at: Date.now() }; save();
-      try { A && A.notifyNow && A.notifyNow('أنت مسافر: ' + d + ' كم عن ' + S.home.name, 'يجوز قصر الرباعية والجمع بين الظهر والعصر والمغرب والعشاء'); } catch (e) {}
+      try { A && A.notifyNow && A.notifyNow(tr('أنت مسافر: ') + d + tr(' كم عن ') + S.home.name, tr('يجوز قصر الرباعية والجمع بين الظهر والعصر والمغرب والعشاء')); } catch (e) {}
     } else if (!away && S.trip.on) { S.trip = { on: false }; save(); }
   }
 
@@ -2144,10 +2177,10 @@
   function myVersion() { try { return A && A.version ? 'v' + String(A.version()).split('.').pop() : ''; } catch (e) { return ''; } }
   function updMsg() {
     var mine = myVersion();
-    var ver = mine ? 'عندك ' + mine + (upd.latest ? (upd.latest === mine ? ' · وهي الأحدث' : ' · الأحدث ' + upd.latest) : '') : 'dromaia.github.io/tv';
-    var msg = { run: 'جارٍ التحميل… ' + upd.pct + '%', done: 'اكتمل التحميل، اضغط «تثبيت» في الصفحة التالية',
-      fail: 'تعذّر التحميل، تأكد من الإنترنت وحاول مرة أخرى',
-      perm: 'اسمح لـ«مواقيت الصلاة» بتثبيت التطبيقات (مصادر غير معروفة) ثم اضغط مرة أخرى' }[upd.state];
+    var ver = mine ? tr('عندك ') + mine + (upd.latest ? (upd.latest === mine ? tr(' · وهي الأحدث') : tr(' · الأحدث ') + upd.latest) : '') : 'dromaia.github.io/tv';
+    var msg = { run: tr('جارٍ التحميل… ') + upd.pct + '%', done: tr('اكتمل التحميل، اضغط «تثبيت» في الصفحة التالية'),
+      fail: tr('تعذّر التحميل، تأكد من الإنترنت وحاول مرة أخرى'),
+      perm: tr('اسمح لـ«مواقيت الصلاة» بتثبيت التطبيقات (مصادر غير معروفة) ثم اضغط مرة أخرى') }[upd.state];
     $('upd-msg').innerHTML = ver + (msg ? ' <span class="muted">· ' + msg + '</span>' : '');
   }
   function updLatest() {
@@ -2190,9 +2223,9 @@
   // ---------- the city: automatic (from the internet connection) or chosen by search (Open-Meteo geocoding) ----------
   var locResults = [], locMsg = '', locQ = '';
   function showCity() {
-    $('w0-city').textContent = S.loc.name;
-    $('w0-btn').setAttribute('aria-label', 'الطقس في ' + S.loc.name);
-    $('set-sub').textContent = S.loc.name + ' · ' + P.method().name;
+    $('w0-city').textContent = tr(S.loc.name);
+    $('w0-btn').setAttribute('aria-label', tr('الطقس في ') + tr(S.loc.name));
+    $('set-sub').textContent = tr(S.loc.name) + ' · ' + P.method().name;
   }
   function applyLoc(loc) {
     var moved = Math.abs(loc.lat - S.loc.lat) + Math.abs(loc.lon - S.loc.lon) > 0.05 || loc.tz !== S.loc.tz;
@@ -2218,13 +2251,13 @@
     var q = ($('loc-q').value || '').trim();
     if (!q) { $('loc-q').focus(); return; }
     locQ = q;
-    locMsg = 'جارٍ البحث…'; setRender();
+    locMsg = tr('جارٍ البحث…'); setRender();
     geo(q).then(function (list) {
       locResults = list.filter(function (g) { return g.timezone; });
-      locMsg = locResults.length ? '' : 'لم أجد مدينة بهذا الاسم';
+      locMsg = locResults.length ? '' : tr('لم أجد مدينة بهذا الاسم');
       setRender();
       var f = document.querySelector('[data-k="loc-0"]'); if (f) f.focus();
-    }).catch(function () { locMsg = 'تعذّر البحث، تأكد من اتصال الإنترنت'; setRender(); });
+    }).catch(function () { locMsg = tr('تعذّر البحث، تأكد من اتصال الإنترنت'); setRender(); });
   }
   // automatic on the phone: the phone's own location (asks once for permission); its Arabic city name and
   // time zone from the internet. If there is no position yet, the city of the internet connection meanwhile.
@@ -2268,17 +2301,18 @@
         return base;
       }).catch(function () { return base; });
     }).then(function (loc) { if (S.loc.mode === 'auto') { locMsg = ''; applyLoc(loc); sendSchedule(); } })
-      .catch(function () { locMsg = 'تعذّر تحديد المدينة تلقائيًا، ابحث عنها بالاسم'; if (screen === 'settings') setRender(); });
+      .catch(function () { locMsg = tr('تعذّر تحديد المدينة تلقائيًا، ابحث عنها بالاسم'); if (screen === 'settings') setRender(); });
   }
 
-  var SOUNDS = [['tone', 'نغمة'], ['adhan', 'أذان كامل'], ['short', 'أذان مختصر'], ['none', 'بدون صوت']];
+  var SOUNDS = [['tone', tr('نغمة')], ['adhan', tr('أذان كامل')], ['short', tr('أذان مختصر')], ['none', tr('بدون صوت')]];
   function setAction(k) {
     var p = k.split('-'), a = p[0], v = p[1];
     if (a === 'loc') {
-      if (v === 'auto') { S.loc = Object.assign({}, S.loc, { mode: 'auto' }); save(); locMsg = 'جارٍ تحديد المدينة…'; gpsTry = 0; locateAuto(true); }
+      if (v === 'auto') { S.loc = Object.assign({}, S.loc, { mode: 'auto' }); save(); locMsg = tr('جارٍ تحديد المدينة…'); gpsTry = 0; locateAuto(true); }
       else if (locResults[+v]) { applyLoc(fromGeo(locResults[+v], 'city')); locResults = []; locMsg = ''; sendSchedule(); }
       setRender(); return;
     }
+    if (a === 'lang') { if (S.lang !== v) { S.lang = v; save(); location.reload(); } return; }
     if (a === 'fsz') { S.fontSize = v; S.zoom = 0; save(); fit(); setRender(); return; }
     if (a === 'wg') {
       var W = S.widget, f = v, val = p[2];

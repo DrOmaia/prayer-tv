@@ -71,7 +71,7 @@ object TvLink {
                     Handler(Looper.getMainLooper()).post { MainActivity.syncArrived() }
                     return
                 }
-                val title = o.optString("t").take(40).ifEmpty { "رسالة" }
+                val title = o.optString("t").take(40).ifEmpty { Device.en(ctx, "رسالة", "Message") }
                 val text = o.optString("x").take(160)
                 if (text.isBlank()) return
                 it.getOutputStream().write("ok\n".toByteArray(Charsets.UTF_8))
@@ -164,12 +164,12 @@ class TvLinkService : Service() {
         try {
             val nm = getSystemService(NotificationManager::class.java)
             val b = if (Build.VERSION.SDK_INT >= 26) {
-                nm.createNotificationChannel(NotificationChannel("tvlink", "رسائل العائلة", NotificationManager.IMPORTANCE_MIN))
+                nm.createNotificationChannel(NotificationChannel("tvlink", Device.en(this, "رسائل العائلة", "Family messages"), NotificationManager.IMPORTANCE_MIN))
                 Notification.Builder(this, "tvlink")
             } else {
                 @Suppress("DEPRECATION") Notification.Builder(this)
             }
-            val n = b.setContentTitle("رسائل العائلة").setSmallIcon(R.drawable.ic_moon).build()
+            val n = b.setContentTitle(Device.en(this, "رسائل العائلة", "Family messages")).setSmallIcon(R.drawable.ic_moon).build()
             if (Build.VERSION.SDK_INT >= 29) startForeground(8, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
             else startForeground(8, n)
         } catch (_: Exception) {}

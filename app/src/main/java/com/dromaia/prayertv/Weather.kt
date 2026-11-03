@@ -87,16 +87,16 @@ object Weather {
                     if (p >= 60 && wetAt == 0L) wetAt = at
                     if (p > wet) wet = p
                 }
-                if (hot >= 45) send(ctx, i, "heat", "$name: حرارة شديدة", "تصل إلى ${Math.round(hot)}° خلال الساعات القادمة. اشرب الماء وتجنّب الشمس.")
-                if (cold <= 3) send(ctx, i, "cold", "$name: " + (if (cold <= 0) "صقيع" else "برد شديد"),
-                    "تنخفض إلى ${Math.round(cold)}° خلال الساعات القادمة. تدفّأ جيدًا.")
-                if (wetAt > 0) send(ctx, i, "rain", "$name: مطر متوقع", "احتمال المطر $wet% ابتداءً من الساعة ${hm(wetAt, tz)} تقريبًا.")
+                if (hot >= 45) send(ctx, i, "heat", Device.en(ctx, "$name: حرارة شديدة", "$name: extreme heat"), Device.en(ctx, "تصل إلى ${Math.round(hot)}° خلال الساعات القادمة. اشرب الماء وتجنّب الشمس.", "Up to ${Math.round(hot)}° in the coming hours. Drink water and avoid the sun."))
+                if (cold <= 3) send(ctx, i, "cold", Device.en(ctx, "$name: " + (if (cold <= 0) "صقيع" else "برد شديد"), "$name: " + (if (cold <= 0) "frost" else "severe cold")),
+                    Device.en(ctx, "تنخفض إلى ${Math.round(cold)}° خلال الساعات القادمة. تدفّأ جيدًا.", "Down to ${Math.round(cold)}° in the coming hours. Keep warm."))
+                if (wetAt > 0) send(ctx, i, "rain", Device.en(ctx, "$name: مطر متوقع", "$name: rain expected"), Device.en(ctx, "احتمال المطر $wet% ابتداءً من الساعة ${hm(wetAt, tz)} تقريبًا.", "$wet% chance of rain from about ${hm(wetAt, tz)}."))
             } catch (_: Exception) {}
             try {
                 val a = get("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=dust")
                 val dust = a.optJSONObject("current")?.optDouble("dust") ?: 0.0
-                if (dust >= 1000) send(ctx, i, "dust", "$name: عاصفة غبارية", "الغبار كثيف الآن. خفّف الخروج وأغلق النوافذ.")
-                else if (dust >= 400) send(ctx, i, "dust", "$name: غبار", "في الهواء غبار الآن.")
+                if (dust >= 1000) send(ctx, i, "dust", Device.en(ctx, "$name: عاصفة غبارية", "$name: dust storm"), Device.en(ctx, "الغبار كثيف الآن. خفّف الخروج وأغلق النوافذ.", "Heavy dust now. Limit going out and close the windows."))
+                else if (dust >= 400) send(ctx, i, "dust", Device.en(ctx, "$name: غبار", "$name: dust"), Device.en(ctx, "في الهواء غبار الآن.", "Dust in the air now."))
             } catch (_: Exception) {}
         }
     }
@@ -110,7 +110,7 @@ object Weather {
         prefs.edit().putLong(key, now).apply()
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val b = if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(NotificationChannel("weather", "تنبيهات الطقس", NotificationManager.IMPORTANCE_DEFAULT))
+            nm.createNotificationChannel(NotificationChannel("weather", Device.en(ctx, "تنبيهات الطقس", "Weather alerts"), NotificationManager.IMPORTANCE_DEFAULT))
             Notification.Builder(ctx, "weather")
         } else {
             @Suppress("DEPRECATION")

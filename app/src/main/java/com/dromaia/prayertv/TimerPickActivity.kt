@@ -22,15 +22,15 @@ class TimerPickActivity : Activity() {
         }
         val items = Widgets.rotateChoices(this)
         if (items.isEmpty()) {
-            Toast.makeText(this, "افتح التطبيق مرة، ثم أضف الويدجت من جديد", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, Device.en(this, "افتح التطبيق مرة، ثم أضف الويدجت من جديد", "Open the app once, then add the widget again"), Toast.LENGTH_LONG).show()
             finish(); return
         }
         val chosen = Widgets.rotateKeys(this, id)
         val checked = BooleanArray(items.size) { items[it].first in chosen }
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
-            .setTitle("اختر عدّادًا أو أكثر")
+            .setTitle(Device.en(this, "اختر عدّادًا أو أكثر", "Choose one or more countdowns"))
             .setMultiChoiceItems(items.map { it.second }.toTypedArray(), checked) { _, which, on -> checked[which] = on }
-            .setPositiveButton("تم") { _, _ ->
+            .setPositiveButton(Device.en(this, "تم", "Done")) { _, _ ->
                 val keys = items.indices.filter { checked[it] }.map { items[it].first }
                 if (keys.isNotEmpty()) {
                     Widgets.setRotate(this, id, keys)
@@ -38,7 +38,7 @@ class TimerPickActivity : Activity() {
                 }
                 finish()
             }
-            .setNegativeButton("إلغاء") { _, _ -> finish() }
+            .setNegativeButton(Device.en(this, "إلغاء", "Cancel")) { _, _ -> finish() }
             .setOnCancelListener { finish() }
             .show()
     }

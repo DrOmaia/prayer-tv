@@ -14,6 +14,13 @@ import android.net.Uri
 import android.os.Build
 
 object Device {
+    // the interface language chosen in the app: 'en' when the page saved lang = en with the widget data
+    fun isEn(ctx: Context): Boolean = try {
+        val j = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString("widget", null)
+        j != null && org.json.JSONObject(j).optString("lang") == "en"
+    } catch (_: Exception) { false }
+    fun en(ctx: Context, ar: String, en: String) = if (isEn(ctx)) en else ar
+
     fun isTv(ctx: Context): Boolean {
         val ui = ctx.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         return ui.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
@@ -34,10 +41,10 @@ object Device {
         val res = soundRes(snd)
         val sound = if (res != 0) Uri.parse("android.resource://" + ctx.packageName + "/" + res) else null
         val (id, name) = when (snd) {
-            "adhan" -> Pair("adhan_full", "الأذان كاملًا")
-            "short" -> Pair("adhan_short", "الأذان مختصرًا")
-            "none" -> Pair("adhan_silent", "التنبيه بدون صوت")
-            else -> Pair("adhan_phone", "الأذان")
+            "adhan" -> Pair("adhan_full", en(ctx, "الأذان كاملًا", "Full adhan"))
+            "short" -> Pair("adhan_short", en(ctx, "الأذان مختصرًا", "Short adhan"))
+            "none" -> Pair("adhan_silent", en(ctx, "التنبيه بدون صوت", "Silent alert"))
+            else -> Pair("adhan_phone", en(ctx, "الأذان", "Adhan"))
         }
         val b = if (Build.VERSION.SDK_INT >= 26) {
             val ch = NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH)
@@ -67,7 +74,7 @@ object Device {
     fun notifyRefresh(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val b = if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(NotificationChannel("refresh", "تحديث المواقيت", NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(NotificationChannel("refresh", en(ctx, "تحديث المواقيت", "Prayer-times refresh"), NotificationManager.IMPORTANCE_LOW))
             Notification.Builder(ctx, "refresh")
         } else {
             @Suppress("DEPRECATION")
@@ -76,8 +83,8 @@ object Device {
         val open = PendingIntent.getActivity(ctx, 4,
             Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         val n = b.setSmallIcon(R.drawable.ic_moon)
-            .setContentTitle("افتح «مواقيت الصلاة»")
-            .setContentText("لتحديث مواقيت الأيام القادمة وتنبيهاتها")
+            .setContentTitle(en(ctx, "افتح «مواقيت الصلاة»", "Open \"Prayer Times\""))
+            .setContentText(en(ctx, "لتحديث مواقيت الأيام القادمة وتنبيهاتها", "To refresh the coming days' times and alerts"))
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()

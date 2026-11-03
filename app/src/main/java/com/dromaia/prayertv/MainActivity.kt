@@ -351,7 +351,7 @@ class MainActivity : Activity() {
                 val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.listFiles()?.forEach { it.delete() }
                 val req = DownloadManager.Request(Uri.parse(UPDATE_URL))
-                    .setTitle("مواقيت الصلاة — آخر نسخة")
+                    .setTitle(Device.en(this@MainActivity, "مواقيت الصلاة — آخر نسخة", "Prayer Times — latest version"))
                     .setMimeType(APK_TYPE)
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
                     .setDestinationInExternalFilesDir(this@MainActivity, Environment.DIRECTORY_DOWNLOADS, "prayer-tv.apk")

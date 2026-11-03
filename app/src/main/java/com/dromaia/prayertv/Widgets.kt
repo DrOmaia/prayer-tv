@@ -53,6 +53,10 @@ object Widgets {
     // a provider's own update: never let an error reach the launcher
     fun safeUpdate(ctx: Context) { try { updateAll(ctx) } catch (e: Exception) { lastError(ctx, e.toString()) } }
 
+    // the interface language chosen in the app ('ar' or 'en'); the page sends it with the widget data
+    @Volatile private var EN = false
+    private fun en(ar: String, en: String) = if (EN) en else ar
+
     private fun data(ctx: Context): JSONObject? =
         ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).getString(KEY, null)?.let {
             try { JSONObject(it) } catch (_: Exception) { null }
@@ -173,18 +177,18 @@ object Widgets {
                 val ink = try { Color.parseColor(x.optString("ink")) } catch (_: Exception) { Color.WHITE }
                 val at = x.optLong("at"); val date = x.optString("date")
                 cards.add(Card(bg, ink, bigNumbers(timerText(at, x.optString("unit"), now)),
-                    (if (at <= now) "منذ " else "حتى ") + x.optString("name") + if (date.isNotEmpty()) " · $date" else "", x.optString("dua")))
+                    (if (at <= now) en("منذ ", "Since ") else en("حتى ", "Until ")) + x.optString("name") + if (date.isNotEmpty()) " · $date" else "", x.optString("dua")))
             } else if (key.startsWith("e:")) {
                 val e = events.firstOrNull { it.optString("name") == key.substring(2) } ?: continue
                 val left = (dayNumber(e.optLong("at")) - dayNumber(now)).toInt()
                 if (left < 0) continue
                 val date = e.optString("date")
-                cards.add(Card(navy, Color.WHITE, bigNumbers(if (left == 0) "اليوم" else tw(left.toLong(), "يوم", "يومان", "أيام", "يومًا")),
-                    (if (left == 0) "" else "حتى ") + e.optString("name") + if (date.isNotEmpty()) " · $date" else ""))
+                cards.add(Card(navy, Color.WHITE, bigNumbers(if (left == 0) en("اليوم", "Today") else tw(left.toLong(), "يوم", "يومان", "أيام", "يومًا")),
+                    (if (left == 0) "" else en("حتى ", "Until ")) + e.optString("name") + if (date.isNotEmpty()) " · $date" else ""))
             }
             if (cards.size == 12) break
         }
-        if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, "عدّاد", "اضغط مطولًا ← الإعدادات لاختياره"))
+        if (cards.isEmpty()) cards.add(Card(navy, Color.WHITE, en("عدّاد", "Countdown"), en("اضغط مطولًا ← الإعدادات لاختياره", "Long-press → Settings to choose")))
         rv.removeAllViews(R.id.rot_flip) // the launcher keeps the old cards between refreshes
         cards.forEachIndexed { i, c ->
             val item = RemoteViews(ctx.packageName, R.layout.widget_rotate_item)
@@ -208,8 +212,11 @@ object Widgets {
         return rv
     }
 
-    private fun tw(n: Long, one: String, two: String, few: String, many: String) =
-        "$n " + when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> few; else -> many }
+    private val EN_UNITS = mapOf("دقيقة" to "minute", "ساعة" to "hour", "يومًا" to "day", "أسبوعًا" to "week", "يوم عمل" to "workday", "شهرًا" to "month", "سنة" to "year")
+    private fun tw(n: Long, one: String, two: String, few: String, many: String): String {
+        if (EN) { val u = EN_UNITS[many] ?: many; return "$n " + if (n == 1L) u else u + "s" }
+        return "$n " + when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> few; else -> many }
+    }
 
     // the count in the unit chosen (the same words as the app's screen)
     private fun timerText(at: Long, unit: String, now: Long): String {
@@ -301,6 +308,7 @@ object Widgets {
         val am = AppWidgetManager.getInstance(ctx)
         val now = System.currentTimeMillis()
         val d = data(ctx)
+        EN = d?.optString("lang") == "en"
         d?.optString("tz")?.takeIf { it.isNotEmpty() }?.let { TZ = TimeZone.getTimeZone(it) }
         val st = state(d, now)
         // each kind of widget has its own look (chosen in the app's «الويدجت» screen); older data: one look for all
@@ -430,7 +438,7 @@ object Widgets {
         tint(rv, R.id.progress, sty.accent)
         rv.setTextColor(R.id.info_chrono, sty.accent)
         if (st == null) {
-            rv.setTextViewText(R.id.next_name, "افتح التطبيق مرة")
+            rv.setTextViewText(R.id.next_name, en("افتح التطبيق مرة", "Open the app once"))
             rv.setTextViewText(R.id.next_time, "")
             return rv
         }
@@ -466,9 +474,9 @@ object Widgets {
         val fajr = t.getLong(0); val sunrise = t.getLong(1); val asr = t.getLong(3); val maghrib = t.getLong(4)
         var until = 0L
         val label = when {
-            st.today.optBoolean("ram") && now >= fajr && now < maghrib -> { until = maghrib; "متبقٍّ للإفطار" }
-            now >= fajr && now < sunrise + 3_600_000L -> "وقت أذكار الصباح"
-            now >= asr && now < maghrib -> "وقت أذكار المساء"
+            st.today.optBoolean("ram") && now >= fajr && now < maghrib -> { until = maghrib; en("متبقٍّ للإفطار", "Until iftar") }
+            now >= fajr && now < sunrise + 3_600_000L -> en("وقت أذكار الصباح", "Morning adhkar time")
+            now >= asr && now < maghrib -> en("وقت أذكار المساء", "Evening adhkar time")
             else -> nearestEvent(d, now) ?: "سبحان الله وبحمده، سبحان الله العظيم"
         }
         rv.setTextViewText(R.id.info_label, label)
@@ -483,7 +491,7 @@ object Widgets {
     private val EV_N = intArrayOf(R.id.ev0n, R.id.ev1n, R.id.ev2n)
     private val EV_D = intArrayOf(R.id.ev0d, R.id.ev1d, R.id.ev2d)
     private fun daysLeft(left: Int): String = when (left) {
-        0 -> "اليوم"; 1 -> "غدًا"; 2 -> "بعد يومين"; in 3..10 -> "بعد $left أيام"; else -> "بعد $left يومًا"
+        0 -> en("اليوم", "Today"); 1 -> en("غدًا", "Tomorrow"); 2 -> en("بعد يومين", "In 2 days"); in 3..10 -> en("بعد $left أيام", "In $left days"); else -> en("بعد $left يومًا", "In $left days")
     }
     private fun putEvents(rv: RemoteViews, d: JSONObject?, sty: Style, now: Long) {
         val list = mutableListOf<Pair<String, String>>()
@@ -515,11 +523,11 @@ object Widgets {
             if (left < 0) continue
             val name = e.optString("name")
             return when (left) {
-                0 -> "$name اليوم"
-                1 -> "$name غدًا"
-                2 -> "$name بعد يومين"
-                in 3..10 -> "$name بعد $left أيام"
-                else -> "$name بعد $left يومًا"
+                0 -> en("$name اليوم", "$name today")
+                1 -> en("$name غدًا", "$name tomorrow")
+                2 -> en("$name بعد يومين", "$name in 2 days")
+                in 3..10 -> en("$name بعد $left أيام", "$name in $left days")
+                else -> en("$name بعد $left يومًا", "$name in $left days")
             }
         }
         return null
@@ -532,7 +540,7 @@ object Widgets {
         sizes(rv, sty, listOf(R.id.next_name to 17f, R.id.countdown to 19f, R.id.next_time to 13f))
         tint(rv, R.id.progress, sty.accent)
         if (st == null) {
-            rv.setTextViewText(R.id.next_name, "افتح التطبيق")
+            rv.setTextViewText(R.id.next_name, en("افتح التطبيق", "Open the app"))
             return rv
         }
         putNext(rv, sty, st, now)
@@ -546,7 +554,7 @@ object Widgets {
         putBg(rv, sty, bgOf(sty, st))
         sizes(rv, sty, listOf(R.id.hijri to 14f, R.id.next_name to 17f, R.id.next_time to 14f, R.id.countdown to 18f))
         if (st == null) {
-            rv.setTextViewText(R.id.hijri, "افتح التطبيق مرة")
+            rv.setTextViewText(R.id.hijri, en("افتح التطبيق مرة", "Open the app once"))
             return rv
         }
         putNext(rv, sty, st, now)
@@ -567,7 +575,7 @@ object Widgets {
         putBg(rv, sty, bgOf(sty, st))
         val months = d?.optJSONArray("months")
         if (months == null || months.length() == 0) {
-            rv.setTextViewText(R.id.m_title, "افتح التطبيق مرة")
+            rv.setTextViewText(R.id.m_title, en("افتح التطبيق مرة", "Open the app once"))
             return rv
         }
         val today = dayNumber(now)
@@ -626,9 +634,9 @@ object Widgets {
                 add("■", Color.parseColor(CELL_COLOR[x.optString(0)] ?: "#FFFFFF"), x.optString(1))
             }
         }
-        if (m.optBoolean("white")) add("■", Color.parseColor("#E8E8E8"), "الأيام البيض")
-        add("•", Color.WHITE, "الاثنين والخميس")
-        if (m.optBoolean("events")) add("★", sty.accent, "مناسبة")
+        if (m.optBoolean("white")) add("■", Color.parseColor("#E8E8E8"), en("الأيام البيض", "White days"))
+        add("•", Color.WHITE, en("الاثنين والخميس", "Mon & Thu"))
+        if (m.optBoolean("events")) add("★", sty.accent, en("مناسبة", "Occasion"))
         rv.setTextViewText(R.id.m_legend, lg)
         if (todayDay > 0) rv.setImageViewBitmap(R.id.moon, moon(todayDay, (18 * ctx.resources.displayMetrics.density).toInt()))
         return rv
@@ -640,7 +648,7 @@ object Widgets {
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "convert", 6))
         putBg(rv, sty, bgOf(sty, st))
         val t = st?.today
-        rv.setTextViewText(R.id.cv_day, t?.optInt("hday", 0)?.takeIf { it > 0 }?.toString() ?: "هـ")
+        rv.setTextViewText(R.id.cv_day, t?.optInt("hday", 0)?.takeIf { it > 0 }?.toString() ?: en("هـ", "AH"))
         rv.setTextColor(R.id.cv_day, sty.accent)
         return rv
     }
@@ -679,11 +687,11 @@ object Widgets {
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "reader", 9))
         val m = d?.optJSONObject("mark")
         if (m == null) {
-            rv.setTextViewText(R.id.rd_line, "اضغط للبدء")
-            rv.setTextViewText(R.id.rd_sub, "ابدأ وردك من المصحف")
+            rv.setTextViewText(R.id.rd_line, en("اضغط للبدء", "Tap to start"))
+            rv.setTextViewText(R.id.rd_sub, en("ابدأ وردك من المصحف", "Start your portion from the Mushaf"))
         } else {
-            rv.setTextViewText(R.id.rd_line, "سورة " + m.optString("name") + " · الآية " + m.optInt("i"))
-            rv.setTextViewText(R.id.rd_sub, "توقفت هنا، اضغط لتكمل")
+            rv.setTextViewText(R.id.rd_line, en("سورة ", "Surah ") + m.optString("name") + en(" · الآية ", " · verse ") + m.optInt("i"))
+            rv.setTextViewText(R.id.rd_sub, en("توقفت هنا، اضغط لتكمل", "You stopped here; tap to continue"))
         }
         return rv
     }
@@ -698,8 +706,8 @@ object Widgets {
             val e = events.getJSONObject(i)
             val left = (dayNumber(e.getLong("at")) - today).toInt()
             if (left < 0) continue
-            rv.setTextViewText(R.id.days, if (left == 0) "اليوم" else left.toString())
-            rv.setTextViewText(R.id.unit, if (left == 0) "" else if (left in 3..10) "أيام" else "يوم")
+            rv.setTextViewText(R.id.days, if (left == 0) en("اليوم", "Today") else left.toString())
+            rv.setTextViewText(R.id.unit, if (left == 0) "" else if (EN) (if (left == 1) "day" else "days") else if (left in 3..10) "أيام" else "يوم")
             rv.setTextViewText(R.id.name, e.getString("name"))
             shown = true
             break
@@ -707,7 +715,7 @@ object Widgets {
         if (!shown) {
             rv.setTextViewText(R.id.days, "—")
             rv.setTextViewText(R.id.unit, "")
-            rv.setTextViewText(R.id.name, "افتح التطبيق مرة")
+            rv.setTextViewText(R.id.name, en("افتح التطبيق مرة", "Open the app once"))
         }
         return rv
     }

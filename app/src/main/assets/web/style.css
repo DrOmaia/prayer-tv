@@ -11,13 +11,13 @@
 @font-face { font-family: 'AmiriQuran'; src: url(fonts/amiri-quran-arabic-400-normal.woff2) format('woff2'); }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #16181B; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #16181B; position: relative; }
 body { font-family: 'Tajawal', sans-serif; }
 button { font-family: inherit; color: inherit; cursor: pointer; }
 .hidden { display: none !important; }
 
 /* 1920×1080 stage, scaled to the screen */
-#stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); }
+#stage { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: 0 0; transform: scale(0.2); overflow: hidden; color: var(--ink); }
 /* day: calm sand and gold (no white), the night's star pattern */
 .day { --now-tint: rgba(142,102,36,.08); --pc-bg: #E6DDCB; --ink: #2A2418; --muted: #5E513C; --card: rgba(236,228,212,.7); --card2: #E6DDCB; --tile: #E6DDCB; --line: #C9B894; --shadow: rgba(60,45,20,.10); --gold: #8E6624; --on-gold: #FFF8EA; --now-bg: #2A2418; --now-fg: #F6EFE2; --now-sub: #D3C6AE; --now-badge: #E6D7B8; --faint: #8F8270;
   background-color: #D9CEB8;

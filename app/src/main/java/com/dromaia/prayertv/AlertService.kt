@@ -75,7 +75,7 @@ class AlertService : Service() {
     private fun startAsForeground() {
         val nm = getSystemService(NotificationManager::class.java)
         val b = if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(NotificationChannel("adhan", "تنبيه الأذان", NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(NotificationChannel("adhan", Device.en(this, "تنبيه الأذان", "Adhan alert"), NotificationManager.IMPORTANCE_LOW))
             Notification.Builder(this, "adhan")
         } else {
             @Suppress("DEPRECATION") Notification.Builder(this)
@@ -85,7 +85,7 @@ class AlertService : Service() {
         @Suppress("DEPRECATION")
         val n = b.setContentTitle(getString(R.string.app_name))
             .setSmallIcon(R.drawable.ic_moon)
-            .addAction(Notification.Action.Builder(null, "إيقاف الأذان", stop).build())
+            .addAction(Notification.Action.Builder(null, Device.en(this, "إيقاف الأذان", "Stop the adhan"), stop).build())
             .build()
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
