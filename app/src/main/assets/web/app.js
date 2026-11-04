@@ -888,7 +888,7 @@
   }
   function fill(t, x) {
     var names = fam().members.filter(function (m) { return m.kind !== 'self'; }).map(function (m) { return m.name; });
-    var list = names.length > 1 ? names.slice(0, -1).join(tr('، ')) + tr(' و') + names[names.length - 1] : names.join('');
+    var list = names.length > 1 ? names.slice(0, -1).join(EN ? ', ' : '، ') + (EN ? ' and ' : ' و') + names[names.length - 1] : names.join('');
     var d = x && x.dep, sp = spouse();
     return t.replace(/\{name\}/g, x ? x.name : '').replace(/\{names\}/g, list)
       .replace(/\{acc\}/g, d ? d.acc || d.name : '').replace(/\{gen\}/g, d ? d.gen || d.name : '').replace(/\{spouse\}/g, sp ? sp.name : '');
@@ -911,12 +911,14 @@
     return list[(round * per + before) % list.length];
   }
   // family messages, one for each person in turn (own messages added to that person's list)
+  // the family texts in the interface language (English texts keep the same keys and placeholders)
+  function FM() { return EN && window.FAMILY_EN ? window.FAMILY_EN : FAMILY; }
   function famPool() {
     var lists = {}, pool = [], max = 0, order = famOrder();
     order.forEach(function (id) {
-      var x = member(id), base = FAMILY.messages[id === 'all' ? 'all' : msgKind(x)] || [];
+      var x = member(id), base = FM().messages[id === 'all' ? 'all' : msgKind(x)] || [];
       // a child who loves football: every other message is a football one
-      if (x.likes === 'football') base = mix(base, FAMILY.messages.football);
+      if (x.likes === 'football') base = mix(base, FM().messages.football);
       lists[id] = base.map(function (t) { return fill(t, x); })
         .concat(S.famMsgs.filter(function (m) { return m.to === id; }).map(function (m) { return m.text; }));
       max = Math.max(max, lists[id].length);
@@ -949,10 +951,10 @@
   // birthday or wedding anniversary today: its greeting stays all day
   function special(r) {
     var b = fam().members.filter(function (x) { return x.m === r.m && x.d === r.d; })[0];
-    if (b) return { id: 'b-' + b.id, type: tr('يوم ميلاد ') + b.name, text: fill(FAMILY.birthday[msgKind(b)], b), src: '— ' + sign(b), fam: true };
+    if (b) return { id: 'b-' + b.id, type: tr('يوم ميلاد ') + b.name, text: fill(FM().birthday[msgKind(b)], b), src: '— ' + sign(b), fam: true };
     var a = fam().anniversary, sp = spouse();
     if (a && sp && a.m === r.m && a.d === r.d) {
-      return { id: 'anniv', type: tr('ذكرى زواجنا'), text: fill(FAMILY.anniversary[fam().parent === 'mother' ? 'mother' : 'father'], sp), src: '— ' + sign(sp), fam: true };
+      return { id: 'anniv', type: tr('ذكرى زواجنا'), text: fill(FM().anniversary[fam().parent === 'mother' ? 'mother' : 'father'], sp), src: '— ' + sign(sp), fam: true };
     }
     return null;
   }
