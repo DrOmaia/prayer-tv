@@ -607,6 +607,10 @@
       // the phone shows the box full width: bigger text
       $('fact-x').style.fontSize = fs ? Math.round(fs * (stage.classList.contains('portrait') ? 1.5 : 1)) + 'px' : '';
       $('fact-s').textContent = item.s;
+      // the English under the Arabic text, for the English interface (the Arabic stays as it is)
+      var fi = EN && window.FACTS_EN && !item.q && !dh ? FACTS.indexOf(item) : -1, en = fi >= 0 ? window.FACTS_EN[fi] : null;
+      $('fact-en').classList.toggle('hidden', !en);
+      if (en) $('fact-en').innerHTML = (en[0] ? '<b>' + esc(en[0]) + '</b> ' : '') + esc(en[1]) + (en[2] ? '<span class="fe-src">— ' + esc(en[2]) + '</span>' : '');
       box.classList.remove('fade');
     }
     if (first) put(); else { box.classList.add('fade'); setTimeout(put, 600); }
