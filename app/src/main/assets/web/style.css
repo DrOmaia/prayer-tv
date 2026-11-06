@@ -327,7 +327,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .cell .cg { font-size: 32px; }
 .portrait .cell .ch { font-size: 15px; }
 .portrait .cal-tr { grid-template-columns: minmax(0, 1fr) 200px 200px; }
-.portrait .kahf-text { min-height: 900px; }
+.portrait .kahf-text { min-height: 0; flex: 1; overflow: hidden; }
+/* on the phone the reader's controls stay above the bottom tab bar */
+.portrait.phone #kahf { padding-bottom: 210px; }
 .portrait .iq-cd { font-size: 300px; letter-spacing: -6px; }
 .portrait .iq-label { font-size: 60px; }
 .portrait .iq-mid { min-height: 1200px; }
