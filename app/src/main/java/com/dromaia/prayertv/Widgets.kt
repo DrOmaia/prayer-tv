@@ -72,7 +72,8 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
-        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, ReaderWidget::class.java)
+        EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, ReaderWidget::class.java,
+        DuaWidget::class.java)
 
     // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
     fun timers(ctx: Context): List<Pair<String, String>> {
@@ -330,6 +331,8 @@ object Widgets {
         each(ConvertWidget::class.java) { convertViews(ctx, styleOf("convert"), st) }
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
         each(ReaderWidget::class.java) { readerViews(ctx, d) }
+        // the supplication changes every hour: refresh at the next full hour while one is placed
+        if (each(DuaWidget::class.java) { duaViews(ctx, d) }) nextChange = minOf(nextChange, now - now % 3_600_000L + 3_600_000L)
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
@@ -682,6 +685,20 @@ object Widgets {
     }
 
     // the reading widget: where the reading stopped (the page's mark); a tap opens the reader there
+    // the supplication of the hour: starts with today's (the page's choice) and moves on each hour
+    private fun duaViews(ctx: Context, d: JSONObject?): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_dua)
+        rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
+        val list = d?.optJSONArray("duas")
+        val text = if (list == null || list.length() == 0) en("افتح التطبيق ليظهر الدعاء", "Open the app to see the supplication")
+        else {
+            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            list.optString(((d.optLong("duaBase") + hour) % list.length()).toInt())
+        }
+        rv.setTextViewText(R.id.dua_text, text)
+        return rv
+    }
+
     private fun readerViews(ctx: Context, d: JSONObject?): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_reader)
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "reader", 9))
@@ -778,6 +795,10 @@ class ConvertWidget : AppWidgetProvider() {
 }
 
 class ReaderWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
+}
+
+class DuaWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
 

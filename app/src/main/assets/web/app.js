@@ -439,7 +439,10 @@
     var events = allEvents(r).slice(0, 30).map(function (e) { return { name: e.name, at: P.noonOf(e.y, e.m, e.d), date: fd(e.d, e.m, e.y) }; });
     var months = [];
     try { months = widgetMonths(r); } catch (e) {}
-    try { A.widgetData(JSON.stringify({ days: days, events: events, tz: P.zone(), city: tr(S.loc.name), lang: S.lang, style: S.widget, styles: S.wstyle, months: months,
+    // lock-screen supplication: the list, and today's day number (the widget changes it every hour, starting from today's)
+    var duas = short.map(function (du) { return (du.q ? quranText(du.q) : '«' + du.x + '»') + ' · ' + du.s; });
+    var duaBase = Math.floor(+new Date(P.noonOf(r.y, r.m, r.d)) / 86400000);
+    try { A.widgetData(JSON.stringify({ days: days, events: events, duas: duas, duaBase: duaBase, tz: P.zone(), city: tr(S.loc.name), lang: S.lang, style: S.widget, styles: S.wstyle, months: months,
       mark: S.qMark ? { s: S.qMark.s, name: QURAN[S.qMark.s - 1][0], i: S.qMark.i } : null,
       timerWg: { font: S.timerWg.font, name: S.timerWg.name },
       timers: S.timers.map(function (x) {
