@@ -1,19 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The lock-screen supplication: one line of today's (hourly changing) dua; a tap opens the app -->
+<!-- The lock-screen supplication: today's dua, changing every hour; a tap opens the app -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#B3101830"
-    android:padding="8dp">
+    android:background="@drawable/widget_dua_bg"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <TextView
         android:id="@+id/dua_text"
+        style="@style/WidgetText"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:gravity="center"
-        android:textAlignment="center"
-        android:textDirection="rtl"
+        android:textDirection="anyRtl"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="4"
+        android:ellipsize="end"
         android:textColor="#FFFFFF"
         android:textSize="15sp" />
 </FrameLayout>

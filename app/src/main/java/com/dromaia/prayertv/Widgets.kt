@@ -331,8 +331,9 @@ object Widgets {
         each(ConvertWidget::class.java) { convertViews(ctx, styleOf("convert"), st) }
         each(EventWidget::class.java) { eventViews(ctx, d, now) }
         each(ReaderWidget::class.java) { readerViews(ctx, d) }
-        // the supplication changes every hour: refresh at the next full hour while one is placed
-        if (each(DuaWidget::class.java) { duaViews(ctx, d) }) nextChange = minOf(nextChange, now - now % 3_600_000L + 3_600_000L)
+        // the supplication changes every hour: refresh at the next full hour (of the city's clock) while one is placed
+        if (each(DuaWidget::class.java) { duaViews(ctx, d, now) })
+            nextChange = minOf(nextChange, now - Math.floorMod(now + TZ.getOffset(now), 3_600_000L) + 3_600_000L)
         // timers count minutes: refresh at the next minute while one is on the home screen
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
@@ -685,15 +686,19 @@ object Widgets {
     }
 
     // the reading widget: where the reading stopped (the page's mark); a tap opens the reader there
-    // the supplication of the hour: starts with today's (the page's choice) and moves on each hour
-    private fun duaViews(ctx: Context, d: JSONObject?): RemoteViews {
+    // the supplication of the hour: at midnight it is today's (the same one the app shows), then the next one each hour.
+    // Day and hour follow the city's time zone; the days passed since the page sent the data keep it in step with the app
+    // even when the app has not been opened for days.
+    private fun duaViews(ctx: Context, d: JSONObject?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_dua)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
         val list = d?.optJSONArray("duas")
-        val text = if (list == null || list.length() == 0) en("افتح التطبيق ليظهر الدعاء", "Open the app to see the supplication")
+        val text = if (d == null || list == null || list.length() == 0) en("افتح التطبيق ليظهر الدعاء", "Open the app to see the supplication")
         else {
-            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-            list.optString(((d.optLong("duaBase") + hour) % list.length()).toInt())
+            fun localDay(t: Long) = Math.floorDiv(t + TZ.getOffset(t), 86_400_000L)
+            val hour = Math.floorMod(now + TZ.getOffset(now), 86_400_000L) / 3_600_000L
+            val daysSince = localDay(now) - localDay(d.optLong("duaAt", now))
+            list.optString(Math.floorMod(d.optLong("duaBase") + daysSince + hour, list.length().toLong()).toInt())
         }
         rv.setTextViewText(R.id.dua_text, text)
         return rv
