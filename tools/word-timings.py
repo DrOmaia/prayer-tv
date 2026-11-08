@@ -14,13 +14,17 @@ def blobs():
         if name.endswith('.zip'):
             with zipfile.ZipFile(p) as z:
                 for n in z.namelist():
-                    if n.endswith('.json'):
+                    if n.endswith('.json') and '__MACOSX' not in n and not os.path.basename(n).startswith('._'):
                         yield os.path.basename(n)[:-5], z.read(n)
         elif name.endswith('.json'):
             yield name[:-5], open(p, 'rb').read()
 
 for reciter, raw in blobs():
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except ValueError as e:
+        print('skipped', reciter, e)
+        continue
     surahs = {}
     for v in data:
         segs = [[int(a), int(b), int(c), int(d)] for a, b, c, d in (s[:4] for s in v.get('segments') or [])]
