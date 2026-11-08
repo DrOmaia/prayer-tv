@@ -886,6 +886,17 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .kv { display: inline; background: none; border: none; padding: 0 2px; font: inherit; color: var(--ink); border-radius: 12px; cursor: pointer; }
 .kv.on { background: rgba(226,185,105,.28); color: var(--ink); }
 #kahf { touch-action: pan-y; }
+/* the Qur'an player looks like a night stage (day and night): navy, the verses in soft lavender,
+   the word the reciter is reading in glowing white; without word timings the whole verse is white */
+#kahf { --ink: #F4EFE6; --muted: #BDB4D6; --faint: #6E6795; --line: rgba(226,185,105,.28); --gold: #E2B969; --on-gold: #17123F;
+  --card: rgba(18,20,64,.45); --card2: rgba(22,24,74,.62); --tile: rgba(255,255,255,.08);
+  background: radial-gradient(ellipse at 50% 35%, #232870 0%, #141849 55%, #0B0E30 100%); color: var(--ink); }
+#kahf .kv { color: #ABA4DE; }
+#kahf .k-cur { color: #FFFFFF; }
+#kahf .kv.on { background: none; color: #FFFFFF; text-shadow: 0 0 22px rgba(255,255,255,.55); }
+#kahf.wsync .k-cur, #kahf.wsync .kv.on { color: #ABA4DE; text-shadow: none; }
+#kahf .w { transition: color .15s, text-shadow .15s; }
+#kahf .w.now { color: #FFFFFF; text-shadow: 0 0 18px rgba(255,255,255,.85), 0 0 4px rgba(255,255,255,.9); }
 
 /* reading without audio: the page, the mark and the bar */
 .r-mark { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 26px; padding: 0 40px 12px; }

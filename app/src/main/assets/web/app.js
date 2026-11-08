@@ -1227,13 +1227,18 @@
   function kCount() { return QURAN[kahf.s - 1][1].length; }
   // the Basmala comes first, except in Al-Fatiha (its first verse) and At-Tawbah
   function kFirst() { return kahf.s === 1 || kahf.s === 9 ? 1 : 0; }
-  // reciters (everyayah.com folders; a second folder is tried if the first does not play)
+  // reciters (everyayah.com folders; a second folder is tried if the first does not play).
+  // words: the folder of word-by-word timings in words/ (made for the first folder's recording; quran-align, CC BY 4.0):
+  // the word the reciter is reading lights up. Without timings the whole verse lights up.
   var RECITERS = [
-    { id: 'alafasy', name: tr('مشاري العفاسي'), dirs: ['Alafasy_128kbps', 'Alafasy_64kbps'] },
+    { id: 'alafasy', name: tr('مشاري العفاسي'), dirs: ['Alafasy_128kbps', 'Alafasy_64kbps'], words: 'Alafasy_128kbps' },
     { id: 'sudais', name: tr('عبد الرحمن السديس'), dirs: ['Abdurrahmaan_As-Sudais_192kbps', 'Abdurrahmaan_As-Sudais_64kbps'] },
-    { id: 'shuraym', name: tr('سعود الشريم'), dirs: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'] },
+    { id: 'shuraym', name: tr('سعود الشريم'), dirs: ['Saood_ash-Shuraym_128kbps', 'Saood_ash-Shuraym_64kbps'], words: 'Saood_ash-Shuraym_128kbps' },
     { id: 'muaiqly', name: tr('ماهر المعيقلي'), dirs: ['MaherAlMuaiqly128kbps', 'Maher_AlMuaiqly_64kbps'] },
-    { id: 'dossary', name: tr('ياسر الدوسري'), dirs: ['Yasser_Ad-Dussary_128kbps'] }
+    { id: 'dossary', name: tr('ياسر الدوسري'), dirs: ['Yasser_Ad-Dussary_128kbps'] },
+    { id: 'basit', name: tr('عبد الباسط عبد الصمد'), dirs: ['Abdul_Basit_Murattal_64kbps', 'Abdul_Basit_Murattal_192kbps'], words: 'Abdul_Basit_Murattal_64kbps' },
+    { id: 'husary', name: tr('محمود خليل الحصري'), dirs: ['Husary_64kbps', 'Husary_128kbps'], words: 'Husary_64kbps' },
+    { id: 'minshawi', name: tr('محمد صديق المنشاوي'), dirs: ['Minshawy_Murattal_128kbps'], words: 'Minshawy_Murattal_128kbps' }
   ];
   var dirTry = 0;
   function reciter() { return RECITERS.filter(function (r) { return r.id === S.reciter; })[0] || RECITERS[0]; }
@@ -1243,6 +1248,45 @@
   }
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
+  // the same verse with each word in its own span (lit up while the reciter reads it)
+  function kWords(i) {
+    var v = QURAN[kahf.s - 1][1], t = i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] : '');
+    if (!t) return '';
+    return t.split(' ').map(function (w) { return '<span class="w">' + w + '</span>'; }).join(' ') + (i ? ' ﴿' + arNum(i) + '﴾' : '');
+  }
+  // word timings: one file per surah and reciter, loaded when needed (the Basmala uses Al-Fatiha's first verse)
+  var wCache = {};
+  function wLoad(s) {
+    var f = reciter().words;
+    if (!f) return null;
+    var k = f + '/' + pad3(s);
+    if (!(k in wCache)) {
+      wCache[k] = null;
+      fetch('words/' + k + '.json').then(function (r) { return r.json(); }).then(function (j) { wCache[k] = j; }).catch(function () {});
+    }
+    return wCache[k];
+  }
+  function wSegs() {
+    var j = kahf.i === 0 ? wLoad(1) : wLoad(kahf.s);
+    return j ? j[String(kahf.i === 0 ? 1 : kahf.i)] : null;
+  }
+  // while playing: light the word being read (the last word whose time has started); the others go back to normal
+  var wNow = -1, wBox = null, wRun = false;
+  function wStart() { if (!wRun) { wRun = true; requestAnimationFrame(wTick); } }
+  function wTick() {
+    if (!kahf.playing || $('kahf').classList.contains('hidden')) { wRun = false; wNow = -1; return; }
+    requestAnimationFrame(wTick);
+    var segs = wSegs(), box = kahf.read ? document.querySelector('#k-read .kv.on') : $('k-cur');
+    var t = audio.currentTime * 1000, seg = null;
+    if (segs && !audio.paused) for (var k = 0; k < segs.length && segs[k][2] <= t; k++) seg = segs[k];
+    var key = seg ? seg[0] * 1000 + seg[1] : -1;
+    if (key === wNow && box === wBox) return;
+    wNow = key; wBox = box;
+    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now'), function (w) { w.classList.remove('now'); });
+    if (!box || !seg) return;
+    var ws = box.querySelectorAll('.w');
+    for (var n = seg[0]; n < seg[1] && n < ws.length; n++) ws[n].classList.add('now');
+  }
   // the size of the text: pinch with two fingers on this screen (kept)
   function kApplySize() {
     document.documentElement.style.setProperty('--qz', S.qSize || 1);
@@ -1258,8 +1302,8 @@
     var rd = $('k-read');
     if (rd.dataset.s !== String(kahf.s)) {
       rd.dataset.s = kahf.s;
-      var h = '<button class="kv" data-i="0">' + kText(0) + '</button>';
-      for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kText(v) + '</button>';
+      var h = '<button class="kv" data-i="0">' + kWords(0) + '</button>';
+      for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + '</button>';
       rd.innerHTML = h;
     }
     Array.prototype.forEach.call(rd.querySelectorAll('.kv'), function (b) { b.classList.toggle('on', +b.dataset.i === i); });
@@ -1278,7 +1322,9 @@
     $('k-title').textContent = tr('سورة ') + QURAN[kahf.s - 1][0];
     $('k-sub').textContent = tr('بصوت الشيخ ') + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
-    $('k-cur').textContent = cur;
+    $('k-cur').innerHTML = kWords(i);
+    $('kahf').classList.toggle('wsync', !!reciter().words);
+    wNow = -1; wBox = null;
     $('k-next').textContent = kText(i + 1);
     $('k-cur').style.fontSize = cur.length > 900 ? '28px' : cur.length > 600 ? '34px' : cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
     $('k-pos').textContent = i === 0 ? tr('البسملة') : tr('الآية ') + i + tr(' من ') + n;
@@ -1292,6 +1338,8 @@
     $('k-msg').textContent = '';
     audio.src = kSrc(i);
     audio.play().catch(function () {});
+    wSegs();
+    wStart();
     if (i < kCount()) pre.src = kSrc(i + 1);
     if (i > 0) { S.qLast = { s: kahf.s, i: i }; save(); }
     kRender();
@@ -1311,7 +1359,7 @@
   });
   function kToggle() {
     if (kahf.playing) { audio.pause(); kahf.playing = false; kRender(); }
-    else if (audio.src && !audio.ended && audio.currentTime > 0) { audio.play().catch(function () {}); kahf.playing = true; kRender(); }
+    else if (audio.src && !audio.ended && audio.currentTime > 0) { audio.play().catch(function () {}); kahf.playing = true; kRender(); wStart(); }
     else kPlay(kahf.i);
   }
   // the list of the 114 surahs, and «continue» from the last verse heard
