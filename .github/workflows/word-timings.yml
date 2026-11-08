@@ -1,0 +1,31 @@
+name: Word timings
+
+# Actions → Word timings → Run workflow: downloads the word-by-word timings of the reciters (quran-align, CC BY 4.0)
+# and saves them in app/src/main/assets/web/words/ (used to light up the word the reciter is reading).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  timings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and convert
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/qa
+          gh release download release-2016-11-24 -R cpfair/quran-align -D /tmp/qa
+          ls -la /tmp/qa
+          python3 tools/word-timings.py /tmp/qa
+          du -sh app/src/main/assets/web/words
+      - name: Save
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/web/words
+          git commit -m "Word timings of the reciters (quran-align, CC BY 4.0) [skip ci]" || exit 0
+          git push origin HEAD:main
