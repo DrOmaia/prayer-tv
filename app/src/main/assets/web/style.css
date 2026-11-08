@@ -941,3 +941,34 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait #kahf .title-row > div { flex: 1 0 calc(100% - 200px); min-width: 0; }
 .portrait #kahf .title-row > div + .k-readbtn { order: 3; }
 .portrait #kahf .k-readbtn2 { order: 4; }
+/* tajweed colours (as in the coloured tajweed mushaf); lighter tones on the dark screens */
+#stage { --tj-grey: #8E8A84; --tj-green: #12872A; --tj-blue: #1565C0; --tj-gold: #B07D00; --tj-orange: #E06A00; --tj-red: #D81B1B; --tj-dred: #8E0E0E; }
+#stage.night, #kahf { --tj-grey: #9C98B8; --tj-green: #4ADE80; --tj-blue: #60A5FA; --tj-gold: #F2C94C; --tj-orange: #FF9F43; --tj-red: #FF6B6B; --tj-dred: #F0457A; }
+b.tj { font-weight: inherit; }
+.tj-grey { color: var(--tj-grey) !important; } .tj-green { color: var(--tj-green) !important; } .tj-blue { color: var(--tj-blue) !important; }
+.tj-gold { color: var(--tj-gold) !important; } .tj-orange { color: var(--tj-orange) !important; } .tj-red { color: var(--tj-red) !important; }
+.tj-dred { color: var(--tj-dred) !important; }
+#kahf .w.now b.tj, #kahf .w.lit b.tj { color: #FFFFFF !important; }
+.tj-btn.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
+.k-tjhelp { margin-inline-start: 12px; font-size: 30px; font-weight: 700; }
+#reader .title-row .tj-btn { margin-inline-start: auto; }
+/* the explanation card */
+.tj-pop { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+.tj-card { background: #F3ECDD; color: var(--ink); border: 1px solid var(--line); border-radius: 28px; padding: 36px 44px; width: 900px; max-width: calc(100% - 80px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 18px; font-size: 30px; line-height: 1.6; }
+#stage.night .tj-card { background: #17184A; }
+.tj-h { display: flex; align-items: center; gap: 16px; font-size: 40px; font-weight: 700; }
+.tj-dot { width: 28px; height: 28px; border-radius: 50%; background: currentColor; flex: none; }
+.tj-card p { margin: 0; }
+.tj-ex { font-size: 48px; text-align: center; color: var(--gold); }
+.tj-btns { display: flex; gap: 16px; justify-content: flex-end; }
+.tj-all { width: 1300px; max-height: calc(100% - 80px); }
+.tj-list { overflow-y: auto; display: flex; flex-direction: column; gap: 20px; min-height: 0; }
+.tj-gh { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; margin-bottom: 6px; }
+.tj-row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: start; background: var(--card); border: 1px solid var(--line);
+  border-radius: 18px; padding: 14px 22px; margin-top: 8px; font: inherit; font-size: 26px; color: var(--ink); cursor: pointer; }
+.tj-row b { font-size: 30px; }
+.tj-src { font-size: 22px; }
+.portrait .tj-card { width: auto; font-size: 34px; }
+.portrait #reader .title-row { flex-wrap: wrap; row-gap: 16px; }
+.portrait #reader .title-row > div { flex: 1 0 calc(100% - 200px); min-width: 0; }

@@ -118,6 +118,8 @@
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
         <div><div id="k-title" class="quran big-title">سورة الكهف</div><div id="k-sub" class="muted sub-title">بصوت الشيخ مشاري العفاسي</div></div>
         <button id="k-word-btn" class="pill f k-readbtn" data-kword="1">كلمة بكلمة</button>
+        <button class="pill f k-readbtn k-readbtn2 tj-btn" data-tjon="1">التجويد</button>
+        <button class="round f k-tjhelp hidden" data-tjlegend="1" aria-label="ألوان التجويد">؟</button>
         <button id="k-read-btn" class="pill f k-readbtn k-readbtn2" data-kread="1">وضع القراءة</button>
       </div>
       <div id="kahf-clock" class="muted sub-title"></div>
@@ -146,6 +148,8 @@
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
         <div><div id="r-title" class="quran big-title"></div><div class="muted sub-title">اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية</div></div>
+        <button class="pill f k-readbtn tj-btn" data-tjon="1">التجويد</button>
+        <button class="round f k-tjhelp hidden" data-tjlegend="1" aria-label="ألوان التجويد">؟</button>
       </div>
     </header>
     <div class="r-views"><button class="pill f" data-rview="page">صفحات المصحف</button><button class="pill f" data-rview="text">نص متصل</button></div>
@@ -427,6 +431,8 @@
     <div class="b-icon"><svg viewBox="0 0 24 24" class="ic"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></div>
     <div><div id="b-title" class="b-title"></div><div id="b-sub" class="muted b-sub"></div></div>
   </div>
+  <!-- tajweed: the card that explains a rule, and the list of all the colours -->
+  <div id="tj-pop" class="tj-pop hidden"></div>
   <div id="dim" class="dim"></div>
 </div>
 
@@ -438,6 +444,7 @@
 <script src="reminders.js"></script>
 <script src="family.js"></script>
 <script src="family-en.js"></script>
+<script src="tajweed-rules.js"></script>
 <script src="facts.js"></script>
 <script src="facts-en.js"></script>
 <script src="prayer.js"></script>

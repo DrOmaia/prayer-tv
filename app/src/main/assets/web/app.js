@@ -75,6 +75,7 @@
       // the timer widgets: text size and the lines they show
       timerWg: Object.assign({ font: 'm', name: true, hijri: false, anniv: true, ms: false, dua: true }, s.timerWg),
       reciter: s.reciter || 'alafasy',
+      tajweed: !!s.tajweed, // Qur'an: tajweed colours on the text
       qFill: !!s.qFill, // Qur'an player: the words already read stay lit (false = only the word being read)
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
@@ -1249,11 +1250,83 @@
   }
   function arNum(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
   function kText(i) { var v = QURAN[kahf.s - 1][1]; return i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] + ' ﴿' + arNum(i) + '﴾' : ''); }
+  // ---------- tajweed colours (button «التجويد»): one file per surah, loaded when needed ----------
+  var TJ = {};
+  var SYM = /^[\u06DE\u06E9\u200C\u06D6-\u06ED]+$/; // a hizb or sajda sign alone is not a word
+  function tjData(s) {
+    if (!S.tajweed) return null;
+    if (TJ[s] === undefined) {
+      TJ[s] = null;
+      fetch('tajweed/' + pad3(s) + '.json').then(function (r) { return r.json(); })
+        .then(function (j) { TJ[s] = j; tjRefresh(); }).catch(function () { delete TJ[s]; });
+    }
+    return TJ[s];
+  }
+  // a key that changes when the colours of a surah appear (to draw the text again)
+  function tjKey(s) { return s + (S.tajweed ? (TJ[s] ? 't' : 'w') : ''); }
+  function tjRefresh() {
+    if (screen === 'kahf') kRender();
+    if (screen === 'reader') rdRender();
+  }
+  // the text of a verse (a = 0: the Basmala): coloured when tajweed is on; words: each word in its own span
+  function vHtml(s, a, words) {
+    var d = tjData(a === 0 ? 1 : s), segs = d && d[String(a === 0 ? 1 : a)];
+    if (!segs) {
+      var t = a === 0 ? BASMALA : QURAN[s - 1][1][a - 1];
+      return words ? t.split(' ').map(function (w) { return '<span class="w">' + w + '</span>'; }).join(' ') : t;
+    }
+    var h = '', open = false;
+    segs.forEach(function (g) {
+      // the tajweed text writes the small alif after a tatweel (ـٰ); the printed mushaf has no tatweel there
+      g[0].replace(/\u0640(?=\u0670)/g, '').split(' ').forEach(function (p, k) {
+        if (k > 0) { if (open) { h += '</span>'; open = false; } h += ' '; }
+        if (!p) return;
+        if (words && !open && !SYM.test(p)) { h += '<span class="w">'; open = true; }
+        h += g[1] && TAJWEED.rules[g[1]] ? '<b class="tj tj-' + TAJWEED.rules[g[1]].c + '" data-tj="' + g[1] + '">' + p + '</b>' : p;
+      });
+    });
+    if (open) h += '</span>';
+    return h.trim();
+  }
+  // the explanation card of a rule (a tap on a coloured letter), and the list of all the colours
+  function tjShow(rule) {
+    var r = TAJWEED.rules[rule];
+    if (!r) return;
+    $('tj-pop').innerHTML = '<div class="tj-card"><div class="tj-h"><span class="tj-dot tj-' + r.c + '"></span>' + (EN ? r.en : r.ar) + '</div>' +
+      '<p>' + (EN ? r.xe : r.x) + '</p><p class="tj-ex quran">' + r.e + '</p>' +
+      '<div class="tj-btns"><button class="pill f" data-tjall="1">' + tr('كل الألوان') + '</button><button class="gold-btn f" data-tjclose="1">' + tr('حسنًا') + '</button></div></div>';
+    $('tj-pop').classList.remove('hidden');
+    focusFirst($('tj-pop').querySelector('.f'));
+  }
+  function tjLegend() {
+    var h = '<div class="tj-card tj-all"><div class="tj-h">' + tr('ألوان التجويد') + '</div><div class="tj-list">';
+    TAJWEED.groups.forEach(function (g) {
+      h += '<div class="tj-g"><div class="tj-gh"><span class="tj-dot tj-' + g.c + '"></span>' + (EN ? g.en : g.ar) + '</div>';
+      Object.keys(TAJWEED.rules).forEach(function (k) {
+        var r = TAJWEED.rules[k];
+        if (r.c === g.c) h += '<button class="tj-row f" data-tjrule="' + k + '"><b class="tj tj-' + r.c + '">' + (EN ? r.en : r.ar) + '</b><span class="muted">' + (EN ? r.xe : r.x) + '</span></button>';
+      });
+      h += '</div>';
+    });
+    h += '</div><p class="muted tj-src">' + tr('المرجع: تحفة الأطفال، والمقدمة الجزرية') + '</p><div class="tj-btns"><button class="gold-btn f" data-tjclose="1">' + tr('إغلاق') + '</button></div></div>';
+    $('tj-pop').innerHTML = h;
+    $('tj-pop').classList.remove('hidden');
+    focusFirst($('tj-pop').querySelector('.f'));
+  }
+  function tjClose() { $('tj-pop').classList.add('hidden'); }
+  function tjToggle() {
+    S.tajweed = !S.tajweed; save();
+    tjButtons();
+    tjRefresh();
+  }
+  function tjButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tjon]'), function (b) { b.classList.toggle('on', !!S.tajweed); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tjlegend]'), function (b) { b.classList.toggle('hidden', !S.tajweed); });
+  }
   // the same verse with each word in its own span (lit up while the reciter reads it)
   function kWords(i) {
-    var v = QURAN[kahf.s - 1][1], t = i === 0 ? BASMALA : (i >= 1 && i <= v.length ? v[i - 1] : '');
-    if (!t) return '';
-    return t.split(' ').map(function (w) { return '<span class="w">' + w + '</span>'; }).join(' ') + (i ? ' ﴿' + arNum(i) + '﴾' : '');
+    if (i < 0 || i > kCount()) return '';
+    return vHtml(kahf.s, i, true) + (i ? ' ﴿' + arNum(i) + '﴾' : '');
   }
   // word timings: one file per surah and reciter, loaded when needed (the Basmala uses Al-Fatiha's first verse)
   var wCache = {};
@@ -1303,8 +1376,8 @@
   document.getElementById('r-slider').addEventListener('change', function () { save(); });
   function kReadRender(i) {
     var rd = $('k-read');
-    if (rd.dataset.s !== String(kahf.s)) {
-      rd.dataset.s = kahf.s;
+    if (rd.dataset.s !== tjKey(kahf.s)) {
+      rd.dataset.s = tjKey(kahf.s);
       var h = '<button class="kv" data-i="0">' + kWords(0) + '</button>';
       for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + '</button>';
       rd.innerHTML = h;
@@ -1327,6 +1400,7 @@
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').innerHTML = kWords(i);
     $('kahf').classList.toggle('wsync', !!reciter().words);
+    tjButtons();
     $('k-word-btn').classList.toggle('hidden', !reciter().words);
     $('k-word-btn').textContent = S.qFill ? tr('تبقى مضاءة') : tr('كلمة بكلمة');
     wNow = -1; wBox = null;
@@ -2103,10 +2177,10 @@
       var s = x[0], a = x[1];
       if (s !== lastS) {
         h += tr('<div class="m-surah">سورة ') + QURAN[s - 1][0] + '</div>';
-        if (a === 1 && s !== 1 && s !== 9) h += '<div class="m-bism">' + BASMALA + '</div>';
+        if (a === 1 && s !== 1 && s !== 9) h += '<div class="m-bism">' + vHtml(s, 0) + '</div>';
         lastS = s;
       }
-      h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + QURAN[s - 1][1][a - 1] + ' ﴿' + arNum(a) + '﴾</span> ';
+      h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + vHtml(s, a) + ' ﴿' + arNum(a) + '﴾</span> ';
     });
     return '<div class="m-page">' + h + '</div><div class="m-num">' + arNum(p) + '</div>';
   }
@@ -2127,15 +2201,16 @@
   function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
   // the text view: the verses of the surah, with a line for each page's number where a new page begins
   function rdText(s) {
-    var v = QURAN[s - 1][1], h = '<span class="rv bism" data-i="0">' + BASMALA + '</span> ', lastP = 0;
+    var v = QURAN[s - 1][1], h = '<span class="rv bism" data-i="0">' + vHtml(s, 0) + '</span> ', lastP = 0;
     for (var k = 0; k < v.length; k++) {
       var pg = PAGE_OF[s + ':' + (k + 1)];
       if (pg && pg !== lastP) { h += '<div class="r-pno">' + arNum(pg) + '</div>'; lastP = pg; }
-      h += '<span class="rv" data-i="' + (k + 1) + '">' + v[k] + ' ﴿' + arNum(k + 1) + '﴾</span> ';
+      h += '<span class="rv" data-i="' + (k + 1) + '">' + vHtml(s, k + 1) + ' ﴿' + arNum(k + 1) + '﴾</span> ';
     }
     return h;
   }
   function rdRender() {
+    tjButtons();
     var pageView = (S.qView || 'page') === 'page';
     $('r-text').classList.toggle('hidden', pageView);
     $('r-pages').classList.toggle('hidden', !pageView);
@@ -2150,7 +2225,7 @@
     var box = $('r-text');
     $('r-prev').textContent = tr('السورة السابقة'); $('r-next').textContent = tr('السورة التالية');
     $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0];
-    if (box.dataset.s !== String(rd.s)) { box.dataset.s = rd.s; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
+    if (box.dataset.s !== tjKey(rd.s)) { box.dataset.s = tjKey(rd.s); box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
     $('r-mark').innerHTML = m ? tr('<span>توقفت عند سورة ') + QURAN[m.s - 1][0] + tr(' · الآية ') + m.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : tr('<span class="muted">لم تحدّد موضعك بعد</span>');
     kApplySize(); rdHl();
@@ -2533,6 +2608,7 @@
   function back() {
     if (iqOpen()) { iqDismiss(); return true; }
     if (!$('msg-pop').classList.contains('hidden')) { $('msg-pop').classList.add('hidden'); return true; }
+    if (!$('tj-pop').classList.contains('hidden')) { tjClose(); return true; }
     if (tvOpen) { tvAction('close'); return true; }
     if (tPin) { tPinAction('cancel'); return true; }
     if (screen === 'timers' && tEdit) { tClose(); return true; }
@@ -2605,6 +2681,15 @@
   });
 
   document.addEventListener('click', function (e) {
+    // tajweed: a tap on a coloured letter explains its rule (instead of choosing the verse)
+    var tjb = e.target.closest && e.target.closest('.tj[data-tj]');
+    if (tjb && S.tajweed && !tjb.closest('#tj-pop')) { e.preventDefault(); tjShow(tjb.dataset.tj); return; }
+    var bt = e.target.closest && e.target.closest('button');
+    if (bt && bt.dataset.tjrule) { tjShow(bt.dataset.tjrule); return; }
+    if (bt && bt.dataset.tjall) { tjLegend(); return; }
+    if (bt && bt.dataset.tjon) { tjToggle(); return; }
+    if (bt && bt.dataset.tjlegend) { tjLegend(); return; }
+    if (!$('tj-pop').classList.contains('hidden') && (!e.target.closest('.tj-card') || (bt && bt.dataset.tjclose))) { tjClose(); return; }
     var rv = e.target.closest && e.target.closest('.rv');
     if (rv && screen === 'reader') {
       if (rv.dataset.s) { rd.s = +rv.dataset.s; rd.i = +rv.dataset.i; rdRender(); return; }
