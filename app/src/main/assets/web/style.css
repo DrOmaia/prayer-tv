@@ -880,6 +880,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .trip-n { font-size: 25px; }
 /* Surah Al-Kahf: reading mode (the whole surah as a page; a tap on a verse plays it) and the size by pinch */
 .k-readbtn { margin-inline-start: auto; height: 80px; padding: 0 34px; font-size: 28px; }
+.k-readbtn + .k-readbtn2 { margin-inline-start: 16px; }
 .k-readbtn.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
 .kahf-read { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; text-align: justify; padding: 10px 40px 40px; font-size: calc(64px * var(--qz, 1)); line-height: 2.1; }
 .kahf-read::-webkit-scrollbar { display: none; }
@@ -896,6 +897,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #kahf .kv.on { background: none; color: #FFFFFF; text-shadow: 0 0 22px rgba(255,255,255,.55); }
 #kahf.wsync .k-cur, #kahf.wsync .kv.on { color: #ABA4DE; text-shadow: none; }
 #kahf .w { transition: color .15s, text-shadow .15s; }
+#kahf .w.lit { color: #FFFFFF; }
 #kahf .w.now { color: #FFFFFF; text-shadow: 0 0 18px rgba(255,255,255,.85), 0 0 4px rgba(255,255,255,.9); }
 
 /* reading without audio: the page, the mark and the bar */
@@ -932,3 +934,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .fact-en { margin-top: 12px; font-size: 22px; line-height: 1.5; color: var(--muted); direction: ltr; text-align: left; }
 .fact-en b { color: var(--gold); font-weight: 600; }
 .fact-en .fe-src { display: block; margin-top: 4px; font-size: 18px; opacity: .85; }
+/* phone (portrait): the two player buttons on their own line under the title */
+.portrait #kahf .title-row { flex-wrap: wrap; row-gap: 16px; }
+.portrait #kahf .k-readbtn { white-space: nowrap; }
+.portrait #kahf #k-word-btn { margin-inline-start: 0; }
+.portrait #kahf .title-row > div { flex: 1 0 calc(100% - 200px); min-width: 0; }
+.portrait #kahf .title-row > div + .k-readbtn { order: 3; }
+.portrait #kahf .k-readbtn2 { order: 4; }

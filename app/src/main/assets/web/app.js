@@ -75,6 +75,7 @@
       // the timer widgets: text size and the lines they show
       timerWg: Object.assign({ font: 'm', name: true, hijri: false, anniv: true, ms: false, dua: true }, s.timerWg),
       reciter: s.reciter || 'alafasy',
+      qFill: !!s.qFill, // Qur'an player: the words already read stay lit (false = only the word being read)
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
       timers: (s.timers && s.timers.map(function (x) { return x.rip === undefined ? Object.assign({ rip: x.id === 't1' ? 'm' : '' }, x) : x; })) || [
@@ -1282,9 +1283,11 @@
     var key = seg ? seg[0] * 1000 + seg[1] : -1;
     if (key === wNow && box === wBox) return;
     wNow = key; wBox = box;
-    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now'), function (w) { w.classList.remove('now'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now, #kahf .w.lit'), function (w) { w.classList.remove('now', 'lit'); });
     if (!box || !seg) return;
     var ws = box.querySelectorAll('.w');
+    // «تبقى مضاءة»: the words before the current one stay lit
+    if (S.qFill) for (var m = 0; m < seg[0] && m < ws.length; m++) ws[m].classList.add('lit');
     for (var n = seg[0]; n < seg[1] && n < ws.length; n++) ws[n].classList.add('now');
   }
   // the size of the text: pinch with two fingers on this screen (kept)
@@ -1324,6 +1327,8 @@
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').innerHTML = kWords(i);
     $('kahf').classList.toggle('wsync', !!reciter().words);
+    $('k-word-btn').classList.toggle('hidden', !reciter().words);
+    $('k-word-btn').textContent = S.qFill ? tr('تبقى مضاءة') : tr('كلمة بكلمة');
     wNow = -1; wBox = null;
     $('k-next').textContent = kText(i + 1);
     $('k-cur').style.fontSize = cur.length > 900 ? '28px' : cur.length > 600 ? '34px' : cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
@@ -2610,6 +2615,7 @@
     if (!el) return;
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
     if (el.dataset.kread) { kReadToggle(); return; }
+    if (el.dataset.kword) { S.qFill = !S.qFill; save(); wNow = -1; kRender(); return; }
     if (el.dataset.rnav) { rdNav(+el.dataset.rnav); return; }
     if (el.dataset.rsura) { rdOpen({ s: +el.dataset.rsura, i: +(el.dataset.rfrom || 0) }); return; }
     if (el.dataset.qmode) { S.qMode = el.dataset.qmode; save(); quranRender(); focusFirst(document.querySelector('#quran .f')); return; }
