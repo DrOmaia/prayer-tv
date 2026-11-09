@@ -1346,6 +1346,10 @@
     var d = enData(i === 0 ? 1 : kahf.s);
     return d ? d[i === 0 ? 0 : i - 1] || '' : '';
   }
+  // the meaning with each word in its own span: they light up as the reciter moves through the verse (approximately)
+  function enWords(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').split(' ').map(function (w) { return '<span class="ew">' + w + '</span>'; }).join(' ');
+  }
   function enToggle() { S.qEn = !S.qEn; save(); kRender(); }
   // the same verse with each word in its own span (lit up while the reciter reads it)
   function kWords(i) {
@@ -1380,9 +1384,16 @@
     var key = seg ? seg[0] * 1000 + seg[1] : -1;
     if (key === wNow && box === wBox) return;
     wNow = key; wBox = box;
-    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now, #kahf .w.lit'), function (w) { w.classList.remove('now', 'lit'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now, #kahf .w.lit, #kahf .ew.now, #kahf .ew.lit'), function (w) { w.classList.remove('now', 'lit'); });
     if (!box || !seg) return;
     var ws = box.querySelectorAll('.w');
+    // the English meaning follows at the same pace: the same share of its words as the reciter has read of the verse
+    var eb = S.qEn ? (kahf.read ? box.querySelector('.kv-en') : $('k-en')) : null, es = eb ? eb.querySelectorAll('.ew') : [];
+    if (es.length && ws.length) {
+      var a = Math.floor(seg[0] / ws.length * es.length), z = Math.max(a + 1, Math.ceil(Math.min(seg[1], ws.length) / ws.length * es.length));
+      if (S.qFill) for (var q = 0; q < a; q++) es[q].classList.add('lit');
+      for (var u = a; u < z && u < es.length; u++) es[u].classList.add('now');
+    }
     // «تبقى مضاءة»: the words before the current one stay lit
     if (S.qFill) for (var m = 0; m < seg[0] && m < ws.length; m++) ws[m].classList.add('lit');
     for (var n = seg[0]; n < seg[1] && n < ws.length; n++) ws[n].classList.add('now');
@@ -1403,7 +1414,7 @@
     var key = tjKey(kahf.s) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') : '');
     if (rd.dataset.s !== key) {
       rd.dataset.s = key;
-      var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + t + '</span>' : ''; };
+      var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + enWords(t) + '</span>' : ''; };
       var h = '<button class="kv" data-i="0">' + kWords(0) + en(0) + '</button>';
       for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + en(v) + '</button>';
       rd.innerHTML = h;
@@ -1425,7 +1436,7 @@
     $('k-sub').textContent = tr('بصوت الشيخ ') + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').innerHTML = kWords(i);
-    $('k-en').textContent = S.qEn ? enText(i) : '';
+    $('k-en').innerHTML = S.qEn ? enWords(enText(i)) : '';
     $('k-en').classList.toggle('hidden', !S.qEn);
     $('kahf').classList.toggle('q-en', !!S.qEn);
     $('k-en-btn').classList.toggle('on', !!S.qEn);

@@ -1005,3 +1005,8 @@ b.wq { font-size: 1.15em; }
 .q-en .kv.on .kv-en { opacity: 1; color: #FFFFFF; }
 .portrait .k-en { font-size: calc(40px * var(--qz, 1)); }
 .portrait .kv-en { font-size: calc(40px * var(--qz, 1)); }
+/* the English words follow the reciter like the Arabic ones (with word timings) */
+#kahf.wsync .k-en, #kahf.wsync .kv.on .kv-en { color: #A9A3D9; opacity: 1; }
+#kahf .ew { transition: color .15s, text-shadow .15s; }
+#kahf .ew.lit { color: #FFFFFF; }
+#kahf .ew.now { color: #FFFFFF; text-shadow: 0 0 14px rgba(255,255,255,.8); }
