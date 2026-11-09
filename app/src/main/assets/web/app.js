@@ -76,6 +76,7 @@
       timerWg: Object.assign({ font: 'm', name: true, hijri: false, anniv: true, ms: false, dua: true }, s.timerWg),
       reciter: s.reciter || 'alafasy',
       tajweed: !!s.tajweed, // Qur'an: tajweed colours on the text
+      qEn: !!s.qEn, // Qur'an player: the English meaning under each verse (Saheeh International)
       qFill: !!s.qFill, // Qur'an player: the words already read stay lit (false = only the word being read)
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
@@ -1329,6 +1330,23 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-tjon]'), function (b) { b.classList.toggle('on', !!S.tajweed); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-tjlegend]'), function (b) { b.classList.toggle('hidden', !S.tajweed); });
   }
+  // ---------- the English meaning under each verse (player, button «English»): one file per surah ----------
+  var EN_Q = {};
+  function enData(s) {
+    if (!S.qEn) return null;
+    if (EN_Q[s] === undefined) {
+      EN_Q[s] = null;
+      fetch('en/' + pad3(s) + '.json').then(function (r) { return r.json(); })
+        .then(function (j) { EN_Q[s] = j; if (screen === 'kahf') kRender(); }).catch(function () { delete EN_Q[s]; });
+    }
+    return EN_Q[s];
+  }
+  // the meaning of verse i of the open surah (0 = the Basmala, the meaning of Al-Fatiha's first verse)
+  function enText(i) {
+    var d = enData(i === 0 ? 1 : kahf.s);
+    return d ? d[i === 0 ? 0 : i - 1] || '' : '';
+  }
+  function enToggle() { S.qEn = !S.qEn; save(); kRender(); }
   // the same verse with each word in its own span (lit up while the reciter reads it)
   function kWords(i) {
     if (i < 0 || i > kCount()) return '';
@@ -1382,10 +1400,12 @@
   document.getElementById('r-slider').addEventListener('change', function () { save(); });
   function kReadRender(i) {
     var rd = $('k-read');
-    if (rd.dataset.s !== tjKey(kahf.s)) {
-      rd.dataset.s = tjKey(kahf.s);
-      var h = '<button class="kv" data-i="0">' + kWords(0) + '</button>';
-      for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + '</button>';
+    var key = tjKey(kahf.s) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') : '');
+    if (rd.dataset.s !== key) {
+      rd.dataset.s = key;
+      var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + t + '</span>' : ''; };
+      var h = '<button class="kv" data-i="0">' + kWords(0) + en(0) + '</button>';
+      for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + en(v) + '</button>';
       rd.innerHTML = h;
     }
     Array.prototype.forEach.call(rd.querySelectorAll('.kv'), function (b) { b.classList.toggle('on', +b.dataset.i === i); });
@@ -1405,6 +1425,10 @@
     $('k-sub').textContent = tr('بصوت الشيخ ') + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').innerHTML = kWords(i);
+    $('k-en').textContent = S.qEn ? enText(i) : '';
+    $('k-en').classList.toggle('hidden', !S.qEn);
+    $('kahf').classList.toggle('q-en', !!S.qEn);
+    $('k-en-btn').classList.toggle('on', !!S.qEn);
     $('kahf').classList.toggle('wsync', !!reciter().words);
     tjButtons();
     $('k-word-btn').classList.toggle('hidden', !reciter().words);
@@ -2707,6 +2731,7 @@
     if (!el) return;
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
     if (el.dataset.kread) { kReadToggle(); return; }
+    if (el.dataset.ken) { enToggle(); return; }
     if (el.dataset.kword) { S.qFill = !S.qFill; save(); wNow = -1; kRender(); return; }
     if (el.dataset.rnav) { rdNav(+el.dataset.rnav); return; }
     if (el.dataset.rsura) { rdOpen({ s: +el.dataset.rsura, i: +(el.dataset.rfrom || 0) }); return; }

@@ -997,3 +997,11 @@ b.wq { font-size: 1.15em; }
 .portrait .r-tools .r-size, .portrait .r-mark { font-size: 30px; }
 .portrait .r-mark .pill { height: 66px; font-size: 30px; }
 .portrait .r-bar .pill, .portrait .r-bar .gold-btn { height: 76px !important; font-size: 30px !important; }
+/* the English meaning (Saheeh International) under the verses of the player */
+.k-en { font-family: Georgia, 'Times New Roman', serif; font-size: calc(36px * var(--qz, 1)); line-height: 1.5; color: #D9D4F5; max-width: 1500px; text-align: center; }
+.q-en .k-side { max-height: 90px; }
+.kv-en { display: block; direction: ltr; text-align: left; font-family: Georgia, 'Times New Roman', serif; font-size: calc(32px * var(--qz, 1)); line-height: 1.5; color: #CFC9F2; opacity: .85; margin: 6px 0 22px; }
+.q-en .kv { display: block; text-align: justify; }
+.q-en .kv.on .kv-en { opacity: 1; color: #FFFFFF; }
+.portrait .k-en { font-size: calc(40px * var(--qz, 1)); }
+.portrait .kv-en { font-size: calc(40px * var(--qz, 1)); }
