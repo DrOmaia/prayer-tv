@@ -1282,18 +1282,24 @@
         if (k > 0) { if (open) { h += '</span>'; open = false; } h += ' '; }
         if (!p) return;
         if (words && !open && !SYM.test(p)) { h += '<span class="w">'; open = true; }
-        h += g[1] && TAJWEED.rules[g[1]] ? '<b class="tj tj-' + TAJWEED.rules[g[1]].c + '" data-tj="' + g[1] + '">' + p + '</b>' : p;
+        h += tjMarks(g[1] && TAJWEED.rules[g[1]] ? '<b class="tj tj-' + TAJWEED.rules[g[1]].c + '" data-tj="' + g[1] + '">' + p + '</b>' : p);
       });
     });
     if (open) h += '</span>';
     return h.trim();
   }
+  // the stop signs (صلى، قلى، مـ، لا …): bigger, in the colour of their rule, and a tap explains them
+  function tjMarks(h) {
+    // the sign stands on a no-break space of its own, so it never jumps away from its place
+    return h.replace(/\u200C?([\u06D6-\u06DC])/g, function (x, m) { var k = TAJWEED.marks[m]; return '<b class="tj wq tj-' + TAJWEED.rules[k].c + '" data-tj="' + k + '">\u00A0' + m + '</b>'; });
+  }
   // the explanation card of a rule (a tap on a coloured letter), and the list of all the colours
   function tjShow(rule) {
     var r = TAJWEED.rules[rule];
     if (!r) return;
-    $('tj-pop').innerHTML = '<div class="tj-card"><div class="tj-h"><span class="tj-dot tj-' + r.c + '"></span>' + (EN ? r.en : r.ar) + '</div>' +
-      '<p>' + (EN ? r.xe : r.x) + '</p><p class="tj-ex quran">' + r.e + '</p>' +
+    var ex = r.e.match(/^(.*?)(?: \((.+)\))?$/);
+    $('tj-pop').innerHTML = '<div class="tj-card"><div class="tj-h">' + (r.m ? '<span class="tj-m quran tj-' + r.c + '">' + r.m + '</span>' : '<span class="tj-dot tj-' + r.c + '"></span>') + (EN ? r.en : r.ar) + '</div>' +
+      '<p>' + (EN ? r.xe : r.x) + '</p><p class="tj-ex quran">' + tjMarks(ex[1]) + '</p>' + (ex[2] ? '<p class="tj-ref muted">' + ex[2] + '</p>' : '') +
       '<div class="tj-btns"><button class="pill f" data-tjall="1">' + tr('كل الألوان') + '</button><button class="gold-btn f" data-tjclose="1">' + tr('حسنًا') + '</button></div></div>';
     $('tj-pop').classList.remove('hidden');
     focusFirst($('tj-pop').querySelector('.f'));
@@ -1304,7 +1310,7 @@
       h += '<div class="tj-g"><div class="tj-gh"><span class="tj-dot tj-' + g.c + '"></span>' + (EN ? g.en : g.ar) + '</div>';
       Object.keys(TAJWEED.rules).forEach(function (k) {
         var r = TAJWEED.rules[k];
-        if (r.c === g.c) h += '<button class="tj-row f" data-tjrule="' + k + '"><b class="tj tj-' + r.c + '">' + (EN ? r.en : r.ar) + '</b><span class="muted">' + (EN ? r.xe : r.x) + '</span></button>';
+        if ((r.g || r.c) === g.c) h += '<button class="tj-row f" data-tjrule="' + k + '"><b class="tj tj-' + r.c + '">' + (r.m ? '<span class="quran">' + r.m + '</span> ' : '') + (EN ? r.en : r.ar) + '</b><span class="muted">' + (EN ? r.xe : r.x) + '</span></button>';
       });
       h += '</div>';
     });
@@ -2211,13 +2217,14 @@
   }
   function rdRender() {
     tjButtons();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rview]'), function (b) { b.classList.toggle('on', b.dataset.rview === (S.qView || 'page')); });
     var pageView = (S.qView || 'page') === 'page';
     $('r-text').classList.toggle('hidden', pageView);
     $('r-pages').classList.toggle('hidden', !pageView);
     if (pageView) {
       rdPagesRender();
       var mm = S.qMark;
-      $('r-mark').innerHTML = mm ? tr('<span>توقفت عند سورة ') + QURAN[mm.s - 1][0] + tr(' · الآية ') + mm.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : tr('<span class="muted">لم تحدّد موضعك بعد</span>');
+      $('r-mark').innerHTML = mm ? tr('<span>توقفت عند سورة ') + QURAN[mm.s - 1][0] + tr(' · الآية ') + mm.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : '<span class="muted">' + tr('اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية') + '</span>';
       $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0] + tr(' · صفحة ') + rdPageNo();
       $('r-prev').textContent = tr('الصفحة السابقة'); $('r-next').textContent = tr('الصفحة التالية');
       return;
@@ -2227,7 +2234,7 @@
     $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0];
     if (box.dataset.s !== tjKey(rd.s)) { box.dataset.s = tjKey(rd.s); box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
-    $('r-mark').innerHTML = m ? tr('<span>توقفت عند سورة ') + QURAN[m.s - 1][0] + tr(' · الآية ') + m.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : tr('<span class="muted">لم تحدّد موضعك بعد</span>');
+    $('r-mark').innerHTML = m ? tr('<span>توقفت عند سورة ') + QURAN[m.s - 1][0] + tr(' · الآية ') + m.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : '<span class="muted">' + tr('اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية') + '</span>';
     kApplySize(); rdHl();
   }
   function rdHl() {

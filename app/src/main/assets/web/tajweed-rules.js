@@ -9,8 +9,11 @@ window.TAJWEED = {
     { c: 'gold', ar: 'مدّ حركتان', en: 'Lengthen 2 counts' },
     { c: 'orange', ar: 'مدّ جائز 2 أو 4 أو 6', en: 'Lengthen 2, 4 or 6 counts' },
     { c: 'red', ar: 'مدّ واجب 4 أو 5', en: 'Lengthen 4 or 5 counts' },
-    { c: 'dred', ar: 'مدّ لازم 6', en: 'Lengthen 6 counts' }
+    { c: 'dred', ar: 'مدّ لازم 6', en: 'Lengthen 6 counts' },
+    { c: 'waqf', ar: 'علامات الوقف', en: 'Stop signs' }
   ],
+  // the stop signs in the text (the character) and their rule
+  marks: { '\u06D8': 'waqf_lazim', '\u06D9': 'waqf_mamnu', '\u06D6': 'waqf_sila', '\u06D7': 'waqf_qila', '\u06DA': 'waqf_jaiz', '\u06DB': 'waqf_muanaqa', '\u06DC': 'sakta' },
   rules: {
     ham_wasl: { c: 'grey', ar: 'همزة الوصل', en: 'Connecting hamza',
       x: 'همزة تُنطق إذا بدأتَ بها، وتسقط إذا وصلتَ الكلمة بما قبلها.',
@@ -79,6 +82,35 @@ window.TAJWEED = {
     madda_necessary: { c: 'dred', ar: 'المدّ اللازم', en: 'Necessary lengthening',
       x: 'حرف مدّ بعده سكون أصلي في الوصل والوقف: يُمدّ ست حركات.',
       xe: 'A long vowel followed by an original sukun: 6 counts.',
-      e: 'ٱلضَّآلِّينَ · الٓمٓ' }
+      e: 'ٱلضَّآلِّينَ · الٓمٓ' },
+    // stop signs (g = their group in the list of colours; m = the sign)
+    waqf_lazim: { c: 'wgreen', g: 'waqf', m: 'مـ', ar: 'الوقف اللازم', en: 'Required stop',
+      x: 'يلزم الوقف هنا؛ لأن وصل الكلام قد يوهم معنى غير المراد.',
+      xe: 'You must stop here: joining on could suggest a meaning that is not intended.',
+      e: 'إِنَّمَا يَسْتَجِيبُ ٱلَّذِينَ يَسْمَعُونَ ۘ وَٱلْمَوْتَىٰ يَبْعَثُهُمُ ٱللَّهُ (الأنعام ٣٦)' },
+    waqf_mamnu: { c: 'wred', g: 'waqf', m: 'لا', ar: 'الوقف الممنوع', en: 'Do not stop',
+      x: 'لا يُوقف هنا؛ فإن وقفتَ لضرورة (كانقطاع النفَس) فأعِد من كلمة قبلها.',
+      xe: 'Do not stop here; if you must (out of breath), go back a word and read on.',
+      e: 'ٱلَّذِينَ تَتَوَفَّىٰهُمُ ٱلْمَلَٰٓئِكَةُ طَيِّبِينَ ۙ يَقُولُونَ (النحل ٣٢)' },
+    waqf_sila: { c: 'wcalm', g: 'waqf', m: 'صلى', ar: 'الوصل أولى', en: 'Better to read on',
+      x: 'يجوز الوقف والوصل، والوصل أفضل.',
+      xe: 'You may stop or read on; reading on is better.',
+      e: 'فَلَا كَاشِفَ لَهُۥٓ إِلَّا هُوَ ۖ وَإِن يُرِدْكَ بِخَيْرٍ (يونس ١٠٧)' },
+    waqf_qila: { c: 'wcalm', g: 'waqf', m: 'قلى', ar: 'الوقف أولى', en: 'Better to stop',
+      x: 'يجوز الوقف والوصل، والوقف أفضل.',
+      xe: 'You may stop or read on; stopping is better.',
+      e: 'مَّا يَعْلَمُهُمْ إِلَّا قَلِيلٌ ۗ فَلَا تُمَارِ فِيهِمْ (الكهف ٢٢)' },
+    waqf_jaiz: { c: 'wcalm', g: 'waqf', m: 'ج', ar: 'الوقف الجائز', en: 'Stop or read on',
+      x: 'يجوز الوقف والوصل على السواء.',
+      xe: 'Stopping and reading on are equally fine.',
+      e: 'نَّحْنُ نَقُصُّ عَلَيْكَ نَبَأَهُم بِٱلْحَقِّ ۚ إِنَّهُمْ فِتْيَةٌ (الكهف ١٣)' },
+    waqf_muanaqa: { c: 'wcalm', g: 'waqf', m: '∴ ∴', ar: 'وقف المعانقة', en: 'Paired stop',
+      x: 'علامتان متقاربتان: قِف على إحداهما فقط، ولا تقف عليهما معًا.',
+      xe: 'Two signs close together: stop at one of them only, not at both.',
+      e: 'ذَٰلِكَ ٱلْكِتَٰبُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ (البقرة ٢)' },
+    sakta: { c: 'wcalm', g: 'waqf', m: 'س', ar: 'السكتة', en: 'Short pause (sakta)',
+      x: 'سكتة لطيفة بلا تنفّس قدر حركتين ثم تُكمل. وهي عند حفص في أربعة مواضع: الكهف ١، يس ٥٢، القيامة ٢٧، المطففين ١٤.',
+      xe: 'A light pause of two counts without taking a breath, then read on. In Hafs it is in four places.',
+      e: 'وَلَمْ يَجْعَل لَّهُۥ عِوَجَا ۜ قَيِّمًا (الكهف ١-٢)' }
   }
 };

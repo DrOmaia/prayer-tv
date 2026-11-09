@@ -147,13 +147,16 @@
     <header class="top">
       <div class="title-row">
         <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
-        <div><div id="r-title" class="quran big-title"></div><div class="muted sub-title">اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية</div></div>
-        <button class="pill f k-readbtn tj-btn" data-tjon="1">التجويد</button>
-        <button class="round f k-tjhelp hidden" data-tjlegend="1" aria-label="ألوان التجويد">؟</button>
+        <div><div id="r-title" class="quran big-title"></div></div>
       </div>
     </header>
-    <div class="r-views"><button class="pill f" data-rview="page">صفحات المصحف</button><button class="pill f" data-rview="text">نص متصل</button></div>
-    <div class="r-size"><span class="muted">حجم الخط</span><input id="r-slider" type="range" min="70" max="240" step="5" aria-label="حجم الخط"><span id="r-size-v" class="muted"></span></div>
+    <!-- the tools in one compact bar (the text gets the rest of the screen) -->
+    <div class="r-tools">
+      <div class="r-views"><button class="pill f" data-rview="page">صفحات المصحف</button><button class="pill f" data-rview="text">نص متصل</button></div>
+      <button class="pill f tj-btn" data-tjon="1">التجويد</button>
+      <button class="round f k-tjhelp hidden" data-tjlegend="1" aria-label="ألوان التجويد">؟</button>
+      <div class="r-size"><span class="muted">الخط</span><input id="r-slider" type="range" min="70" max="240" step="5" aria-label="حجم الخط"><span id="r-size-v" class="muted"></span></div>
+    </div>
     <div id="r-mark" class="r-mark"></div>
     <div id="r-text" class="r-text quran"></div>
     <div id="r-pages" class="r-pages quran hidden"></div>

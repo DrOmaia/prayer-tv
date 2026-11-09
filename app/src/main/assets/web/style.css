@@ -942,33 +942,58 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait #kahf .title-row > div + .k-readbtn { order: 3; }
 .portrait #kahf .k-readbtn2 { order: 4; }
 /* tajweed colours (as in the coloured tajweed mushaf); lighter tones on the dark screens */
-#stage { --tj-grey: #8E8A84; --tj-green: #12872A; --tj-blue: #1565C0; --tj-gold: #B07D00; --tj-orange: #E06A00; --tj-red: #D81B1B; --tj-dred: #8E0E0E; }
-#stage.night, #kahf { --tj-grey: #9C98B8; --tj-green: #4ADE80; --tj-blue: #60A5FA; --tj-gold: #F2C94C; --tj-orange: #FF9F43; --tj-red: #FF6B6B; --tj-dred: #F0457A; }
+#stage { --tj-wgreen: #0F7B3A; --tj-wred: #C62828; --tj-wcalm: #6D3FC0; --tj-waqf: #6D3FC0; --tj-grey: #8E8A84; --tj-green: #12872A; --tj-blue: #1565C0; --tj-gold: #B07D00; --tj-orange: #E06A00; --tj-red: #D81B1B; --tj-dred: #8E0E0E; }
+#stage.night, #kahf { --tj-wgreen: #34D399; --tj-wred: #FF5252; --tj-wcalm: #C4B5FD; --tj-waqf: #C4B5FD; --tj-grey: #9C98B8; --tj-green: #4ADE80; --tj-blue: #60A5FA; --tj-gold: #F2C94C; --tj-orange: #FF9F43; --tj-red: #FF6B6B; --tj-dred: #F0457A; }
 b.tj { font-weight: inherit; }
 .tj-grey { color: var(--tj-grey) !important; } .tj-green { color: var(--tj-green) !important; } .tj-blue { color: var(--tj-blue) !important; }
 .tj-gold { color: var(--tj-gold) !important; } .tj-orange { color: var(--tj-orange) !important; } .tj-red { color: var(--tj-red) !important; }
 .tj-dred { color: var(--tj-dred) !important; }
+.tj-wgreen { color: var(--tj-wgreen) !important; } .tj-wred { color: var(--tj-wred) !important; } .tj-wcalm, .tj-waqf { color: var(--tj-wcalm) !important; }
+b.wq { font-size: 1.15em; }
+.tj-m { font-size: 1.2em; }
 #kahf .w.now b.tj, #kahf .w.lit b.tj { color: #FFFFFF !important; }
 .tj-btn.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
 .k-tjhelp { margin-inline-start: 12px; font-size: 30px; font-weight: 700; }
-#reader .title-row .tj-btn { margin-inline-start: auto; }
+/* reader: one compact bar of tools; the text takes the rest */
+.r-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 0 40px 10px; }
+.r-tools .r-views { padding: 0; gap: 0; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.r-tools .r-views .pill { flex: none; height: 64px; font-size: 26px; padding: 0 26px; border: none; border-radius: 0; }
+.r-tools .tj-btn { height: 64px; font-size: 26px; padding: 0 26px; }
+.r-tools .k-tjhelp { width: 64px; height: 64px; margin: 0; font-size: 28px; }
+.r-tools .r-size { flex: 1; min-width: 360px; padding: 0; font-size: 24px; gap: 12px; }
+#reader .top { height: 100px; }
+.portrait #reader .top { height: auto; gap: 8px; }
+.r-mark { font-size: 24px; padding: 0 40px 8px; }
+.r-mark .pill { height: 56px; font-size: 24px; padding: 0 22px; }
+.r-bar { padding: 10px 20px 16px; }
+.r-bar .pill, .r-bar .gold-btn { height: 66px !important; font-size: 26px !important; }
+/* the continuous text sits on a light page: the colours of the day */
+.r-text { --tj-wgreen: #0F7B3A; --tj-wred: #C62828; --tj-wcalm: #6D3FC0; --tj-grey: #8E8A84; --tj-green: #12872A; --tj-blue: #1565C0; --tj-gold: #B07D00; --tj-orange: #E06A00; --tj-red: #D81B1B; --tj-dred: #8E0E0E; }
+.tj-ref { text-align: center; font-size: .75em; margin-top: -10px !important; }
 /* the explanation card */
 .tj-pop { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
-.tj-card { background: #F3ECDD; color: var(--ink); border: 1px solid var(--line); border-radius: 28px; padding: 36px 44px; width: 900px; max-width: calc(100% - 80px);
-  box-shadow: 0 20px 60px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 18px; font-size: 30px; line-height: 1.6; }
+.tj-card { background: #F3ECDD; color: var(--ink); border: 1px solid var(--line); border-radius: 28px; padding: 36px 44px; width: calc(1000px * var(--qz, 1)); max-width: calc(100% - 80px); max-height: calc(100% - 80px); overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 18px; font-size: calc(38px * var(--qz, 1)); line-height: 1.6; }
 #stage.night .tj-card { background: #17184A; }
-.tj-h { display: flex; align-items: center; gap: 16px; font-size: 40px; font-weight: 700; }
+.tj-h { display: flex; align-items: center; gap: 16px; font-size: 1.35em; font-weight: 700; }
 .tj-dot { width: 28px; height: 28px; border-radius: 50%; background: currentColor; flex: none; }
 .tj-card p { margin: 0; }
-.tj-ex { font-size: 48px; text-align: center; color: var(--gold); }
+.tj-ex { font-size: 1.5em; text-align: center; color: var(--gold); }
 .tj-btns { display: flex; gap: 16px; justify-content: flex-end; }
-.tj-all { width: 1300px; max-height: calc(100% - 80px); }
+.tj-all { width: calc(1400px * var(--qz, 1)); overflow: hidden; }
 .tj-list { overflow-y: auto; display: flex; flex-direction: column; gap: 20px; min-height: 0; }
-.tj-gh { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; margin-bottom: 6px; }
+.tj-gh { display: flex; align-items: center; gap: 14px; font-size: 1em; font-weight: 700; margin-bottom: 6px; }
 .tj-row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: start; background: var(--card); border: 1px solid var(--line);
-  border-radius: 18px; padding: 14px 22px; margin-top: 8px; font: inherit; font-size: 26px; color: var(--ink); cursor: pointer; }
-.tj-row b { font-size: 30px; }
-.tj-src { font-size: 22px; }
-.portrait .tj-card { width: auto; font-size: 34px; }
-.portrait #reader .title-row { flex-wrap: wrap; row-gap: 16px; }
-.portrait #reader .title-row > div { flex: 1 0 calc(100% - 200px); min-width: 0; }
+  border-radius: 18px; padding: 14px 22px; margin-top: 8px; font: inherit; font-size: .85em; color: var(--ink); cursor: pointer; }
+.tj-row b { font-size: 1.1em; }
+.tj-src { font-size: .7em; }
+.portrait .tj-card { width: auto; font-size: calc(44px * var(--qz, 1)); }
+.portrait .r-tools { padding: 0 24px 8px; gap: 12px; }
+.portrait .r-tools .r-size { flex: 1 0 100%; min-width: 0; }
+.portrait .r-mark { padding: 0 24px 6px; }
+.r-tools .r-views .pill.on { background: var(--gold); color: var(--on-gold); }
+.portrait .r-tools .r-views .pill, .portrait .r-tools .tj-btn { height: 76px; font-size: 32px; padding: 0 28px; }
+.portrait .r-tools .k-tjhelp { width: 76px; height: 76px; font-size: 32px; }
+.portrait .r-tools .r-size, .portrait .r-mark { font-size: 30px; }
+.portrait .r-mark .pill { height: 66px; font-size: 30px; }
+.portrait .r-bar .pill, .portrait .r-bar .gold-btn { height: 76px !important; font-size: 30px !important; }
