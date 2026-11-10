@@ -156,6 +156,8 @@ class MainActivity : Activity() {
         visible = true
         web?.evaluateJavascript("window.App && App.onResume()", null)
         openPending()
+        // phone: look at the TVs' state now (and keep looking every 15 minutes)
+        if (TvStatus.code(this).isNotEmpty()) try { sendBroadcast(Intent(this, TvWatchReceiver::class.java)) } catch (_: Exception) {}
     }
 
     override fun onPause() {
@@ -291,6 +293,18 @@ class MainActivity : Activity() {
         // the phone: a notification now (traveller mode)
         @JavascriptInterface
         fun notifyNow(title: String, sub: String) = Device.notify(this@MainActivity, title, sub, "tone")
+
+        // «is the TV on?»: agree on the home code with the TVs on this Wi-Fi (once), and the state the phone knows
+        @JavascriptInterface
+        fun tvStatusPair() {
+            TvStatus.pair(this@MainActivity) { r ->
+                val safe = r.filter { it.isLetterOrDigit() || it == ':' }
+                runOnUiThread { web?.evaluateJavascript("window.App && App.tvPaired('$safe')", null) }
+            }
+        }
+
+        @JavascriptInterface
+        fun tvStatus(): String = TvStatus.summary(this@MainActivity)
 
         @JavascriptInterface
         fun placedWidgets(): String = Widgets.placedCounts(this@MainActivity)

@@ -11,4 +11,5 @@
     <string name="widget_timer">عدّاد</string>
     <string name="widget_reader">ورد القراءة</string>
     <string name="widget_dua">دعاء اليوم</string>
+    <string name="widget_tv">حالة التلفزيون</string>
 </resources>

@@ -108,7 +108,7 @@ object Widgets {
         val cls = when (kind) {
             "prayer" -> PrayerWidget::class.java; "ring" -> RingWidget::class.java; "strip" -> StripWidget::class.java
             "month" -> MonthWidget::class.java; "convert" -> ConvertWidget::class.java; "event" -> EventWidget::class.java
-            "timer" -> TimerWidget::class.java; else -> return "no"
+            "timer" -> TimerWidget::class.java; "tv" -> TvWidget::class.java; else -> return "no"
         }
         var done: PendingIntent? = null
         if (kind == "timer") {

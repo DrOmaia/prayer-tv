@@ -71,6 +71,13 @@ object TvLink {
                     Handler(Looper.getMainLooper()).post { MainActivity.syncArrived() }
                     return
                 }
+                // the home code of «is the TV on?» (TvStatus): a phone asks for it or gives it
+                if (o.optString("k") == "home") {
+                    val code = TvStatus.home(ctx, o.optString("c"), o.optBoolean("set"))
+                    it.getOutputStream().write(("home:$code\n").toByteArray(Charsets.UTF_8))
+                    it.getOutputStream().flush()
+                    return
+                }
                 val title = o.optString("t").take(40).ifEmpty { Device.en(ctx, "رسالة", "Message") }
                 val text = o.optString("x").take(160)
                 if (text.isBlank()) return
@@ -124,6 +131,56 @@ object TvLink {
         }
     } catch (_: Exception) { false }
 
+    // one line to a TV and its one-line answer (null when it did not answer)
+    fun ask(host: String, payload: String): String? = try {
+        val ip = host.substringBeforeLast(':'); val port = host.substringAfterLast(':').toInt()
+        Socket().use { s ->
+            s.connect(InetSocketAddress(ip, port), 3000)
+            s.soTimeout = 8000
+            s.getOutputStream().write((payload.replace('\n', ' ') + "\n").toByteArray(Charsets.UTF_8))
+            s.getOutputStream().flush()
+            s.getInputStream().bufferedReader(Charsets.UTF_8).readLine()
+        }
+    } catch (_: Exception) { null }
+
+    // every TV on the network (a home may have more than one): found for `ms`, resolved one at a time
+    fun discoverAll(ctx: Context, ms: Long): List<String> {
+        val nsd = ctx.getSystemService(Context.NSD_SERVICE) as NsdManager
+        val queue = java.util.concurrent.LinkedBlockingQueue<NsdServiceInfo>()
+        val found = LinkedHashSet<String>()
+        val listener = object : NsdManager.DiscoveryListener {
+            override fun onServiceFound(info: NsdServiceInfo) { if (info.serviceName.startsWith("prayertv")) queue.offer(info) }
+            override fun onDiscoveryStarted(t: String) {}
+            override fun onDiscoveryStopped(t: String) {}
+            override fun onServiceLost(i: NsdServiceInfo) {}
+            override fun onStartDiscoveryFailed(t: String, e: Int) {}
+            override fun onStopDiscoveryFailed(t: String, e: Int) {}
+        }
+        try { nsd.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, listener) } catch (_: Exception) { return emptyList() }
+        val end = System.currentTimeMillis() + ms
+        while (true) {
+            val left = end - System.currentTimeMillis()
+            if (left <= 0) break
+            val info = queue.poll(left, TimeUnit.MILLISECONDS) ?: break
+            val latch = CountDownLatch(1)
+            try {
+                @Suppress("DEPRECATION")
+                nsd.resolveService(info, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(i: NsdServiceInfo, e: Int) { latch.countDown() }
+                    override fun onServiceResolved(i: NsdServiceInfo) {
+                        @Suppress("DEPRECATION")
+                        val h = i.host?.hostAddress
+                        if (h != null) synchronized(found) { found.add("$h:${i.port}") }
+                        latch.countDown()
+                    }
+                })
+            } catch (_: Exception) { latch.countDown() }
+            latch.await(3000, TimeUnit.MILLISECONDS)
+        }
+        try { nsd.stopServiceDiscovery(listener) } catch (_: Exception) {}
+        return synchronized(found) { found.toList() }
+    }
+
     private fun discover(ctx: Context, ms: Long): String? {
         val nsd = ctx.getSystemService(Context.NSD_SERVICE) as NsdManager
         val latch = CountDownLatch(1)
@@ -174,6 +231,7 @@ class TvLinkService : Service() {
             else startForeground(8, n)
         } catch (_: Exception) {}
         TvLink.listen(this)
+        TvStatus.startTv(this)
         return START_STICKY
     }
 
@@ -184,6 +242,7 @@ class TvLinkService : Service() {
             try { if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) } catch (_: Exception) {
                 // not allowed now: listen at least while the app is running
                 TvLink.listen(ctx)
+                TvStatus.startTv(ctx)
             }
         }
     }

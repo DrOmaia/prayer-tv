@@ -144,6 +144,13 @@
 
         <!-- the phone's weather check every two hours (dust, rain, heat, cold) -->
         <receiver android:name=".WeatherReceiver" android:exported="false" />
+        <receiver android:name=".TvWatchReceiver" android:exported="false" />
+        <receiver android:name=".TvWidget" android:exported="false" android:label="@string/widget_tv">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_tv_info" />
+        </receiver>
 
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>

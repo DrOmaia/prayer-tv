@@ -2158,7 +2158,26 @@
       tr('<button class="gold-btn f tv-send" data-tv="send">إرسال</button>') +
       tr('<div class="tm-lbl tv-guest-h">وضع الضيوف</div><input id="guest-in" class="inp f" maxlength="30" placeholder="ضيوفنا الكرام">') +
       tr('<div class="tv-quick"><button class="pill f" data-tv="gon">تشغيل وضع الضيوف</button><button class="pill f" data-tv="goff">إنهاء وضع الضيوف</button></div>') +
-      (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + '</div>';
+      (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + tvStatusHtml() + '</div>';
+  }
+  // «is the TV on?» from anywhere: turned on once at home; then a widget and a notification follow each TV
+  var tvPair = '';
+  function tvStatusHtml() {
+    if (!A || !A.tvStatus) return '';
+    var st = {};
+    try { st = JSON.parse(A.tvStatus()); } catch (e) {}
+    var words = { on: tr('شغّال'), off: tr('مطفأ'), gone: tr('غير متصل') };
+    var h = '<div class="tm-lbl tv-guest-h">' + tr('حالة التلفزيون من أي مكان') + '</div>';
+    if (st.code && st.tvs && st.tvs.length) h += '<div class="tv-st">' + st.tvs.map(function (t) {
+      return '<div class="tv-st-row tv-' + t.st + '"><span>● ' + esc(t.n || tr('التلفزيون')) + '</span><b>' + words[t.st] + '</b></div>';
+    }).join('') + '</div>';
+    else h += '<p class="tm-note tv-st-note">' + tr('يعرّفك هل التلفزيون شغّال أم مطفأ وأنت خارج البيت، بويدجت وإشعار. فعّله مرة واحدة والجوال على واي فاي البيت والتلفزيون شغّال.') + '</p>';
+    h += '<div class="tv-quick"><button class="pill f" data-tv="pair">' + (st.code ? tr('تحديث الربط (تلفزيون جديد)') : tr('تفعيل')) + '</button>' +
+      (st.code && A.pinWidget ? '<button class="pill f" data-tv="pinw">' + tr('ضع الويدجت على الشاشة') + '</button>' : '') + '</div>';
+    var m = tvPair === 'wait' ? tr('جارٍ البحث عن التلفزيون…') : tvPair === 'none' ? tr('لم أجد التلفزيون: تأكد أن الجوال والتلفزيون على نفس شبكة الواي فاي وأن التطبيق محدَّث على التلفزيون.')
+      : tvPair.indexOf('ok') === 0 ? tr('تم الربط ✓ عدد التلفزيونات: ') + (tvPair.split(':')[1] || 1) : '';
+    if (m) h += '<p class="tm-note' + (tvPair === 'none' ? ' tm-warn' : '') + '">' + m + '</p>';
+    return h;
   }
   function tvSend(text) {
     text = (text || '').trim();
@@ -2170,6 +2189,8 @@
     if (k === 'close') { tvOpen = false; tvState = ''; tvRender(); $('tv-btn').focus(); return; }
     if (k === 'send') { tvSend($('tv-text').value); return; }
     if (k === 'gon' || k === 'goff') { guestSend(k === 'gon'); return; }
+    if (k === 'pair') { tvPair = 'wait'; tvRender(); try { A.tvStatusPair(); } catch (e) { tvPair = 'none'; tvRender(); } return; }
+    if (k === 'pinw') { try { A.pinWidget('tv', ''); } catch (e) {} return; }
     if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
   }
   // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
@@ -2863,6 +2884,7 @@
     back: back,
     // a widget opens a screen (the date converter, the calendar)
     // the phone: the TV's answer to a message ('ok', 'none', 'fail'); the TV: a message from a phone
+    tvPaired: function (r) { tvPair = r; if (tvOpen) tvRender(); },
     tvSent: function (r, kind) {
       if (kind === 'sync') { syncDone(r); return; }
       tvState = r; tvRender(); if (r === 'ok') { var i = $('tv-text'); if (i) i.value = ''; }

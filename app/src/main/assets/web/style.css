@@ -1010,3 +1010,10 @@ b.wq { font-size: 1.15em; }
 #kahf .ew { transition: color .15s, text-shadow .15s; }
 #kahf .ew.lit { color: #FFFFFF; }
 #kahf .ew.now { color: #FFFFFF; text-shadow: 0 0 14px rgba(255,255,255,.8); }
+/* «is the TV on?» in the TV sheet */
+.tv-st { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 20px; }
+.tv-st-row { display: flex; justify-content: space-between; align-items: center; font-size: 30px; padding: 16px 24px; border: 1px solid var(--line); border-radius: 18px; }
+.tv-st-row.tv-on span, .tv-st-row.tv-on b { color: #1E9E55; }
+.night .tv-st-row.tv-on span, .night .tv-st-row.tv-on b { color: #6EE7A0; }
+.tv-st-row.tv-gone b { color: #C98A1B; }
+.tv-st-note { margin-top: 10px; }

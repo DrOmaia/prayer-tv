@@ -12,6 +12,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Schedule.armNext(ctx)
         Weather.arm(ctx)
+        TvStatus.arm(ctx)
         TvLinkService.start(ctx)
         try { Widgets.updateAll(ctx) } catch (_: Exception) {}
         if (intent.action != Intent.ACTION_BOOT_COMPLETED || !Device.isTv(ctx)) return
