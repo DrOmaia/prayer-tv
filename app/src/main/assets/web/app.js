@@ -1269,25 +1269,39 @@
     if (screen === 'kahf') kRender();
     if (screen === 'reader') rdRender();
   }
-  // the text of a verse (a = 0: the Basmala): coloured when tajweed is on; words: each word in its own span
-  function vHtml(s, a, words) {
+  // the words of a verse with their tajweed colours: [{h: html, t: text, r: [rules in it], sym: a sign alone}] (null: no colours)
+  function tjWords(s, a) {
     var d = tjData(a === 0 ? 1 : s), segs = d && d[String(a === 0 ? 1 : a)];
-    if (!segs) {
-      var t = a === 0 ? BASMALA : QURAN[s - 1][1][a - 1];
-      return words ? t.split(' ').map(function (w) { return '<span class="w">' + w + '</span>'; }).join(' ') : t;
-    }
-    var h = '', open = false;
+    if (!segs) return null;
+    var out = [], cur = null;
     segs.forEach(function (g) {
+      var rule = g[1] && TAJWEED.rules[g[1]] ? g[1] : '';
       // the tajweed text writes the small alif after a tatweel (ـٰ); the printed mushaf has no tatweel there
       g[0].replace(/\u0640(?=\u0670)/g, '').split(' ').forEach(function (p, k) {
-        if (k > 0) { if (open) { h += '</span>'; open = false; } h += ' '; }
+        if (k > 0) cur = null;
         if (!p) return;
-        if (words && !open && !SYM.test(p)) { h += '<span class="w">'; open = true; }
-        h += tjMarks(g[1] && TAJWEED.rules[g[1]] ? '<b class="tj tj-' + TAJWEED.rules[g[1]].c + '" data-tj="' + g[1] + '">' + p + '</b>' : p);
+        if (!cur) { cur = { h: '', t: '', r: [] }; out.push(cur); }
+        cur.t += p;
+        cur.h += tjMarks(rule ? '<b class="tj tj-' + TAJWEED.rules[rule].c + '" data-tj="' + rule + '">' + p + '</b>' : p);
+        if (rule) cur.r.push(rule);
+        (p.match(/[\u06D6-\u06DC]/g) || []).forEach(function (m) { cur.r.push(TAJWEED.marks[m]); });
       });
     });
-    if (open) h += '</span>';
-    return h.trim();
+    out.forEach(function (w) { w.sym = SYM.test(w.t); });
+    return out;
+  }
+  // the text of a verse (a = 0: the Basmala): coloured when tajweed is on; words: each word in its own span,
+  // with its English meaning under it when «English» is on (it lights up with the word)
+  function vHtml(s, a, words) {
+    var ws = tjWords(s, a);
+    if (!ws) ws = (a === 0 ? BASMALA : QURAN[s - 1][1][a - 1]).split(' ').map(function (w) { return { h: w }; });
+    if (!words) return ws.map(function (w) { return w.h; }).join(' ');
+    var gl = glFor(s, a, ws.filter(function (w) { return !w.sym; }).length), k = 0;
+    return ws.map(function (w) {
+      if (w.sym) return w.h;
+      var g = gl ? gl[k] : null; k++;
+      return '<span class="w' + (g !== null ? ' wg' : '') + '">' + w.h + (g !== null ? '<i class="g">' + (esc(g) || '&nbsp;') + '</i>' : '') + '</span>';
+    }).join(' ');
   }
   // the stop signs (صلى، قلى، مـ، لا …): bigger, in the colour of their rule, and a tap explains them
   function tjMarks(h) {
@@ -1346,15 +1360,31 @@
     var d = enData(i === 0 ? 1 : kahf.s);
     return d ? d[i === 0 ? 0 : i - 1] || '' : '';
   }
-  // the meaning with each word in its own span: they light up as the reciter moves through the verse (approximately)
-  function enWords(t) {
-    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').split(' ').map(function (w) { return '<span class="ew">' + w + '</span>'; }).join(' ');
+  // the English meaning of each word (wbw/<sss>.json), shown under the word: exact, so it lights up with it
+  var GL = {};
+  function glData(s) {
+    if (!S.qEn) return null;
+    if (GL[s] === undefined) {
+      GL[s] = null;
+      fetch('wbw/' + pad3(s) + '.json').then(function (r) { return r.json(); })
+        .then(function (j) { GL[s] = j; if (screen === 'kahf') kRender(); }).catch(function () { delete GL[s]; });
+    }
+    return GL[s];
+  }
+  // the meanings for the n words shown of a verse (null when they are not loaded or do not fit)
+  function glFor(s, a, n) {
+    var d = glData(a === 0 ? 1 : s), i = a === 0 ? 1 : a;
+    if (!d) return null;
+    var g = d.v[i - 1];
+    if (g && g.length === n) return g;
+    g = d.alt && d.alt[i];
+    return g && g.length === n ? g : null;
   }
   function enToggle() { S.qEn = !S.qEn; save(); kRender(); }
   // the same verse with each word in its own span (lit up while the reciter reads it)
   function kWords(i) {
     if (i < 0 || i > kCount()) return '';
-    return vHtml(kahf.s, i, true) + (i ? ' ﴿' + arNum(i) + '﴾' : '');
+    return vHtml(kahf.s, i, true) + (i ? ' <span class="vn">﴿' + arNum(i) + '﴾</span>' : '');
   }
   // word timings: one file per surah and reciter, loaded when needed (the Basmala uses Al-Fatiha's first verse)
   var wCache = {};
@@ -1381,19 +1411,18 @@
     var segs = wSegs(), box = kahf.read ? document.querySelector('#k-read .kv.on') : $('k-cur');
     var t = audio.currentTime * 1000, seg = null;
     if (segs && !audio.paused) for (var k = 0; k < segs.length && segs[k][2] <= t; k++) seg = segs[k];
+    // TV: a long verse is shown in parts; the part follows the word being read (or the time, without word timings)
+    if (TV && kPages.length > 1) {
+      var nW = kPages[kPages.length - 1][1], wi = seg ? seg[0] : (!segs && audio.duration ? Math.floor(audio.currentTime / audio.duration * nW) : -1), pg = 0;
+      while (pg < kPages.length - 1 && wi >= kPages[pg][1]) pg++;
+      if (wi >= 0 && pg !== kPage) { kShowPage(pg); wNow = -2; }
+    }
     var key = seg ? seg[0] * 1000 + seg[1] : -1;
     if (key === wNow && box === wBox) return;
     wNow = key; wBox = box;
-    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now, #kahf .w.lit, #kahf .ew.now, #kahf .ew.lit'), function (w) { w.classList.remove('now', 'lit'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#kahf .w.now, #kahf .w.lit'), function (w) { w.classList.remove('now', 'lit'); });
     if (!box || !seg) return;
     var ws = box.querySelectorAll('.w');
-    // the English meaning follows at the same pace: the same share of its words as the reciter has read of the verse
-    var eb = S.qEn ? (kahf.read ? box.querySelector('.kv-en') : $('k-en')) : null, es = eb ? eb.querySelectorAll('.ew') : [];
-    if (es.length && ws.length) {
-      var a = Math.floor(seg[0] / ws.length * es.length), z = Math.max(a + 1, Math.ceil(Math.min(seg[1], ws.length) / ws.length * es.length));
-      if (S.qFill) for (var q = 0; q < a; q++) es[q].classList.add('lit');
-      for (var u = a; u < z && u < es.length; u++) es[u].classList.add('now');
-    }
     // «تبقى مضاءة»: the words before the current one stay lit
     if (S.qFill) for (var m = 0; m < seg[0] && m < ws.length; m++) ws[m].classList.add('lit');
     for (var n = seg[0]; n < seg[1] && n < ws.length; n++) ws[n].classList.add('now');
@@ -1411,10 +1440,10 @@
   document.getElementById('r-slider').addEventListener('change', function () { save(); });
   function kReadRender(i) {
     var rd = $('k-read');
-    var key = tjKey(kahf.s) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') : '');
+    var key = tjKey(kahf.s) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') + (GL[kahf.s] ? 'G' : 'g') : '');
     if (rd.dataset.s !== key) {
       rd.dataset.s = key;
-      var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + enWords(t) + '</span>' : ''; };
+      var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + esc(t) + '</span>' : ''; };
       var h = '<button class="kv" data-i="0">' + kWords(0) + en(0) + '</button>';
       for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + en(v) + '</button>';
       rd.innerHTML = h;
@@ -1424,8 +1453,96 @@
     if (cv && kahf.playing) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   function kReadToggle() { kahf.read = !kahf.read; kRender(); }
+  // the biggest text that fits the room of the verse (the Arabic, the words' meanings and the English sentence together).
+  // TV: as big as it can be, and never small: a verse too long for that is shown in parts that follow the reciter.
+  // Phone: the size it always had, smaller only when the verse would not fit.
+  var kPages = [], kPage = 0, kPosText = '';
+  function kFit(max) {
+    var box = $('k-text'), cur = $('k-cur'), en = $('k-en');
+    var set = function (f) {
+      cur.style.fontSize = f + 'px';
+      en.style.fontSize = TV && S.qEn ? Math.min(56, Math.max(36, Math.round(f * 0.46))) + 'px' : '';
+    };
+    var fits = function () { return box.scrollHeight <= box.clientHeight + 1; };
+    kPages = [];
+    set(max);
+    if (!kahf.read && box.clientHeight && !fits()) {
+      var lo = TV ? (cur.querySelector('.g') ? 76 : 88) : 26, hi = max;
+      set(lo);
+      if (fits()) {
+        for (var n = 0; n < 7; n++) { var mid = (lo + hi) / 2; set(mid); if (fits()) lo = mid; else hi = mid; }
+        set(Math.floor(lo));
+      } else if (TV) {
+        // the lines of the verse at this size, then as many lines in a part as fit with their share of the sentence
+        var ws = cur.querySelectorAll('.w'), lines = [], top = null;
+        for (var j = 0; j < ws.length; j++) { if (ws[j].offsetTop !== top) { lines.push(j); top = ws[j].offsetTop; } }
+        lines.push(ws.length);
+        var nl = lines.length - 1, k = 0;
+        while (k < nl) {
+          var L = Math.min(4, nl - k);
+          for (; L > 1; L--) { kShowRange(lines[k], lines[k + L]); if (fits()) break; }
+          kPages.push([lines[k], lines[k + L]]);
+          k += L;
+        }
+      }
+    }
+    kShowPage(0);
+    box.scrollTop = 0;
+  }
+  // show one part of a long verse: its words, and the share of the English sentence that goes with them
+  function kShowPage(p) {
+    kPage = p;
+    var pg = kPages.length > 1 ? kPages[p] : null;
+    kShowRange(pg ? pg[0] : 0, pg ? pg[1] : 1e9);
+    $('k-pos').textContent = kPosText + (pg ? ' · ' + (p + 1) + '/' + kPages.length : '');
+  }
+  // only the words a…b of the verse (and the verse's number after its last word), with their share of the sentence
+  function kShowRange(a, b) {
+    var ws = $('k-cur').querySelectorAll('.w'), vn = $('k-cur').querySelector('.vn'), n = ws.length;
+    for (var j = 0; j < n; j++) ws[j].classList.toggle('off', j < a || j >= b);
+    if (vn) vn.classList.toggle('off', b < n);
+    if (S.qEn) $('k-en').textContent = a > 0 || b < n ? enPart(enText(kahf.i), a, b, n) : enText(kahf.i);
+  }
+  // the share of the sentence for the words a…b of n: by proportion, cut at the nearest punctuation mark
+  function enPart(t, a, b, n) {
+    var tk = t.split(' '), m = tk.length;
+    var cut = function (x) {
+      var best = x, far = 99;
+      for (var k = Math.max(1, x - 6); k <= Math.min(m - 1, x + 6); k++)
+        if (/[.,;:?!"\])]$/.test(tk[k - 1]) && Math.abs(k - x) < far) { best = k; far = Math.abs(k - x); }
+      return best;
+    };
+    var st = a <= 0 ? 0 : cut(Math.round(m * a / n)), e = b >= n ? m : cut(Math.round(m * b / n));
+    if (e <= st) e = Math.min(m, st + 1);
+    return (st > 0 ? '… ' : '') + tk.slice(st, e).join(' ') + (e < m ? ' …' : '');
+  }
+  // TV: a tajweed rule found in the verse being recited, explained in a strip under it (nobody can tap a letter there);
+  // a new rule every half minute, so the listener keeps seeing the rules
+  var tip = { rule: '', at: 0, seen: [] };
+  function tipUpdate() {
+    var el = $('k-tip'), on = TV && S.tajweed && !!TJ[kahf.i === 0 ? 1 : kahf.s];
+    if (!on) { el.classList.add('hidden'); tip.rule = ''; return; }
+    if (tip.rule && Date.now() - tip.at < 30000) return;
+    // the rules in the verse on screen, each with the first word that has it
+    var list = [], has = {};
+    (tjWords(kahf.s, kahf.i) || []).forEach(function (w) {
+      w.r.forEach(function (r) { if (!has[r]) { has[r] = 1; list.push({ r: r, h: w.h }); } });
+    });
+    if (!list.length) { if (!tip.rule) el.classList.add('hidden'); return; }
+    var pick = list.filter(function (x) { return tip.seen.indexOf(x.r) < 0; })[0];
+    if (!pick) { tip.seen = []; pick = list.filter(function (x) { return x.r !== tip.rule; })[0] || list[0]; }
+    tip.seen.push(pick.r); tip.rule = pick.r; tip.at = Date.now();
+    var r = TAJWEED.rules[pick.r];
+    el.innerHTML = '<span class="k-tip-w quran">' + pick.h + '</span><p><b class="tj-' + r.c + '">' + (EN ? r.en : r.ar) + ':</b> ' + (EN ? r.xe : r.x) + '</p>';
+    el.classList.remove('hidden');
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  }
+  setInterval(function () { if (screen === 'kahf' && !$('k-tip').classList.contains('hidden')) tipUpdate(); }, 5000);
+  // the Qur'an font arrives after the first verse is drawn: fit the text again with its real size
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', function () { if (screen === 'kahf') kRender(); });
   function kRender() {
     var i = kahf.i, cur = kText(i), n = kCount();
+    if (TV) kahf.read = false; // the TV only recites: no reading view
     kApplySize();
     $('k-read').classList.toggle('hidden', !kahf.read);
     $('k-text').classList.toggle('hidden', kahf.read);
@@ -1436,7 +1553,7 @@
     $('k-sub').textContent = tr('بصوت الشيخ ') + reciter().name;
     $('k-prev').textContent = i > kFirst() ? kText(i - 1) : '';
     $('k-cur').innerHTML = kWords(i);
-    $('k-en').innerHTML = S.qEn ? enWords(enText(i)) : '';
+    $('k-en').textContent = S.qEn ? enText(i) : '';
     $('k-en').classList.toggle('hidden', !S.qEn);
     $('kahf').classList.toggle('q-en', !!S.qEn);
     $('k-en-btn').classList.toggle('on', !!S.qEn);
@@ -1446,8 +1563,9 @@
     $('k-word-btn').textContent = S.qFill ? tr('تبقى مضاءة') : tr('كلمة بكلمة');
     wNow = -1; wBox = null;
     $('k-next').textContent = kText(i + 1);
-    $('k-cur').style.fontSize = cur.length > 900 ? '28px' : cur.length > 600 ? '34px' : cur.length > 330 ? '42px' : cur.length > 200 ? '52px' : cur.length > 110 ? '60px' : '70px';
-    $('k-pos').textContent = i === 0 ? tr('البسملة') : tr('الآية ') + i + tr(' من ') + n;
+    kPosText = i === 0 ? tr('البسملة') : tr('الآية ') + i + tr(' من ') + n;
+    tipUpdate();
+    kFit(TV ? 140 : cur.length > 900 ? 28 : cur.length > 600 ? 34 : cur.length > 330 ? 42 : cur.length > 200 ? 52 : cur.length > 110 ? 60 : 70);
     $('k-fill').style.width = (i / n * 100) + '%';
     $('k-ic-pause').classList.toggle('hidden', !kahf.playing);
     $('k-ic-play').classList.toggle('hidden', kahf.playing);
@@ -1485,7 +1603,8 @@
   // the list of the 114 surahs, and «continue» from the last verse heard
   // the Quran tab: two main choices, «القراءة» (the page, with its mark) and «الصوت» (the recitation)
   function quranRender() {
-    var mode = S.qMode || 'listen', read = mode === 'read', L = S.qLast;
+    // the TV only recites (no reading there); the phone has both
+    var mode = TV ? 'listen' : S.qMode || 'listen', read = mode === 'read', L = S.qLast;
     $('q-m-read').classList.toggle('on', read); $('q-m-listen').classList.toggle('on', !read);
     $('q-reciters').classList.toggle('hidden', read);
     $('q-list').classList.toggle('hidden', read);
