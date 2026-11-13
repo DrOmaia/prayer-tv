@@ -60,11 +60,13 @@
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
       autoEv: Object.assign({ ramadan: true, fitr: true, adha: true }, s.autoEv),
       ishaMin: Object.assign({ normal: 90, ramadan: 120 }, s.ishaMin),
-      // minutes from adhan to iqamah (Ministry circular: 10, Fajr 20; in Ramadan Fajr and Isha 10)
+      // minutes from adhan to iqamah as in Riyadh's mosques (Fajr 25, Dhuhr 20, Asr 20, Maghrib 10, Isha 20;
+      // in Ramadan Fajr and Isha 15)
       iqMin: {
-        normal: Object.assign({ fajr: 20, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 }, s.iqMin && s.iqMin.normal),
-        ramadan: Object.assign({ fajr: 10, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 }, s.iqMin && s.iqMin.ramadan)
+        normal: Object.assign({ fajr: 25, dhuhr: 20, asr: 20, maghrib: 10, isha: 20 }, s.iqMin && s.iqMin.normal),
+        ramadan: Object.assign({ fajr: 15, dhuhr: 20, asr: 20, maghrib: 10, isha: 15 }, s.iqMin && s.iqMin.ramadan)
       },
+      iqV: s.iqV || 1, // which defaults of iqMin the stored values came from (2 = Riyadh's mosques)
       famMsgs: s.famMsgs || [], // own family messages: {to, text}
       family: s.family || null, // null: the default family (family.js)
       showFact: s.showFact !== false,
@@ -118,6 +120,20 @@
     };
   })();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
+  // once: the iqamah minutes still at the old defaults (10, Fajr 20; Ramadan all 10) move to Riyadh's;
+  // a prayer whose minutes the owner changed himself keeps them
+  function iqMigrate() {
+    if (S.iqV >= 2) return;
+    (function (o, n) {
+      ['normal', 'ramadan'].forEach(function (m) {
+        Object.keys(o[m]).forEach(function (k) { if (S.iqMin[m][k] === o[m][k]) S.iqMin[m][k] = n[m][k]; });
+      });
+    })({ normal: { fajr: 20, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 }, ramadan: { fajr: 10, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 } },
+      { normal: { fajr: 25, dhuhr: 20, asr: 20, maghrib: 10, isha: 20 }, ramadan: { fajr: 15, dhuhr: 20, asr: 20, maghrib: 10, isha: 15 } });
+    S.iqV = 2;
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+  }
+  iqMigrate();
   if (!S.wstyle) { S.wstyle = {}; ['prayer', 'ring', 'strip', 'month', 'convert'].forEach(function (k) { S.wstyle[k] = Object.assign({}, S.widget); }); }
   // «مواقيت اليوم»: the place of each part (right / centre / left) and the size of each
   (function (W) {
@@ -2313,7 +2329,7 @@
     if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
   }
   // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
-  var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'iqMin', 'sound', 'hijriAdj'];
+  var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'iqMin', 'iqV', 'sound', 'hijriAdj'];
   var syncTimer = null, syncSending = '', syncState = '';
   function syncData() { var o = {}; SYNC_KEYS.forEach(function (k) { o[k] = S[k]; }); return JSON.stringify(o); }
   function syncLast() { try { return localStorage.getItem('prayertv-synced') || ''; } catch (e) { return ''; } }
@@ -2338,6 +2354,8 @@
     if (!j) return;
     var o; try { o = JSON.parse(j); } catch (e) { return; }
     SYNC_KEYS.forEach(function (k) { if (o[k] !== undefined) S[k] = o[k]; });
+    // a phone still on an older version sends the old iqamah minutes: bring them to Riyadh's as well
+    if (o.iqMin && !(o.iqV >= 2)) { S.iqV = 1; iqMigrate(); }
     if (o.guest) { S.guest = o.guest; guestApply(); }
     save();
     P.setIqamah(S.iqMin); P.setHijriAdj(S.hijriAdj);

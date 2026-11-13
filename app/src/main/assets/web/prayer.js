@@ -47,9 +47,10 @@
   var NAMES = { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' };
   // the English interface (chosen in the app's settings): the names in English
   try { if ((JSON.parse(localStorage.getItem('prayertv-settings') || '{}').lang) === 'en') NAMES = { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' }; } catch (e) {}
-  // Ministry of Islamic Affairs: 10 min between adhan and iqamah, Fajr 20; in Ramadan Fajr and Isha also 10
-  var IQ_NORMAL = { fajr: 20, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
-  var IQ_RAMADAN = { fajr: 10, dhuhr: 10, asr: 10, maghrib: 10, isha: 10 };
+  // minutes between adhan and iqamah as in Riyadh's mosques: Fajr 25, Dhuhr 20, Asr 20, Maghrib 10, Isha 20;
+  // in Ramadan Fajr and Isha 15 (the Ministry of Islamic Affairs' circular for Ramadan 1447)
+  var IQ_NORMAL = { fajr: 25, dhuhr: 20, asr: 20, maghrib: 10, isha: 20 };
+  var IQ_RAMADAN = { fajr: 15, dhuhr: 20, asr: 20, maghrib: 10, isha: 15 };
   // Umm al-Qura: Isha is 90 minutes after Maghrib, 120 in Ramadan (adjustable in the settings)
   var ISHA = { normal: 90, ramadan: 120 };
   function setIsha(v) { if (v) { ISHA.normal = v.normal; ISHA.ramadan = v.ramadan; } }
