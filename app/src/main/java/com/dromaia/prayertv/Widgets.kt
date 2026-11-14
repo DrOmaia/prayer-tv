@@ -405,6 +405,8 @@ object Widgets {
     private fun prayerViews(ctx: Context, d: JSONObject?, sty: Style, st: State?, now: Long): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_prayer)
         rv.setOnClickPendingIntent(R.id.root, openApp(ctx))
+        // a tap on the date line (Hijri or Gregorian) opens the date converter
+        rv.setOnClickPendingIntent(R.id.foot, openScreen(ctx, "convert", 6))
         putBg(rv, sty, bgOf(sty, st))
         // the three parts of the top line in the places chosen (two parts on one place: the other moves to the free one)
         val want = listOf(R.layout.widget_part_next to sty.posNext, R.layout.widget_part_events to sty.posEv, R.layout.widget_part_left to sty.posLeft)
