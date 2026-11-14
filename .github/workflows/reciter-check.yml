@@ -1,0 +1,27 @@
+name: Reciter check
+
+# Actions → Reciter check → Run workflow: are these everyayah.com folders there, with the whole Qur'an?
+# (used before adding a reciter to RECITERS in app.js)
+on:
+  workflow_dispatch:
+    inputs:
+      folders:
+        description: "everyayah.com/data folders, separated by spaces"
+        required: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        env:
+          FOLDERS: ${{ github.event.inputs.folders }}
+        run: |
+          for f in $FOLDERS; do
+            for v in 001001 002282 018010 114006; do
+              printf '%s %s ' "$f" "$v"
+              curl -s -o /dev/null -m 30 -w '%{http_code} %{size_download} bytes %{content_type}\n' "https://everyayah.com/data/$f/$v.mp3" || echo "failed"
+            done
+          done
+          echo "--- folders with 'jam' in the listing:"
+          curl -s -m 30 https://everyayah.com/data/ | grep -io 'href="[^"]*jam[^"]*"' | sort -u || true
