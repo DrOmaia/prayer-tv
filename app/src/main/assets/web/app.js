@@ -1257,7 +1257,8 @@
     { id: 'dossary', name: tr('ياسر الدوسري'), dirs: ['Yasser_Ad-Dussary_128kbps'] },
     { id: 'basit', name: tr('عبد الباسط عبد الصمد'), dirs: ['Abdul_Basit_Murattal_64kbps', 'Abdul_Basit_Murattal_192kbps'], words: 'Abdul_Basit_Murattal_64kbps' },
     { id: 'husary', name: tr('محمود خليل الحصري'), dirs: ['Husary_64kbps', 'Husary_128kbps'], words: 'Husary_64kbps' },
-    { id: 'minshawi', name: tr('محمد صديق المنشاوي'), dirs: ['Minshawy_Murattal_128kbps'], words: 'Minshawy_Murattal_128kbps' }
+    { id: 'minshawi', name: tr('محمد صديق المنشاوي'), dirs: ['Minshawy_Murattal_128kbps'], words: 'Minshawy_Murattal_128kbps' },
+    { id: 'ajmi', name: tr('أحمد بن علي العجمي'), dirs: ['ahmed_ibn_ali_al_ajamy_128kbps', 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net', 'Ahmed_ibn_Ali_al-Ajamy_64kbps_QuranExplorer.Com'] }
   ];
   var dirTry = 0;
   function reciter() { return RECITERS.filter(function (r) { return r.id === S.reciter; })[0] || RECITERS[0]; }
