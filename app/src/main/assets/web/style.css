@@ -97,9 +97,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wx-h b { font-size: 24px; direction: ltr; }
 .wx-p { color: #2766B0; font-size: 20px; font-weight: 600; direction: ltr; }
 .wx-days { display: flex; flex-direction: column; gap: 4px; }
-.wx-d { display: grid; grid-template-columns: 140px 48px 70px 70px 60px; align-items: center; gap: 16px; font-size: 24px; padding: 6px 0; }
-.wx-d .wi .ic { width: 34px; height: 34px; }
-.wx-d b, .wx-d .muted { direction: ltr; }
+.wx-d .wi .ic { width: 40px; height: 40px; }
 .portrait .wx-body { grid-template-columns: minmax(0, 1fr); flex: none; }
 .title-row { display: flex; align-items: center; gap: 20px; }
 .big-title { font-size: 44px; font-weight: 700; line-height: 1.2; }
@@ -527,8 +525,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .portrait .wx-h b { font-size: 40px; }
 .portrait .wx-h .wi .ic { width: 56px; height: 56px; }
 .portrait .wx-p { font-size: 30px; }
-.portrait .wx-d { grid-template-columns: 220px 70px 110px 110px 100px; font-size: 38px; padding: 10px 0; }
-.portrait .wx-d .wi .ic { width: 52px; height: 52px; }
+
 /* settings and calendar */
 .portrait .srow { font-size: 38px; }
 .portrait .set-note { font-size: 32px; }
@@ -1040,3 +1037,31 @@ b.wq { font-size: 1.15em; }
 .tv .kahf-bar .k-ctrl { flex: none; gap: 20px; }
 .tv .kahf-bar .round.huge { width: 88px; height: 88px; }
 .tv .kahf-bar .round.big { width: 68px; height: 68px; }
+/* weather: one city at a time; the next 14 days, each with its day (highest) and its night (lowest) */
+.wx-tabs { display: flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.wx-tab { height: 76px; padding: 0 48px; font: inherit; font-size: 30px; font-weight: 700; background: none; border: none; color: var(--ink); cursor: pointer; }
+.wx-tab.on { background: var(--gold); color: var(--on-gold); }
+.wx-body { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+.wx-body.sw { animation: wx-sw .3s ease; }
+@keyframes wx-sw { from { opacity: 0; } to { opacity: 1; } }
+.wx-next { gap: 10px; }
+.wx-next-h { font-size: 26px; font-weight: 700; color: var(--muted); }
+.wx-next .wx-days { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; column-gap: 56px; flex: 1; min-height: 0; }
+.wx-d { display: grid; grid-template-columns: minmax(0, 1fr) 124px 124px 56px; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+.wx-dn { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.wx-dn b { font-size: 28px; font-weight: 700; }
+.wx-dn i { font-style: normal; font-size: 22px; color: var(--muted); }
+.wx-hi, .wx-lo { display: flex; align-items: center; gap: 12px; }
+.wx-hi b, .wx-lo b { direction: ltr; font-size: 32px; font-weight: 700; }
+.wx-lo b { font-weight: 600; }
+.wx-lo .wi { opacity: .85; }
+.portrait .wx-tabs { align-self: stretch; }
+.portrait .wx-tab { flex: 1; height: 100px; font-size: 40px; }
+.portrait .wx-next-h { font-size: 38px; }
+.portrait .wx-body { grid-template-columns: minmax(0, 1fr); }
+.portrait .wx-next .wx-days { display: flex; flex-direction: column; }
+.portrait .wx-d { grid-template-columns: minmax(0, 1fr) 240px 240px 110px; padding: 18px 0; }
+.portrait .wx-dn b { font-size: 42px; }
+.portrait .wx-dn i { font-size: 32px; }
+.portrait .wx-hi b, .portrait .wx-lo b { font-size: 48px; }
+.portrait .wx-d .wi .ic { width: 60px; height: 60px; }

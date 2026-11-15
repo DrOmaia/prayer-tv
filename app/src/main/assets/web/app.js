@@ -321,10 +321,12 @@
     for (var k = start; k < Math.min(h.time.length, start + 7); k++) {
       hours.push({ h: h.time[k].slice(11, 16), t: Math.round(h.temperature_2m[k]), code: h.weather_code[k], day: h.is_day[k], p: h.precipitation_probability[k] || 0 });
     }
-    var days = d.time.slice(0, 6).map(function (x, k) {
-      var p = x.split('-');
-      return { name: k === 0 ? tr('اليوم') : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], max: Math.round(d.temperature_2m_max[k]),
-        min: Math.round(d.temperature_2m_min[k]), code: d.weather_code[k], p: d.precipitation_probability_max[k] || 0 };
+    // 14 days: the day's weather with its highest, and the night's weather (at 23:00) with its lowest
+    var days = d.time.slice(0, 14).map(function (x, k) {
+      var p = x.split('-'), ni = h.time.indexOf(x + 'T23:00');
+      return { name: k === 0 ? tr('اليوم') : k === 1 ? tr('غدًا') : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], date: +p[2] + '/' + +p[1],
+        max: Math.round(d.temperature_2m_max[k]), min: Math.round(d.temperature_2m_min[k]), code: d.weather_code[k],
+        ncode: ni >= 0 ? h.weather_code[ni] : d.weather_code[k], p: d.precipitation_probability_max[k] || 0 };
     });
     return { t: Math.round(c.temperature_2m), feels: Math.round(c.apparent_temperature), hum: Math.round(c.relative_humidity_2m),
       wind: Math.round(c.wind_speed_10m), code: c.weather_code, day: c.is_day, rain: hours.length ? hours[0].p : 0,
@@ -336,7 +338,7 @@
       fetch('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
         '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
         '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
-        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=6&timezone=auto')
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=14&timezone=auto')
         .then(function (r) { return r.json(); })
         .then(function (j) {
           var w = parseWeather(j);
@@ -354,10 +356,15 @@
         .catch(function () {});
     });
   }
-  // the weather screen: both cities side by side
+  // the weather screen: one city at a time (the two buttons at the top, or a swipe on the phone, change the city):
+  // now and the coming hours, then the next 14 days
+  var wxCity = 0;
   function weatherRender() {
-    $('wx-body').innerHTML = CITIES.map(function (c, i) {
-      var w = WX[i];
+    Array.prototype.forEach.call(document.querySelectorAll('[data-wxc]'), function (b) {
+      b.textContent = tr(CITIES[+b.dataset.wxc].name); b.classList.toggle('on', +b.dataset.wxc === wxCity);
+    });
+    $('wx-body').innerHTML = [CITIES[wxCity]].map(function (c) {
+      var i = wxCity, w = WX[i];
       if (!w || !w.hours) return '<div class="card wx-col"><div class="wx-city">' + tr(c.name) + tr('</div><div class="muted wx-none">لا تتوفر بيانات الطقس الآن، تأكد من اتصال الإنترنت</div></div>');
       var info = weatherInfo(w.code, w.day);
       return '<div class="card wx-col">' +
@@ -367,11 +374,33 @@
         '<div class="wx-hours">' + w.hours.map(function (x, k) {
           return '<div class="wx-h"><span class="muted">' + (k === 0 ? tr('الآن') : hourLabel(x.h)) + '</span>' + wIcon(x.code, x.day) + '<b>' + x.t + '°</b><span class="wx-p">' + x.p + '%</span></div>';
         }).join('') + '</div>' +
+        '</div><div class="card wx-col wx-next"><div class="wx-next-h">' + tr('الأيام القادمة') + '</div>' +
         '<div class="wx-days">' + w.days.map(function (x) {
-          return '<div class="wx-d"><span class="wx-dn">' + x.name + '</span>' + wIcon(x.code, 1) + '<span class="wx-p">' + x.p + '%</span><b>' + x.max + '°</b><span class="muted">' + x.min + '°</span></div>';
+          return '<div class="wx-d"><span class="wx-dn"><b>' + x.name + '</b>' + (x.date ? '<i>' + x.date + '</i>' : '') + '</span>' +
+            '<span class="wx-hi">' + wIcon(x.code, 1) + '<b>' + x.max + '°</b></span>' +
+            '<span class="wx-lo">' + wIcon(x.ncode != null ? x.ncode : x.code, 0) + '<b>' + x.min + '°</b></span>' +
+            '<span class="wx-p">' + (x.p >= 10 ? x.p + '%' : '') + '</span></div>';
         }).join('') + '</div></div>';
     }).join('');
   }
+  function wxSwitch(i) {
+    if (i === wxCity) return;
+    wxCity = i; weatherRender();
+    $('wx-body').classList.remove('sw'); void $('wx-body').offsetWidth; $('wx-body').classList.add('sw');
+  }
+  // phone: a swipe to the side changes the city (not on the row of hours, which scrolls sideways itself)
+  (function (el) {
+    var x0 = 0, y0 = 0, ok = false;
+    el.addEventListener('touchstart', function (e) {
+      ok = e.touches.length === 1 && !(e.target.closest && e.target.closest('.wx-hours'));
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener('touchend', function (e) {
+      if (!ok) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) wxSwitch(1 - wxCity);
+    }, { passive: true });
+  })(document.getElementById('weather'));
   CITIES.forEach(function (c, i) {
     try {
       var w = JSON.parse(localStorage.getItem('prayertv-w' + i));
@@ -2900,6 +2929,7 @@
     var el = e.target.closest('button');
     if (!el) return;
     if (el.classList.contains('kv')) { kPlay(+el.dataset.i); return; }
+    if (el.dataset.wxc) { wxSwitch(+el.dataset.wxc); return; }
     if (el.dataset.kread) { kReadToggle(); return; }
     if (el.dataset.ken) { enToggle(); return; }
     if (el.dataset.kword) { S.qFill = !S.qFill; save(); wNow = -1; kRender(); return; }
@@ -2921,6 +2951,7 @@
     }
     if (el.hasAttribute('data-go')) {
       if (el.dataset.go === 'apps') appsMode = 'launch';
+      if (el.dataset.go === 'weather') wxCity = +(el.dataset.city || 0); // the card pressed: its city first
       if (el.dataset.go === 'reader') rdSet(S.qMark || { s: 1, i: 0 });
       if (el.dataset.go === 'kahf') { kahf.s = +(el.dataset.sura || 18); kahf.from = +(el.dataset.from || 0); }
       go(el.dataset.go); return;
