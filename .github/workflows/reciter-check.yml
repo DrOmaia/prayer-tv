@@ -7,7 +7,12 @@ on:
     inputs:
       folders:
         description: "everyayah.com/data folders, separated by spaces"
-        required: true
+        required: false
+        default: ""
+      find:
+        description: "list the folders whose name matches this (grep -i -E), e.g. 'ajam|shak'"
+        required: false
+        default: ""
 
 jobs:
   check:
@@ -16,6 +21,7 @@ jobs:
       - name: Check
         env:
           FOLDERS: ${{ github.event.inputs.folders }}
+          FIND: ${{ github.event.inputs.find }}
         run: |
           for f in $FOLDERS; do
             for v in 001001 002282 018010 114006; do
@@ -23,5 +29,8 @@ jobs:
               curl -s -o /dev/null -m 30 -w '%{http_code} %{size_download} bytes %{content_type}\n' "https://everyayah.com/data/$f/$v.mp3" || echo "failed"
             done
           done
-          echo "--- folders with 'jam' in the listing:"
-          curl -s -m 30 https://everyayah.com/data/ | grep -io 'href="[^"]*jam[^"]*"' | sort -u || true
+          echo "--- all folders: $(curl -s -m 30 https://everyayah.com/data/ | grep -o 'href="[^"?]*/"' | sort -u | wc -l)"
+          if [ -n "$FIND" ]; then
+            echo "--- folders matching $FIND:"
+            curl -s -m 30 https://everyayah.com/data/ | grep -o 'href="[^"?]*/"' | sort -u | grep -i -E "$FIND" || echo "(none)"
+          fi
