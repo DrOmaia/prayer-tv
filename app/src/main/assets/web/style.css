@@ -1065,3 +1065,11 @@ b.wq { font-size: 1.15em; }
 .portrait .wx-dn i { font-size: 32px; }
 .portrait .wx-hi b, .portrait .wx-lo b { font-size: 48px; }
 .portrait .wx-d .wi .ic { width: 60px; height: 60px; }
+/* TV: the star pattern behind every screen is very faint, so the content stands out from the sofa (the phone keeps it) */
+.tv.day { background-image: radial-gradient(ellipse 760px 520px at 52% 34%, rgba(160,116,42,.12), rgba(160,116,42,0) 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%238A6A2F' stroke-opacity='.035' stroke-width='1.2'%3E%3Cpath d='M48 14l10 24 24 10-24 10-10 24-10-24-24-10 24-10z'/%3E%3Cpath d='M24 24h48v48H24z' transform='rotate%2845 48 48%29'/%3E%3Cpath d='M24 24h48v48H24z'/%3E%3Ccircle cx='48' cy='48' r='9'/%3E%3Cpath d='M0 0l14 14M96 0L82 14M0 96l14-14M96 96L82 82'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #DED4C0 0%, #D6CAB2 100%); }
+.tv.night { background-image: radial-gradient(ellipse 760px 520px at 52% 34%, rgba(226,185,105,.16), rgba(226,185,105,0) 70%),
+    radial-gradient(ellipse 1200px 700px at 20% 100%, rgba(120,60,160,.45), rgba(120,60,160,0) 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23E2B969' stroke-opacity='.03' stroke-width='1.2'%3E%3Cpath d='M48 14l10 24 24 10-24 10-10 24-10-24-24-10 24-10z'/%3E%3Cpath d='M24 24h48v48H24z' transform='rotate%2845 48 48%29'/%3E%3Cpath d='M24 24h48v48H24z'/%3E%3Ccircle cx='48' cy='48' r='9'/%3E%3Cpath d='M0 0l14 14M96 0L82 14M0 96l14-14M96 96L82 82'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #121848 0%, #1E1B57 55%, #34205E 100%); }
