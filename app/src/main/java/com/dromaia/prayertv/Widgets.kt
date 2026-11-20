@@ -311,7 +311,8 @@ object Widgets {
         val d = data(ctx)
         EN = d?.optString("lang") == "en"
         d?.optString("tz")?.takeIf { it.isNotEmpty() }?.let { TZ = TimeZone.getTimeZone(it) }
-        val st = state(d, now)
+        // times that cannot be read (a place with no sunrise or sunset) must not stop every widget
+        val st = try { state(d, now) } catch (_: Exception) { null }
         // each kind of widget has its own look (chosen in the app's «الويدجت» screen); older data: one look for all
         fun styleOf(kind: String) = Style(d?.optJSONObject("styles")?.optJSONObject(kind) ?: d?.optJSONObject("style"))
         // refresh at the next prayer time and at midnight; every 10 minutes for the progress bar and ring
@@ -426,13 +427,15 @@ object Widgets {
         rv.setInt(R.id.part_left, "setGravity", (gravity[placed[R.layout.widget_part_left]] ?: Gravity.END) or Gravity.CENTER_VERTICAL)
         for (id in intArrayOf(R.id.ev_box0, R.id.ev_box1, R.id.ev_box2)) rv.setInt(id, "setGravity", gEv)
         val gLine = gravity[sty.posLine] ?: Gravity.CENTER_HORIZONTAL
-        rv.setInt(R.id.dua, "setGravity", gLine or Gravity.CENTER_VERTICAL)
+        // a TextView's gravity can be set from a widget only from Android 12; before that the line stays centred
+        if (Build.VERSION.SDK_INT >= 31) rv.setInt(R.id.dua, "setGravity", gLine or Gravity.CENTER_VERTICAL)
         rv.setInt(R.id.info_row, "setGravity", gLine or Gravity.CENTER_VERTICAL)
         // each part in its own size
         fun size(k: Float, list: List<Pair<Int, Float>>) = list.forEach { (id, sp) -> rv.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * k) }
         size(sty.kMain, listOf(R.id.city to 12f, R.id.next_name to 24f, R.id.next_time to 17f, R.id.hijri to 13f, R.id.greg to 13f) +
             NAME_IDS.map { it to 13f } + TIME_IDS.map { it to 17f })
         size(sty.kLeft, listOf(R.id.left_label to 12f, R.id.countdown to 24f))
+        rv.setTextViewText(R.id.left_label, en("متبقٍّ", "Left"))
         size(sty.kEv, listOf(R.id.ev0n to 17f, R.id.ev1n to 17f, R.id.ev2n to 17f, R.id.ev0d to 17f, R.id.ev1d to 17f, R.id.ev2d to 17f))
         size(sty.kLine, listOf(R.id.dua to 13f, R.id.info_label to 13f, R.id.info_chrono to 14f))
         rv.setViewVisibility(R.id.city, if (sty.city) View.VISIBLE else View.GONE)
@@ -601,6 +604,7 @@ object Widgets {
         fun id(n: String) = res.getIdentifier(n, "id", pkg)
         val sizeList = mutableListOf(R.id.m_title to 17f, R.id.m_sub to 12f, R.id.m_legend to 10f)
         for (i in 0 until 7) sizeList.add(id("wd$i") to 10f)
+        if (EN) listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat").forEachIndexed { i, n -> rv.setTextViewText(id("wd$i"), n) }
         var todayDay = 0
         for (i in 0 until 42) {
             val ci = id("c$i"); val hi = id("h$i"); val gi = id("g$i"); val ki = id("k$i")
@@ -653,6 +657,7 @@ object Widgets {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_convert)
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "convert", 6))
         putBg(rv, sty, bgOf(sty, st))
+        rv.setTextViewText(R.id.cv_label, en("هجري", "Hijri"))
         val t = st?.today
         rv.setTextViewText(R.id.cv_day, t?.optInt("hday", 0)?.takeIf { it > 0 }?.toString() ?: en("هـ", "AH"))
         rv.setTextColor(R.id.cv_day, sty.accent)
@@ -709,6 +714,7 @@ object Widgets {
     private fun readerViews(ctx: Context, d: JSONObject?): RemoteViews {
         val rv = RemoteViews(ctx.packageName, R.layout.widget_reader)
         rv.setOnClickPendingIntent(R.id.root, openScreen(ctx, "reader", 9))
+        rv.setTextViewText(R.id.rd_title, en("ورد القراءة", "Daily reading"))
         val m = d?.optJSONObject("mark")
         if (m == null) {
             rv.setTextViewText(R.id.rd_line, en("اضغط للبدء", "Tap to start"))

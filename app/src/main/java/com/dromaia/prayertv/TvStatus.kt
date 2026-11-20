@@ -95,17 +95,19 @@ object TvStatus {
         handler.post(beat)
     }
 
-    fun report(ctx: Context, on: Boolean) {
+    fun report(ctx: Context, on: Boolean, tries: Int = 3) {
         val c = code(ctx)
         if (c.isEmpty() || !Device.isTv(ctx)) return
         val body = JSONObject().put("i", tvId(ctx)).put("n", tvName(ctx)).put("on", if (on) 1 else 0).toString()
         thread {
-            try {
+            val ok = try {
                 val h = URL(BASE + c).openConnection() as HttpURLConnection
                 h.connectTimeout = 8000; h.readTimeout = 8000
                 h.requestMethod = "POST"; h.doOutput = true
-                try { h.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }; h.responseCode } finally { h.disconnect() }
-            } catch (_: Exception) {}
+                try { h.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }; h.responseCode in 200..299 } finally { h.disconnect() }
+            } catch (_: Exception) { false }
+            // the network may not be up yet when the screen has just come on: try again while the state is still the same
+            if (!ok && tries > 1) handler.postDelayed({ if (screenOn(ctx) == on) report(ctx, on, tries - 1) }, 20_000L)
         }
     }
 
@@ -120,7 +122,7 @@ object TvStatus {
             val codes = LinkedHashMap<String, String>()
             for (h in hosts) {
                 val r = TvLink.ask(h, "{\"k\":\"home\"}") ?: continue
-                if (r.startsWith("home:")) codes[h] = r.substring(5).trim()
+                if (r.startsWith("home:")) codes[h] = r.substring(5).trim().filter { it.isLetterOrDigit() }.take(40)
             }
             if (codes.isEmpty()) { done("none"); return@thread }
             // a TV that already has a code keeps it (other phones of the family use it); otherwise this phone's, or a new one
@@ -146,7 +148,8 @@ object TvStatus {
         val st = states(ctx)
         val now = System.currentTimeMillis()
         val before = HashMap<String, String>()
-        st.keys().forEach { k -> st.optJSONObject(k)?.let { before[k] = status(it, now) } }
+        val sinceBefore = HashMap<String, Long>()
+        st.keys().forEach { k -> st.optJSONObject(k)?.let { before[k] = status(it, now); sinceBefore[k] = it.optLong("s") } }
         try {
             val h = URL("$BASE$c/json?poll=1&since=12h").openConnection() as HttpURLConnection
             h.connectTimeout = 15_000; h.readTimeout = 15_000
@@ -162,8 +165,8 @@ object TvStatus {
                 val old = st.optJSONObject(id)
                 if (old != null && old.optLong("t") > t) continue
                 val on = b.optInt("on")
-                // s = since when it is in this state
-                val since = if (old != null && old.optInt("on") == on) old.optLong("s", t) else t
+                // s = since when it is in this state; «on» again after a long silence (it had been unplugged) is a new period
+                val since = if (old != null && old.optInt("on") == on && (on == 0 || t - old.optLong("t") < STALE)) old.optLong("s", t) else t
                 st.put(id, JSONObject().put("n", b.optString("n").take(40)).put("on", on).put("t", t).put("s", since))
             }
             prefs(ctx).edit().putString("tvStates", st.toString()).putLong("tvChecked", now).apply()
@@ -172,8 +175,9 @@ object TvStatus {
         st.keys().forEach { id ->
             val o = st.optJSONObject(id) ?: return@forEach
             val a = status(o, now); val b = before[id]
-            // a TV seen for the first time, or one that only lost its connection, does not notify
-            if (b != null && a != b && a != "gone") notify(ctx, k, o.optString("n"), a == "on", o.optLong("s"))
+            // a TV seen for the first time, or one that only lost its connection, does not notify; nor does a TV that
+            // stayed on while this phone could not look for a while (the same period: nothing happened)
+            if (b != null && a != b && a != "gone" && o.optLong("s") != sinceBefore[id]) notify(ctx, k, o.optString("n"), a == "on", o.optLong("s"))
             k++
         }
     }
@@ -261,11 +265,13 @@ object TvStatus {
 class TvWatchReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val done = goAsync()
+        // the next look is planned first: if the system stops this one (no network, time limit) the chain goes on
+        TvStatus.arm(ctx)
         Thread {
-            try { TvStatus.check(ctx) } catch (_: Exception) {}
-            try { TvStatus.draw(ctx) } catch (_: Exception) {}
-            TvStatus.arm(ctx)
-            done.finish()
+            try {
+                try { TvStatus.check(ctx) } catch (_: Exception) {}
+                try { TvStatus.draw(ctx) } catch (_: Exception) {}
+            } finally { done.finish() }
         }.start()
     }
 }

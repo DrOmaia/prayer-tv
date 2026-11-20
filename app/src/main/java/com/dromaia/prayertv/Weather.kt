@@ -128,10 +128,8 @@ object Weather {
 class WeatherReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val done = goAsync()
-        Thread {
-            try { Weather.check(ctx) } catch (_: Exception) {}
-            Weather.arm(ctx)
-            done.finish()
-        }.start()
+        // the next check is planned first: if the system stops this one (no network, time limit) the chain goes on
+        Weather.arm(ctx)
+        Thread { try { Weather.check(ctx) } catch (_: Exception) {} finally { done.finish() } }.start()
     }
 }

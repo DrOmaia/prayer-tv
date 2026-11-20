@@ -40,14 +40,17 @@ object Device {
     fun notify(ctx: Context, title: String, sub: String, snd: String = "tone", screen: String = "") {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val res = soundRes(snd)
-        val sound = if (res != 0) Uri.parse("android.resource://" + ctx.packageName + "/" + res) else null
+        // the sound by its name: a channel keeps its sound for good, and a numeric resource id can change from one
+        // build to the next (the first channels used the id, so they are replaced once by new ones)
+        val sound = if (res != 0) Uri.parse("android.resource://" + ctx.packageName + "/raw/" + ctx.resources.getResourceEntryName(res)) else null
         val (id, name) = when (snd) {
-            "adhan" -> Pair("adhan_full", en(ctx, "الأذان كاملًا", "Full adhan"))
-            "short" -> Pair("adhan_short", en(ctx, "الأذان مختصرًا", "Short adhan"))
+            "adhan" -> Pair("adhan_full2", en(ctx, "الأذان كاملًا", "Full adhan"))
+            "short" -> Pair("adhan_short2", en(ctx, "الأذان مختصرًا", "Short adhan"))
             "none" -> Pair("adhan_silent", en(ctx, "التنبيه بدون صوت", "Silent alert"))
-            else -> Pair("adhan_phone", en(ctx, "الأذان", "Adhan"))
+            else -> Pair("adhan_phone2", en(ctx, "الأذان", "Adhan"))
         }
         val b = if (Build.VERSION.SDK_INT >= 26) {
+            for (old in arrayOf("adhan_full", "adhan_short", "adhan_phone")) try { nm.deleteNotificationChannel(old) } catch (_: Exception) {}
             val ch = NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH)
             ch.setSound(sound, if (sound == null) null else AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)

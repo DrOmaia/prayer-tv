@@ -38,8 +38,11 @@ object TvLink {
         thread(isDaemon = true) {
             while (true) {
                 val c = try { ss.accept() } catch (_: Exception) { break }
-                thread(isDaemon = true) { handle(app, c) }
+                // a few connections at a time: a faulty device on the network must not exhaust the TV
+                if (!slots.tryAcquire()) { try { c.close() } catch (_: Exception) {}; continue }
+                thread(isDaemon = true) { try { handle(app, c) } finally { slots.release() } }
             }
+            try { ss.close() } catch (_: Exception) {}
             server = null
         }
         try {
@@ -56,16 +59,37 @@ object TvLink {
         } catch (_: Exception) {}
     }
 
+    private val slots = java.util.concurrent.Semaphore(8)
+
+    // one line from a peer: at most `max` characters and 15 seconds (null: nothing, too long or too slow)
+    private fun readLine(s: Socket, max: Int): String? {
+        val r = s.getInputStream().reader(Charsets.UTF_8)
+        val sb = StringBuilder()
+        val buf = CharArray(8192)
+        val end = System.currentTimeMillis() + 15_000L
+        while (true) {
+            val n = r.read(buf)
+            if (n < 0) break
+            for (i in 0 until n) { if (buf[i] == '\n') return sb.toString(); sb.append(buf[i]) }
+            if (sb.length > max || System.currentTimeMillis() > end) return null
+        }
+        return if (sb.isEmpty()) null else sb.toString()
+    }
+
     private fun handle(ctx: Context, c: Socket) {
         try {
             c.use {
                 it.soTimeout = 8000
-                val line = it.getInputStream().bufferedReader(Charsets.UTF_8).readLine()?.take(400_000) ?: return
+                val line = readLine(it, 400_000) ?: return
                 val o = JSONObject(line)
                 // a phone's settings (occasions, family, timers, prayer settings): kept until the page takes them
                 if (o.optString("k") == "sync") {
                     val st = o.optJSONObject("s") ?: return
-                    ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE).edit().putString("pendingSync", st.toString()).apply()
+                    // added to what is still waiting (guest mode and the settings come in separate messages)
+                    val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
+                    val merged = try { JSONObject(prefs.getString("pendingSync", "") ?: "") } catch (_: Exception) { JSONObject() }
+                    st.keys().forEach { k -> merged.put(k, st.get(k)) }
+                    prefs.edit().putString("pendingSync", merged.toString()).apply()
                     it.getOutputStream().write("ok\n".toByteArray(Charsets.UTF_8))
                     it.getOutputStream().flush()
                     Handler(Looper.getMainLooper()).post { MainActivity.syncArrived() }

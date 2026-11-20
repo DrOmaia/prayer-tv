@@ -12,9 +12,10 @@ class AlertReceiver : BroadcastReceiver() {
             val sub = intent.getStringExtra("sub") ?: ""
             val snd = intent.getStringExtra("snd") ?: "tone"
             val screen = (intent.getStringExtra("screen") ?: "").filter { it.isLetter() }
-            // a late alarm (the clock was wrong and has just been corrected) is dropped
+            // a late alarm (the clock was wrong and has just been corrected) is dropped. A sleeping phone on an older
+            // Android may deliver an alarm some minutes late: better late than not at all
             val at = intent.getLongExtra("at", 0L)
-            if (at > 0 && System.currentTimeMillis() - at > 3 * 60_000L) return
+            if (at > 0 && System.currentTimeMillis() - at > (if (Device.isTv(ctx)) 3 else 10) * 60_000L) return
             if (!Device.isTv(ctx)) {
                 // phone: an ordinary notification with the chosen sound
                 Device.notify(ctx, title, sub, snd, screen)

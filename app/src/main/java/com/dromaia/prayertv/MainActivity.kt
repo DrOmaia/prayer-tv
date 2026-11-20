@@ -62,6 +62,8 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // coming back to an activity the system had closed: not on the screen a widget asked for long ago
+        if (savedInstanceState != null) intent?.removeExtra(EXTRA_SCREEN)
         cleanAfterUpdate()
         current = java.lang.ref.WeakReference(this)
         TvLinkService.start(this)
@@ -130,6 +132,7 @@ class MainActivity : Activity() {
         w.addJavascriptInterface(Bridge(), "Android")
         setContentView(w)
         val sc = intent?.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        intent?.removeExtra(EXTRA_SCREEN) // used once: a rebuilt page (renderer restarted) opens on the home screen
         pendingScreen = sc // applied once the page is ready (the hash below covers the first load too)
         w.loadUrl("https://appassets.androidplatform.net/assets/web/index.html" + if (sc.isNullOrEmpty()) "" else "#$sc")
         w.requestFocus()
@@ -141,6 +144,7 @@ class MainActivity : Activity() {
         setIntent(intent)
         // kept: the page may not be ready yet (the app was in the background); applied again on resume
         pendingScreen = intent.getStringExtra(EXTRA_SCREEN)?.filter { it.isLetter() }
+        intent.removeExtra(EXTRA_SCREEN)
         openPending()
     }
 
@@ -149,6 +153,21 @@ class MainActivity : Activity() {
         val sc = pendingScreen ?: return
         if (sc.isEmpty()) { pendingScreen = null; return }
         web?.evaluateJavascript("window.App && App.open('$sc') ? 1 : 0") { r -> if (r == "1") pendingScreen = null }
+    }
+
+    // the page must not live on behind a new activity (a launcher shortcut starts the activity afresh):
+    // its clock, audio and saves would go on unseen, and the old WebView would never be freed
+    override fun onDestroy() {
+        web?.let { w ->
+            try {
+                (w.parent as? android.view.ViewGroup)?.removeView(w)
+                w.removeJavascriptInterface("Android")
+                w.destroy()
+            } catch (_: Exception) {}
+        }
+        web = null
+        if (current?.get() === this) current = null
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -232,7 +251,8 @@ class MainActivity : Activity() {
             runOnUiThread {
                 val i = packageManager.getLeanbackLaunchIntentForPackage(pkg)
                     ?: packageManager.getLaunchIntentForPackage(pkg)
-                if (i != null) startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                // an app that was disabled or refuses the start must not close this one
+                if (i != null) try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
             }
         }
 

@@ -32,6 +32,7 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/cv_label"
             style="@style/WidgetText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
