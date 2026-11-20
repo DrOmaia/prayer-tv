@@ -157,5 +157,27 @@ window.I18N_EN = {
   'وزارة الأوقاف الكويتية': 'Kuwait Ministry of Awqaf', 'وزارة الأوقاف القطرية': 'Qatar Ministry of Awqaf',
   'الهيئة العامة للشؤون الإسلامية (الإمارات)': 'General Authority of Islamic Affairs (UAE)', 'جامعة العلوم الإسلامية بكراتشي': 'University of Islamic Sciences, Karachi',
   'رئاسة الشؤون الدينية التركية': 'Diyanet (Turkey)', 'وزارة الأوقاف المغربية': 'Morocco Ministry of Awqaf',
-  'الجمعية الإسلامية لأمريكا الشمالية': 'Islamic Society of North America', 'رابطة العالم الإسلامي': 'Muslim World League'
+  'الجمعية الإسلامية لأمريكا الشمالية': 'Islamic Society of North America', 'رابطة العالم الإسلامي': 'Muslim World League',
+  // ---- the device's files (TV)
+  'ملفات الجهاز': 'Device files', 'المجلدات': 'Folders', 'ملفات التثبيت (APK)': 'Install files (APK)',
+  'التخزين الداخلي': 'Internal storage', 'فلاشة USB': 'USB drive', 'الأكبر أولًا': 'biggest first',
+  'جيجا': 'GB', 'ميجا': 'MB', 'كيلو': 'KB', 'المتاح': 'Free:', 'أكثر من': 'more than',
+  'عنصر واحد': 'one item', 'عنصران': 'two items', 'عنصرين': 'two items', 'عناصر': 'items', 'عنصرًا': 'items', 'عنصر': 'item',
+  'ملف واحد': 'one file', 'ملفان': 'two files', 'ملفات': 'files', 'ملفًا': 'files', 'ملف': 'file',
+  'فارغ': 'Empty', 'يحميه النظام': 'Protected by the system', 'بيانات التطبيقات': 'Apps’ data',
+  'تحديد': 'Select', 'حذف هذا المجلد': 'Delete this folder', 'حذف المحدد': 'Delete selected',
+  'المحدد:': 'Selected:', 'اضغط OK على كل عنصر تريد حذفه': 'Press OK on each item you want to delete',
+  'تم حذف': 'Deleted', '· المساحة المحرّرة': '· freed', 'تعذّر حذف': 'Could not delete', 'تعذّر الحذف': 'The delete failed', 'لم يُحذف شيء': 'Nothing was deleted',
+  'لا توجد ملفات تثبيت هنا': 'No install files here', 'لا يوجد تخزين متاح الآن': 'No storage is available now',
+  'لا يسمح النظام بفتح هذا المجلد': 'The system does not allow opening this folder', 'هذا المجلد لم يعد موجودًا': 'This folder no longer exists',
+  'هذا المجلد فارغ': 'This folder is empty', 'عرض المزيد': 'Show more', 'المعروض': 'Showing', '، والباقي لا يظهر هنا': '; the rest is not shown here',
+  'حذف هذا الملف؟': 'Delete this file?', 'حذف هذا المجلد بكل ما فيه؟': 'Delete this folder and everything in it?', '؟': '?',
+  'لا يمكن التراجع عن الحذف': 'This cannot be undone', 'جارٍ الحذف…': 'Deleting…',
+  'لعرض ملفات التلفزيون وحذف ما لا تحتاج إليه، يجب أن يسمح التلفزيون للتطبيق بالوصول إلى الملفات.': 'To show the TV\'s files and delete what you do not need, the TV must allow this app to access the files.',
+  'افتح الإذن': 'Open the permission',
+  'فعّل السماح بالوصول إلى كل الملفات، ثم اضغط زر الرجوع': 'Turn on access to all files, then press Back',
+  'اختر «مواقيت الصلاة» من القائمة وفعّل السماح': 'Choose "Prayer Times" in the list and turn the access on',
+  'اختر «السماح» في الرسالة التي تظهر': 'Choose "Allow" in the message that appears',
+  'ادخل إلى «الأذونات» في هذه الصفحة واسمح بالوصول إلى الملفات': 'Open "Permissions" on this page and allow access to the files',
+  'هذا التلفزيون ليس فيه صفحة لهذا الإذن': 'This TV has no page for this permission'
 };

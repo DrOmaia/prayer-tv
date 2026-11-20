@@ -1032,3 +1032,75 @@ b.wq { font-size: 1.15em; }
 
 /* the phone's player: a verse too long even at the smallest size is scrolled from its start, never cut */
 .phone .kahf-text.over { overflow-y: auto; justify-content: flex-start; }
+
+/* TV: the device's files: the storage and its free space, the folders with their sizes, the install files;
+   a delete always asks first (the card) */
+.set-go { border-bottom: 1px solid var(--line); }
+#files .title-row, #files .title-row > div { min-width: 0; }
+#fl-sub { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+#fl-sub bdi { max-width: 300px; overflow: hidden; text-overflow: ellipsis; line-height: 1.8; }
+#fl-sub bdi.on { color: var(--ink); font-weight: 700; }
+/* an arrow that points the way the text runs (drawn, because the «‹ ›» characters come out mirrored in right-to-left text) */
+.fl-chev { flex: none; display: inline-block; width: 12px; height: 12px; border: solid currentColor; border-width: 0 0 3px 3px; transform: rotate(45deg); }
+[dir="ltr"] .fl-chev { transform: rotate(-135deg); }
+#fl-sub .fl-chev { position: relative; top: -2px; width: 10px; height: 10px; border-width: 0 0 2px 2px; }
+.fl-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+.fl-bar { display: flex; align-items: center; gap: 28px; min-height: 64px; flex: none; }
+.fl-st { display: flex; gap: 12px; flex: none; }
+.fl-st .pill { max-width: 330px; }
+.fl-st .pill bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 2; }
+.fl-st .pill.on { background: var(--gold); color: var(--on-gold); border-color: transparent; }
+.fl-meter { display: flex; align-items: center; gap: 16px; min-width: 0; font-size: 26px; font-weight: 600; white-space: nowrap; }
+.fl-meter i { flex: none; width: 220px; height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.fl-meter b { display: block; height: 100%; border-radius: 6px; background: var(--gold); }
+.fl-acts { margin-inline-start: auto; display: flex; align-items: center; gap: 14px; flex: none; }
+.fl-selsum { font-size: 26px; font-weight: 700; margin-inline-end: 10px; }
+.fl-del { color: #A3221B; border-color: currentColor; }
+.night .fl-del { color: #F2A7A1; }
+.fl-info { flex: none; min-height: 38px; padding: 0 18px; font-size: 24px; line-height: 38px; color: var(--muted); }
+.fl-info.msg { color: var(--ink); font-size: 26px; font-weight: 700; }
+.fl-list { position: relative; flex: 1; min-height: 0; padding: 12px 16px; overflow-y: auto; scrollbar-width: none; scroll-padding: 12px 0; }
+.fl-list::-webkit-scrollbar { display: none; }
+.fl-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 240px 170px 170px; align-items: center; column-gap: 22px; width: 100%; min-height: 72px; padding: 0 22px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: inherit; font-size: 28px; font-weight: 600; text-align: start; }
+.fl-list.apk .fl-row { grid-template-columns: 40px minmax(0, 1.2fr) minmax(0, .8fr) 170px 170px; }
+.fl-list.sel .fl-row { grid-template-columns: 40px 40px minmax(0, 1fr) 240px 170px 170px; }
+.fl-list.sel.apk .fl-row { grid-template-columns: 40px 40px minmax(0, 1.2fr) minmax(0, .8fr) 170px 170px; }
+.fl-row .ic { width: 36px; height: 36px; color: var(--muted); }
+.fl-row.fl-d .ic, .fl-x .ic { color: var(--gold); }
+.fl-n, .fl-c { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 2; }
+[dir="rtl"] .fl-n, [dir="rtl"] .fl-c { text-align: right; }
+[dir="ltr"] .fl-n, [dir="ltr"] .fl-c { text-align: left; }
+.fl-c, .fl-t { font-size: 24px; font-weight: 500; color: var(--muted); }
+.fl-s, .fl-t { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fl-s { font-size: 26px; }
+.fl-ck { display: none; width: 36px; height: 36px; border-radius: 9px; border: 2px solid var(--muted); position: relative; }
+.fl-list.sel .fl-ck { display: block; }
+.fl-list.sel .fl-lock { opacity: .5; }
+.fl-list.sel .fl-lock .fl-ck, .fl-list.sel .fl-x .fl-ck { visibility: hidden; }
+.fl-row.on { background: rgba(142,102,36,.12); }
+.night .fl-row.on { background: rgba(255,255,255,.07); }
+.fl-row.on .fl-ck { background: var(--gold); border-color: var(--gold); }
+.fl-row.on .fl-ck::after { content: ''; position: absolute; left: 11px; top: 4px; width: 9px; height: 18px; border: solid var(--on-gold); border-width: 0 4px 4px 0; transform: rotate(45deg); }
+.fl-row:focus, .fl-more:focus { position: relative; z-index: 1; transform: none; border-radius: 14px; border-bottom-color: transparent; background: rgba(142,102,36,.2); }
+.night .fl-row:focus, .night .fl-more:focus { background: rgba(255,255,255,.12); }
+.fl-x .fl-n, .fl-x .ic, .fl-x .fl-t { opacity: .5; }
+.fl-more { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; min-height: 72px; border: 0; background: none; color: var(--gold); font: inherit; font-size: 28px; font-weight: 700; }
+.fl-more span { font-size: 24px; font-weight: 500; color: var(--muted); }
+.fl-none { padding: 34px 22px; text-align: center; font-size: 28px; color: var(--muted); }
+.fl-row + .fl-none { font-size: 24px; padding: 20px 22px; }
+.fl-perm { align-self: center; width: 1180px; margin-top: 40px; padding: 48px 56px; display: flex; flex-direction: column; align-items: flex-start; gap: 30px; font-size: 32px; line-height: 1.6; }
+.fl-perm p { margin: 0; }
+.fl-perm .gold-btn { height: 76px; font-size: 30px; padding: 0 44px; }
+.fl-hint { font-size: 28px; font-weight: 700; }
+.fl-pop { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
+.fl-card { width: 1000px; max-height: calc(100% - 120px); padding: 44px 52px; display: flex; flex-direction: column; gap: 14px; border-radius: 28px; border: 1px solid var(--line); background: #F3ECDD; color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+#stage.night .fl-card { background: #17184A; }
+.fl-q { font-size: 40px; font-weight: 700; line-height: 1.4; }
+.fl-nm { font-size: 30px; font-weight: 600; line-height: 1.9; }
+.fl-nm div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[dir="rtl"] .fl-nm div, [dir="rtl"] .fl-card .fl-dt { text-align: right; }
+[dir="ltr"] .fl-nm div, [dir="ltr"] .fl-card .fl-dt { text-align: left; }
+.fl-dt { font-size: 26px; line-height: 1.9; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-warn { font-size: 26px; font-weight: 600; margin-top: 8px; }
+.fl-btns { display: flex; justify-content: flex-end; gap: 18px; margin-top: 18px; }
+.fl-btns .pill { height: 72px; padding: 0 46px; font-size: 28px; }

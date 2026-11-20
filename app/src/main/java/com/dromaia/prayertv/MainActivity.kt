@@ -510,8 +510,68 @@ class MainActivity : Activity() {
             getSharedPreferences(Schedule.PREFS, MODE_PRIVATE).edit().putBoolean("openOnBoot", on).apply()
         }
 
+        // «ملفات الجهاز» (the TV): the work, and the check of every path the page sends, are in Files
+        @JavascriptInterface
+        fun filesOk(): Boolean = Files.allowed(this@MainActivity)
+
+        // Opens the system's page for the permission and says which one opened. The page is started here, on the
+        // bridge's own thread (startActivity may be called from any thread), not handed to the UI thread: only so
+        // is the answer the page that really opened. Each page is simply tried: asking first whether it exists
+        // would say «no» on Android 11+ for a settings app this app is not allowed to see.
+        @JavascriptInterface
+        fun filesAsk(): String {
+            if (Build.VERSION.SDK_INT < 30) {
+                runOnUiThread {
+                    try {
+                        requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 3)
+                    } catch (_: Exception) {}
+                }
+                return "dialog"
+            }
+            val pkg = Uri.parse("package:$packageName")
+            val pages = listOf(
+                "app" to Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, pkg),
+                "list" to Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                "details" to Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
+            for ((name, page) in pages) {
+                try { startActivity(page); return name } catch (_: Exception) {}
+            }
+            return "none"
+        }
+
+        @JavascriptInterface
+        fun filesRoots(): String = Files.roots(applicationContext)
+
+        @JavascriptInterface
+        fun filesList(path: String): String = Files.list(applicationContext, path)
+
+        // the three below work on a background thread; the answer is a call of a page function (see filesAnswer)
+        @JavascriptInterface
+        fun filesSizes(path: String, token: String) {
+            Files.sizes(applicationContext, path) { r -> filesAnswer("filesSized", token, r) }
+        }
+
+        @JavascriptInterface
+        fun filesApks(token: String) {
+            Files.apks(applicationContext) { r -> filesAnswer("filesFound", token, r) }
+        }
+
+        @JavascriptInterface
+        fun filesDelete(json: String, token: String) {
+            Files.delete(applicationContext, json) { r -> filesAnswer("filesDeleted", token, r) }
+        }
+
         @JavascriptInterface
         fun version(): String = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+    }
+
+    // An answer of Files to the page. A long walk can end after this screen was closed: web is null then and
+    // the answer is dropped.
+    private fun filesAnswer(fn: String, token: String, json: String) {
+        runOnUiThread {
+            web?.evaluateJavascript("window.App && App.$fn(" + JSONObject.quote(token) + "," + JSONObject.quote(json) + ")", null)
+        }
     }
 
     private fun iconData(d: android.graphics.drawable.Drawable): String {

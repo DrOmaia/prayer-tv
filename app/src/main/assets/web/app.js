@@ -2881,6 +2881,385 @@
     setRender();
   }
 
+  // ---------- the device's files (TV): the folders with their sizes, the install files (APK), the USB drive.
+  // One item is deleted from its own card, several with «تحديد»; every delete asks first. Android does the work
+  // (the files… methods of the bridge) and answers the long jobs through App.filesSized / filesFound / filesDeleted ----------
+  var FILES = !!(TV && A && A.filesOk), FL_PAGE = 300, flSeq = 0;
+  var FL_DIR = '<svg viewBox="0 0 24 24" class="ic"><path d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+  var FL_FILE = '<svg viewBox="0 0 24 24" class="ic"><path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4"/></svg>';
+  // view: 'dirs' (the folder at path) or 'apks'; rows: what the list shows; sizes: folder name → {s: bytes, c: files};
+  // sel: the ticked items (path → row) while selecting; dlg: the open card; busy: a delete is running; tok: the token
+  // of the last call of each kind (an answer with another token is dropped)
+  var fl = { ok: false, ask: '', roots: [], root: 0, view: 'dirs', path: '', items: [], rows: [], more: 0, err: '', shown: FL_PAGE,
+    sizes: {}, idx: {}, sizing: false, apks: null, sel: null, dlg: null, busy: false, job: null, msg: null, at: 0, tok: {} };
+  function flMap() { return Object.create(null); } // a map by file name: a folder may be called «constructor»
+  if (FILES) $('sec-files').classList.remove('hidden');
+  function flTok(kind) { return (fl.tok[kind] = kind + (++flSeq)); }
+  function flJson(s, d) { try { var v = typeof s === 'string' ? JSON.parse(s) : s; return v == null ? d : v; } catch (e) { return d; } }
+  function flOk() { try { return !!A.filesOk(); } catch (e) { return false; } }
+  var flCmp = (function () { try { return new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare; } catch (e) { return function (a, b) { return a.localeCompare(b); }; } })();
+  // «1.2 جيجا», «350 ميجا», «12 كيلو» (thousands, as the TV's own settings count them)
+  function flSize(b) {
+    b = +b || 0;
+    if (b >= 999.5e6) return Math.round(b / 1e8) / 10 + ' ' + tr('جيجا');
+    if (b >= 999.5e3) return Math.round(b / 1e6) + ' ' + tr('ميجا');
+    return (b > 0 ? Math.max(1, Math.round(b / 1e3)) : 0) + ' ' + tr('كيلو');
+  }
+  function flDate(t) { if (!(t > 0)) return ''; var r = P.ymd(+t); return fd(r.d, r.m, r.y); }
+  // a count above a hundred follows its last two digits: «103 عناصر», «250 عنصرًا», «300 عنصر»
+  function flCount(n, one, two, few, many, hundred) {
+    var r = n % 100;
+    return EN || n < 100 ? countWord(n, one, two, few, many) : n + ' ' + (r >= 3 && r <= 10 ? few : r >= 11 ? many : hundred);
+  }
+  function flItems(n) { return flCount(n, tr('عنصر واحد'), tr('عنصران'), tr('عناصر'), tr('عنصرًا'), tr('عنصر')); }
+  // after «حذف»: «حذف عنصرين»
+  function flItemsOf(n) { return flCount(n, tr('عنصر واحد'), tr('عنصرين'), tr('عناصر'), tr('عنصرًا'), tr('عنصر')); }
+  function flFilesN(n) { return flCount(n, tr('ملف واحد'), tr('ملفان'), tr('ملفات'), tr('ملفًا'), tr('ملف')); }
+  function flRootP() { return fl.roots[fl.root] ? fl.roots[fl.root].p : ''; }
+  function flRootName(r) { return r.usb ? (r.name || tr('فلاشة USB')) : tr('التخزين الداخلي'); }
+  function flAtTop() { var rp = flRootP(); return !rp || fl.path.indexOf(rp + '/') !== 0; }
+  // Android never deletes the «Android» folder at the top of a storage: it opens, but it is not offered for deleting
+  function flLocked(p) { return fl.roots.some(function (r) { return p.indexOf(r.p + '/') === 0 && p.slice(r.p.length + 1).toLowerCase() === 'android'; }); }
+  function flPath(x) { return fl.view === 'apks' ? x.p : fl.path + '/' + x.n; }
+  // the folder of an install file, from the top of its storage: «/Download»
+  function flDir(p) { var rp = flRootP(), d = String(p).slice(0, String(p).lastIndexOf('/')); return (d + '/').indexOf(rp + '/') === 0 ? d.slice(rp.length) || '/' : d; }
+  // the storages (the internal one first) with their free space; the storage in view stays the same one
+  function flRoots() {
+    var cur = flRootP(), r = [];
+    try { r = flJson(A.filesRoots(), []); } catch (e) {}
+    fl.roots = Array.isArray(r) ? r : [];
+    fl.root = 0;
+    fl.roots.forEach(function (x, i) { if (x.p === cur) fl.root = i; });
+  }
+  // Ask for the sizes of the folders inside `path` (a new call stops the walk before it). With no path the call
+  // only stops the walk that is running, and its answer is not wanted
+  function flSizes(path) {
+    fl.sizing = !!path;
+    try { A.filesSizes(path, flTok('sizes')); } catch (e) { fl.sizing = false; }
+    if (!path) fl.tok.sizes = '';
+  }
+  // read a folder: folders first, then files, each by name; the sizes of its folders are asked for and arrive later
+  function flList(path) {
+    var j = null, walking = fl.sizing, dirs = false;
+    fl.sel = null; fl.items = []; fl.more = 0; fl.sizes = flMap(); fl.idx = flMap(); fl.sizing = false; fl.shown = FL_PAGE; fl.err = ''; fl.tok.sizes = ''; fl.path = path;
+    if (fl.roots.length) { try { j = flJson(A.filesList(path), null); } catch (e) {} }
+    if (!j || !j.ok) {
+      fl.err = !fl.roots.length ? 'none' : (j && j.err) || 'gone';
+      if (fl.err === 'denied' && !flOk()) fl.ok = false; // the permission was taken back
+    } else {
+      fl.path = j.p || path;
+      fl.roots.forEach(function (x, i) { if (x.p === j.root) fl.root = i; });
+      fl.more = +j.more || 0;
+      fl.items = (Array.isArray(j.items) ? j.items : []).sort(function (a, b) { return (b.d ? 1 : 0) - (a.d ? 1 : 0) || flCmp(String(a.n), String(b.n)); });
+      fl.items.forEach(function (x, i) { if (x.d) { fl.idx[x.n] = i; if (!x.x) dirs = true; } });
+    }
+    if (dirs || walking) flSizes(dirs ? fl.path : '');
+  }
+  function flSearch() {
+    fl.sel = null; fl.apks = null; fl.shown = FL_PAGE;
+    try { A.filesApks(flTok('apks')); } catch (e) { fl.apks = []; }
+  }
+  // the install files of the storage in view (with one storage: all of them)
+  function flApks() {
+    var rp = flRootP() + '/', others = fl.roots.filter(function (r, i) { return i !== fl.root; });
+    return (fl.apks || []).filter(function (x) {
+      if (fl.roots.length < 2 || String(x.p).indexOf(rp) === 0) return true;
+      return fl.root === 0 && !others.some(function (r) { return String(x.p).indexOf(r.p + '/') === 0; });
+    });
+  }
+  // the bytes of everything listed; all: false while the size of a folder is still unknown
+  function flTotal() {
+    var s = 0, all = !fl.more;
+    fl.items.forEach(function (x) { if (!x.d) s += Math.max(0, +x.s || 0); else if (fl.sizes[x.n]) s += fl.sizes[x.n].s; else if (!x.x) all = false; });
+    return { s: s, all: all };
+  }
+  function flSum(t) { return t.s > 0 || t.all ? (t.all ? '' : tr('أكثر من ')) + flSize(t.s) : ''; }
+  function flSelSum() {
+    var ks = Object.keys(fl.sel || {}), t = { s: 0, all: true };
+    ks.forEach(function (p) { var x = fl.sel[p]; if (!x.d) t.s += Math.max(0, +x.s || 0); else if (fl.sizes[x.n]) t.s += fl.sizes[x.n].s; else t.all = false; });
+    return { n: ks.length, size: flSum(t) };
+  }
+  function flSelText() { var s = flSelSum(); return s.n ? tr('المحدد: ') + flItems(s.n) + (s.size ? ' · ' + s.size : '') : tr('اضغط OK على كل عنصر تريد حذفه'); }
+
+  // the title's second line: where we are (the storage, then the last folders of the path)
+  function flHead() {
+    var root = fl.roots[fl.root], h = '';
+    Array.prototype.forEach.call(document.querySelectorAll('#fl-tabs .wx-tab'), function (b) { b.classList.toggle('on', b.dataset.flk === 'v-' + fl.view); });
+    $('fl-tabs').classList.toggle('hidden', !fl.ok);
+    if (fl.ok && root && fl.view === 'apks') h = '<bdi>' + esc(flRootName(root)) + '</bdi><span>·</span><span>' + tr('الأكبر أولًا') + '</span>';
+    else if (fl.ok && root) {
+      var rel = flAtTop() ? [] : fl.path.slice(root.p.length).split('/').filter(Boolean), parts = [flRootName(root)];
+      if (rel.length > 2) parts.push('…');
+      parts = parts.concat(rel.slice(-2));
+      h = parts.map(function (p, i) { return '<bdi' + (i === parts.length - 1 ? ' class="on"' : '') + '>' + esc(p) + '</bdi>'; }).join('<i class="fl-chev"></i>');
+    }
+    $('fl-sub').innerHTML = h;
+  }
+  // the bar over the list: the storages (when there is a USB drive), the free space, and the actions
+  // (while selecting: what is ticked, «حذف المحدد», «إلغاء»)
+  function flBar() {
+    var root = fl.roots[fl.root], h = '';
+    if (fl.roots.length > 1 && !fl.sel) h += '<div class="fl-st">' + fl.roots.map(function (r, i) {
+      return '<button class="pill f' + (i === fl.root ? ' on' : '') + '" data-flk="r-' + i + '"><bdi>' + esc(flRootName(r)) + '</bdi></button>';
+    }).join('') + '</div>';
+    if (root && root.total > 0) h += '<div class="fl-meter"><i><b style="width:' + Math.max(0, Math.min(100, Math.round((1 - root.free / root.total) * 100))) + '%"></b></i>' +
+      '<span>' + tr('المتاح ') + flSize(root.free) + tr(' من ') + flSize(root.total) + '</span></div>';
+    h += '<div class="fl-acts">';
+    if (fl.sel) h += '<span id="fl-selsum" class="fl-selsum">' + flSelText() + '</span><button class="pill f fl-del" data-flk="rmsel">' + tr('حذف المحدد') + '</button>' +
+      '<button class="pill f" data-flk="unsel">' + tr('إلغاء') + '</button>';
+    else {
+      if (fl.rows.some(function (x) { return !x.x && !flLocked(flPath(x)); })) h += '<button class="pill f" data-flk="sel">' + tr('تحديد') + '</button>';
+      if (fl.view === 'dirs' && !fl.err && !flAtTop() && !flLocked(fl.path)) h += '<button class="pill f fl-del" data-flk="rmdir">' + tr('حذف هذا المجلد') + '</button>';
+    }
+    $('fl-bar').innerHTML = h + '</div>';
+  }
+  // the line under the bar: what the last delete did, else how much is listed
+  function flInfo() {
+    var m = fl.msg, a = [], n = fl.view === 'apks' ? fl.rows.length : fl.items.length + fl.more;
+    if (m) {
+      if (m.ok) a.push(tr('تم حذف ') + flItemsOf(m.ok) + (m.freed > 0 ? tr(' · المساحة المحرّرة ') + flSize(m.freed) : ''));
+      if (m.fail) a.push('<span class="w-al">' + (m.fail < 0 ? tr('تعذّر الحذف') : tr('تعذّر حذف ') + flItemsOf(m.fail)) + '</span>');
+      if (!a.length) a.push(tr('لم يُحذف شيء'));
+    } else if (fl.view === 'apks') { if (fl.apks && n) a.push(flFilesN(n), flSize(fl.rows.reduce(function (s, x) { return s + Math.max(0, +x.s || 0); }, 0))); }
+    else if (!fl.err && n) { a.push(flItems(n)); if (!fl.sizing && flSum(flTotal())) a.push(flSum(flTotal())); }
+    $('fl-info').innerHTML = a.join(' · ');
+    $('fl-info').classList.toggle('msg', !!m);
+  }
+  function flRow(x, i) {
+    var apk = fl.view === 'apks', p = flPath(x), sz = x.d ? fl.sizes[x.n] : null;
+    // the «Android» folder at the top of a storage: most of it is closed to every app, so a size or «فارغ» would mislead
+    var lock = !apk && flLocked(p);
+    var note = apk ? esc(flDir(p)) : x.x ? tr('يحميه النظام') : lock ? tr('بيانات التطبيقات') : sz ? (sz.c ? flFilesN(sz.c) : tr('فارغ')) : '';
+    var body = '<span class="fl-ck"></span>' + (x.d ? FL_DIR : FL_FILE) + '<span class="fl-n" dir="auto">' + esc(x.n) + '</span>' +
+      '<span class="fl-c"' + (apk ? ' dir="ltr"' : '') + '>' + note + '</span>' +
+      '<span class="fl-s">' + (!x.d ? flSize(x.s) : x.x || lock ? '' : sz ? flSize(sz.s) : fl.sizing ? '…' : '—') + '</span><span class="fl-t">' + flDate(x.t) + '</span>';
+    if (x.x) return '<div class="fl-row fl-x">' + body + '</div>';
+    return '<button class="fl-row f' + (x.d ? ' fl-d' : '') + (flLocked(p) ? ' fl-lock' : '') + (fl.sel && fl.sel[p] ? ' on' : '') + '" data-fl="' + i + '">' + body + '</button>';
+  }
+  // the list: at most `shown` rows are drawn (the remote measures every row on the screen); «عرض المزيد» draws the next ones
+  function flRows() {
+    var L = $('fl-list'), n = fl.rows.length, all = n + (fl.view === 'dirs' ? fl.more : 0), h = '';
+    var none = fl.view === 'apks' ? (!fl.apks ? tr('جارٍ البحث…') : !n ? tr('لا توجد ملفات تثبيت هنا') : '') :
+      fl.err === 'none' ? tr('لا يوجد تخزين متاح الآن') : fl.err === 'denied' ? tr('لا يسمح النظام بفتح هذا المجلد') : fl.err ? tr('هذا المجلد لم يعد موجودًا') : !n ? tr('هذا المجلد فارغ') : '';
+    if (none) h = '<div class="fl-none">' + none + '</div>';
+    else {
+      h = fl.rows.slice(0, fl.shown).map(flRow).join('');
+      var seen = tr('المعروض ') + Math.min(n, fl.shown) + tr(' من ') + all;
+      if (n > fl.shown) h += '<button class="fl-more f" data-flk="more">' + tr('عرض المزيد') + '<span>' + seen + '</span></button>';
+      else if (all > n) h += '<div class="fl-none">' + seen + tr('، والباقي لا يظهر هنا') + '</div>';
+    }
+    L.innerHTML = h;
+    L.classList.toggle('sel', !!fl.sel);
+    L.classList.toggle('apk', fl.view === 'apks');
+  }
+  // no permission yet: why it is needed, the button that opens the system's page, and what to do in the page that opened
+  function flPerm() {
+    var hint = { app: tr('فعّل السماح بالوصول إلى كل الملفات، ثم اضغط زر الرجوع'), list: tr('اختر «مواقيت الصلاة» من القائمة وفعّل السماح'),
+      dialog: tr('اختر «السماح» في الرسالة التي تظهر'), details: tr('ادخل إلى «الأذونات» في هذه الصفحة واسمح بالوصول إلى الملفات'),
+      none: tr('هذا التلفزيون ليس فيه صفحة لهذا الإذن') }[fl.ask];
+    $('fl-perm').innerHTML = '<p>' + tr('لعرض ملفات التلفزيون وحذف ما لا تحتاج إليه، يجب أن يسمح التلفزيون للتطبيق بالوصول إلى الملفات.') + '</p>' +
+      '<button class="gold-btn f" data-flk="ask">' + tr('افتح الإذن') + '</button>' +
+      (hint ? '<p class="fl-hint' + (fl.ask === 'none' ? ' w-al' : '') + '">' + hint + '</p>' : '');
+  }
+  function flRender() {
+    $('fl-perm').classList.toggle('hidden', fl.ok);
+    $('fl-main').classList.toggle('hidden', !fl.ok);
+    fl.rows = !fl.ok ? [] : fl.view === 'apks' ? flApks() : fl.items;
+    flHead();
+    if (!fl.ok) { flPerm(); return; }
+    flBar(); flInfo(); flRows();
+  }
+  // focus the row i (the nearest one that can be focused), in the middle of the list unless the list is to keep its
+  // place; with no row, the «رجوع» button
+  function flFocus(i, keep) {
+    var L = $('fl-list'), n = Math.min(fl.rows.length, fl.shown), el = null, k;
+    i = Math.max(0, Math.min(+i || 0, n - 1));
+    for (k = i; k < n && !el; k++) el = L.querySelector('.f[data-fl="' + k + '"]');
+    for (k = i - 1; k >= 0 && !el; k--) el = L.querySelector('.f[data-fl="' + k + '"]');
+    if (el && !keep) L.scrollTop = el.offsetTop - (L.clientHeight - el.offsetHeight) / 2;
+    (el || document.querySelector('#files [data-back]')).focus();
+  }
+  function flKey(k) { var b = document.querySelector('#files [data-flk="' + k + '"]'); if (b) b.focus(); else flFocus(fl.at); }
+  // the screen opens: the internal storage, the folders
+  function flStart() {
+    fl.view = 'dirs'; fl.sel = null; fl.dlg = null; fl.msg = null; fl.ask = ''; fl.apks = null; fl.at = 0; fl.tok.apks = '';
+    fl.ok = FILES && flOk();
+    if (fl.ok) { fl.root = 0; fl.roots = []; flRoots(); flList(flRootP()); }
+    flPop(); flRender();
+    if (fl.ok) flFocus(0); else flKey('ask');
+  }
+  // back from the system's page (or from anywhere): the permission may have changed, and so may the storages
+  function flResume() {
+    var ok = FILES && flOk();
+    if (ok !== fl.ok) { flStart(); return; }
+    if (!ok || fl.dlg) return;
+    var was = flRootP(), k = document.activeElement && document.activeElement.dataset.flk;
+    flRoots();
+    if (flRootP() !== was) { // the storage in view was taken out
+      fl.msg = null; fl.at = 0;
+      if (fl.view === 'dirs') flList(flRootP()); else fl.path = flRootP();
+      flRender(); flFocus(0); return;
+    }
+    flBar(); if (k) flKey(k);
+  }
+  function flUp() {
+    var i = fl.path.lastIndexOf('/'), name = fl.path.slice(i + 1), k;
+    fl.msg = null;
+    flList(fl.path.slice(0, i));
+    k = fl.idx[name] || 0;
+    if (k >= fl.shown) fl.shown = (Math.floor(k / FL_PAGE) + 1) * FL_PAGE;
+    flRender(); flFocus(k);
+  }
+  // the remote's Back: the card closes, else the selecting ends, else one folder up; false: leave the screen
+  function flBack() {
+    if (fl.dlg) { flPopClose(); return true; }
+    if (fl.sel) { flSelect(false); return true; }
+    if (fl.ok && fl.view === 'dirs' && !flAtTop()) { flUp(); return true; }
+    // leaving: the walk of the sizes stops, and an answer still on its way is no longer wanted
+    if (fl.sizing) flSizes('');
+    fl.tok.sizes = fl.tok.apks = '';
+    return false;
+  }
+  function flSelect(on) {
+    fl.sel = on ? flMap() : null; flBar();
+    if (on && fl.msg) { fl.msg = null; flInfo(); }
+    $('fl-list').classList.toggle('sel', on);
+    Array.prototype.forEach.call($('fl-list').querySelectorAll('.fl-row.on'), function (r) { r.classList.remove('on'); });
+    flFocus(fl.at, true);
+  }
+  // OK on a row: a folder opens, a file shows its card; while selecting, the row is ticked
+  function flPress(i) {
+    var x = fl.rows[i], p, row;
+    if (!x || x.x) return;
+    p = flPath(x);
+    if (fl.sel) {
+      if (flLocked(p)) return;
+      if (fl.sel[p]) delete fl.sel[p]; else fl.sel[p] = x;
+      row = $('fl-list').querySelector('[data-fl="' + i + '"]'); if (row) row.classList.toggle('on', !!fl.sel[p]);
+      $('fl-selsum').textContent = flSelText();
+      return;
+    }
+    if (x.d) { fl.msg = null; flList(p); flRender(); flFocus(0); return; }
+    flAsk({ kind: 'file', i: i, paths: [p], names: [x.n], detail: [flSize(x.s), flDate(x.t)].filter(Boolean).join(' · '), where: fl.view === 'apks' ? p : '' });
+  }
+  // the question before a delete: what goes, how much, and that it cannot be undone; the focus starts on «إلغاء»
+  function flAsk(d) {
+    d.from = document.activeElement;
+    if (fl.busy) d.kind = 'busy'; // one delete at a time
+    fl.dlg = d; flPop();
+    var b = $('fl-pop').querySelector('[data-flk="no"]'); if (b) b.focus(); else if (d.from && d.from.blur) d.from.blur();
+  }
+  function flPop() {
+    var d = fl.dlg, pop = $('fl-pop'), h;
+    pop.classList.toggle('hidden', !d);
+    if (!d) { pop.innerHTML = ''; return; }
+    if (d.kind === 'busy') h = '<div class="fl-q">' + tr('جارٍ الحذف…') + '</div>';
+    else h = '<div class="fl-q">' + (d.kind === 'file' ? tr('حذف هذا الملف؟') : d.kind === 'dir' ? tr('حذف هذا المجلد بكل ما فيه؟') : tr('حذف ') + flItemsOf(d.paths.length) + tr('؟')) + '</div>' +
+      '<div class="fl-nm">' + d.names.slice(0, 4).map(function (n) { return '<div dir="auto">' + esc(n) + '</div>'; }).join('') + (d.names.length > 4 ? '<div>…</div>' : '') + '</div>' +
+      (d.detail ? '<div class="fl-dt">' + d.detail + '</div>' : '') + (d.where ? '<div class="fl-dt" dir="ltr">' + esc(d.where) + '</div>' : '') +
+      '<div class="fl-warn">' + tr('لا يمكن التراجع عن الحذف') + '</div>' +
+      '<div class="fl-btns"><button class="pill f" data-flk="no">' + tr('إلغاء') + '</button><button class="pill f fl-del" data-flk="yes">' + tr('حذف') + '</button></div>';
+    pop.innerHTML = '<div class="fl-card">' + h + '</div>';
+  }
+  function flPopClose() {
+    var from = fl.dlg && fl.dlg.from;
+    fl.dlg = null; flPop();
+    if (from && document.body.contains(from) && from.offsetParent !== null) from.focus(); else flFocus(fl.at);
+  }
+  function flDelete() {
+    var d = fl.dlg;
+    if (!d || !d.paths || d.kind === 'busy' || fl.busy) return;
+    fl.busy = true; fl.msg = null;
+    fl.job = { kind: d.kind, paths: d.paths, i: d.i };
+    fl.dlg = { kind: 'busy', from: d.from }; flPop();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    flTok('del');
+    try { A.filesDelete(JSON.stringify(d.paths), fl.tok.del); } catch (e) { flDeleted(fl.tok.del, { ok: 0, fail: null, freed: 0 }); }
+  }
+  // Android's answers
+  function flSized(token, json) {
+    if (!token || token !== fl.tok.sizes) return;
+    var r = flJson(json, null), on = screen === 'files' && fl.ok && fl.view === 'dirs', i, row;
+    if (!r) { // the last one: a folder left without a size shows «—», and the line under the bar gets the total
+      fl.sizing = false; fl.tok.sizes = '';
+      if (on) { Array.prototype.forEach.call($('fl-list').querySelectorAll('.fl-d .fl-s'), function (s) { if (s.textContent === '…') s.textContent = '—'; }); flInfo(); }
+      return;
+    }
+    fl.sizes[r.n] = { s: +r.s || 0, c: +r.c || 0 };
+    i = fl.idx[r.n];
+    row = on && i !== undefined ? $('fl-list').querySelector('[data-fl="' + i + '"]') : null;
+    if (row && !row.classList.contains('fl-lock')) { row.querySelector('.fl-s').textContent = flSize(r.s); row.querySelector('.fl-c').textContent = +r.c ? flFilesN(+r.c) : tr('فارغ'); }
+    if (on && fl.sel && $('fl-selsum')) $('fl-selsum').textContent = flSelText();
+  }
+  function flFound(token, json) {
+    if (!token || token !== fl.tok.apks) return;
+    var r = flJson(json, []);
+    fl.tok.apks = ''; fl.apks = Array.isArray(r) ? r : [];
+    if (screen !== 'files' || !fl.ok || fl.view !== 'apks') return;
+    var ae = document.activeElement, k = ae && ae.dataset.flk;
+    flRender();
+    if (k) flKey(k); else if (!ae || ae === document.body || !document.body.contains(ae)) flFocus(0);
+  }
+  function flDeleted(token, json) {
+    if (!token || token !== fl.tok.del) return;
+    var r = flJson(json, {}) || {}, job = fl.job || { paths: [] }, fail = Array.isArray(r.fail) ? r.fail : [], at = job.i !== undefined ? job.i : fl.at;
+    fl.tok.del = ''; fl.busy = false; fl.job = null;
+    fl.msg = { ok: +r.ok || 0, fail: r.fail === null ? -1 : fail.length, freed: +r.freed || 0 };
+    if (screen !== 'files' || !fl.ok) { fl.dlg = null; return; }
+    fl.dlg = null; flPop();
+    flRoots();
+    if (fl.view === 'apks') {
+      fl.apks = (fl.apks || []).filter(function (x) { return job.paths.indexOf(x.p) < 0 || fail.indexOf(x.p) >= 0; });
+      fl.sel = null;
+    } else if (job.kind === 'dir' && job.paths[0] === fl.path && fail.indexOf(fl.path) < 0) {
+      // the folder we were in is gone: its parent, at the place where it was
+      var name = fl.path.slice(fl.path.lastIndexOf('/') + 1);
+      flList(fl.path.slice(0, fl.path.lastIndexOf('/')));
+      for (at = 0; at < fl.items.length && fl.items[at].d && flCmp(String(fl.items[at].n), name) < 0;) at++;
+    } else flList(fl.path);
+    if (at >= fl.shown) fl.shown = (Math.floor(at / FL_PAGE) + 1) * FL_PAGE;
+    flRender(); flFocus(at);
+  }
+  function flAction(k) {
+    var p = k.split('-'), t;
+    if (k === 'ask') {
+      if (flOk()) { flStart(); return; }
+      try { fl.ask = String(A.filesAsk()); } catch (e) { fl.ask = 'none'; }
+      flPerm(); flKey('ask'); return;
+    }
+    if (p[0] === 'v') {
+      if (fl.view === p[1]) return;
+      fl.view = p[1]; fl.msg = null; fl.at = 0;
+      if (fl.view === 'apks') { if (fl.sizing) flSizes(''); flSearch(); } else { fl.tok.apks = ''; flList(fl.path); }
+      flRender(); flKey(k); return;
+    }
+    if (p[0] === 'r') {
+      if (+p[1] === fl.root || !fl.roots[+p[1]]) return;
+      fl.root = +p[1]; fl.msg = null; fl.sel = null; fl.at = 0; fl.shown = FL_PAGE;
+      if (fl.view === 'dirs') flList(flRootP()); else fl.path = flRootP();
+      flRender(); flKey(k); return;
+    }
+    if (k === 'sel') { flSelect(true); return; }
+    if (k === 'unsel') { flSelect(false); return; }
+    if (k === 'more') { t = fl.shown; fl.shown += FL_PAGE; var st = $('fl-list').scrollTop; flRows(); $('fl-list').scrollTop = st; flFocus(t); return; }
+    if (k === 'rmdir') {
+      t = flTotal();
+      flAsk({ kind: 'dir', paths: [fl.path], names: [fl.path.slice(fl.path.lastIndexOf('/') + 1)],
+        detail: fl.items.length + fl.more ? [flItems(fl.items.length + fl.more), flSum(t)].filter(Boolean).join(' · ') : tr('فارغ') });
+      return;
+    }
+    if (k === 'rmsel') {
+      var ks = Object.keys(fl.sel || {});
+      if (!ks.length) return;
+      flAsk({ kind: 'sel', paths: ks, names: ks.map(function (q) { return fl.sel[q].n; }), detail: flSelSum().size });
+      return;
+    }
+    if (k === 'no') { flPopClose(); return; }
+    if (k === 'yes') flDelete();
+  }
+  // the row the remote is on: selecting, a closed card and «عرض المزيد» come back to it
+  $('fl-list').addEventListener('focusin', function (e) { var d = e.target.dataset; if (d && d.fl !== undefined) fl.at = +d.fl; });
+
   // ---------- screens ----------
   var screen = 'home', stack = [], lastFocus = {};
   function show(name) {
@@ -2900,6 +3279,7 @@
     if (name === 'reader') { rdRender(); focusFirst(document.querySelector('#reader .f')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
     if (name === 'apps') { appsRender(); focusFirst(document.querySelector('#apps-grid .f')); return; }
+    if (name === 'files') { flStart(); return; }
     if (name === 'settings') setRender();
     var lf = lastFocus[name];
     focusFirst(lf && document.body.contains(lf) && !lf.closest('.hidden') ? lf : null);
@@ -2917,6 +3297,7 @@
     if (tvOpen) { tvAction('close'); return true; }
     if (tPin) { tPinAction('cancel'); return true; }
     if (screen === 'timers' && tEdit) { tClose(); return true; }
+    if (screen === 'files' && flBack()) return true;
     if (screen === 'home') return false;
     if (screen === 'kahf') kStop();
     var to = stack.pop() || 'home';
@@ -2928,7 +3309,7 @@
 
   // ---------- remote control: arrows move between the nearest items ----------
   function focusables() {
-    var root = iqOpen() ? '#iqamah' : !$('tj-pop').classList.contains('hidden') ? '#tj-pop' : '#' + screen;
+    var root = iqOpen() ? '#iqamah' : !$('tj-pop').classList.contains('hidden') ? '#tj-pop' : screen === 'files' && fl.dlg ? '#fl-pop' : '#' + screen;
     return Array.prototype.filter.call(document.querySelectorAll(root + ' .f'), function (e) { return e.offsetParent !== null; });
   }
   function move(dir) {
@@ -3043,6 +3424,8 @@
       return;
     }
     if (el.dataset.k) { setAction(el.dataset.k); return; }
+    if (el.dataset.fl) { flPress(+el.dataset.fl); return; }
+    if (el.dataset.flk) { flAction(el.dataset.flk); return; }
     if (el.dataset.sec) { setToggle(el); return; }
     if (el.dataset.tp) { tPinAction(el.dataset.tp); return; }
     if (el.dataset.tv) { tvAction(el.dataset.tv); return; }
@@ -3137,6 +3520,10 @@
     },
     sync: function () { syncTake(); },
     message: function (title, text) { showMessage(title, text); },
+    // the device's files: the size of a folder (an empty answer ends them), the install files found, what a delete did
+    filesSized: function (token, json) { flSized(token, json); },
+    filesFound: function (token, json) { flFound(token, json); },
+    filesDeleted: function (token, json) { flDeleted(token, json); },
     // a widget or a notification asks for a screen; true once it is shown
     open: function (name) {
       // over the player: the recitation stops, and coming back continues from the same verse
@@ -3156,6 +3543,7 @@
       if (Date.now() - wxAt > 10 * MIN) loadWeather();
       if (TV) { guestApply(); syncTake(); } else syncSoon();
       if (screen === 'widgets') wgRender(); // a widget may have been added or removed meanwhile
+      if (screen === 'files') flResume(); // back from the system's permission page
       // phone travelling: the automatic city follows the phone's location
       if (S.loc.mode === 'auto' && !TV) { gpsTry = 0; locateAuto(); }
     }

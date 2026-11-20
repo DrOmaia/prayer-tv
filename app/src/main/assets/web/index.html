@@ -296,6 +296,26 @@
     <div id="apps-grid" class="apps-grid"></div>
   </section>
 
+  <!-- TV: the device's files: the folders with their sizes, the install files (APK), the USB drive; see and delete -->
+  <section id="files" class="screen hidden">
+    <header class="top">
+      <div class="title-row">
+        <button class="round f" data-back aria-label="رجوع"><svg viewBox="0 0 24 24" class="ic"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div><div class="big-title">ملفات الجهاز</div><div id="fl-sub" class="muted sub-title"></div></div>
+      </div>
+      <div id="fl-tabs" class="wx-tabs"><button class="wx-tab f" data-flk="v-dirs">المجلدات</button><button class="wx-tab f" data-flk="v-apks">ملفات التثبيت (APK)</button></div>
+    </header>
+    <!-- no permission yet: what is needed and the button that opens the system's page -->
+    <div id="fl-perm" class="card fl-perm hidden"></div>
+    <div id="fl-main" class="fl-main">
+      <div id="fl-bar" class="fl-bar"></div>
+      <div id="fl-info" class="fl-info"></div>
+      <div id="fl-list" class="card fl-list"></div>
+    </div>
+    <!-- the question before a delete (a file's card, this folder, the ticked items) -->
+    <div id="fl-pop" class="fl-pop hidden"></div>
+  </section>
+
   <!-- Settings -->
   <section id="settings" class="screen hidden">
     <header class="top">
@@ -370,6 +390,10 @@
         </div>
         <div class="set-sec phone-only" id="sec-widget">
           <button class="set-tg f" data-go="widgets"><span class="set-tt">الويدجت على الشاشة الرئيسية</span><span class="set-pm">‹</span></button>
+        </div>
+        <!-- TV: the device's files (app.js shows the row when the Android app has the files methods) -->
+        <div class="set-go tv-only hidden" id="sec-files">
+          <button class="set-tg f" data-go="files"><span class="set-tt">ملفات الجهاز</span><span class="set-pm"><i class="fl-chev"></i></span></button>
         </div>
         <div class="set-sec" id="sec-update">
           <button class="set-tg f" data-sec="update"><span class="set-tt">تحديث التطبيق</span><span id="sum-update" class="set-sum"></span><span class="set-pm">+</span></button>
