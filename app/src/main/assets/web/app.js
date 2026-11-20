@@ -2514,7 +2514,7 @@
       '<p class="kh-n">' + K.note + '<span class="kh-s">' + K.noteSrc + '</span></p>' +
       '<p class="kh-n">' + K.open + '<span class="kh-s">' + K.openSrc + '</span></p>' +
       K.items.map(one).join('') +
-      '<div class="kh-t kh-t2">' + K.famousTitle + '</div>' + one({ x: K.famous, s: K.famousSrc }) + '</div>';
+      '<div class="kh-t kh-t2">' + K.famousTitle + '</div>' + K.famous.map(function (x) { return '<p class="kh-d">' + x + '</p>'; }).join('') + '<p class="kh-n"><span class="kh-s">' + K.famousSrc + '</span></p></div>';
   }
   // from the list of surahs: the end of the Qur'an, at the supplication
   function khatmOpen() {
