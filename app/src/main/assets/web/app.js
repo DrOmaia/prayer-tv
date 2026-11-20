@@ -54,7 +54,7 @@
     return {
       offsets: Object.assign({ fajr: 0, sunrise: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 }, s.offsets),
       // sunrise: a silent note on the phone; friday: an hour before Jumu'ah; weather: dust, rain, heat, cold (phone)
-      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, weather: true, kaaba: true, travel: true }, s.alerts),
+      alerts: Object.assign({ fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, sunrise: true, friday: true, kahf: true, weather: true, kaaba: true, travel: true }, s.alerts),
       shortcuts: s.shortcuts || null,
       openOnBoot: s.openOnBoot !== false,
       events: s.events || [], // own occasions: {name, y, m, d} (Gregorian)
@@ -442,6 +442,9 @@
       // the phone: an hour before Jumu'ah
       if (!TV && S.alerts.friday && T.friday && T.at.dhuhr - HR > t) ev.push({ at: T.at.dhuhr - HR, title: tr('بعد ساعة: صلاة الجمعة ') + P.full(T.at.dhuhr),
         sub: tr('اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ'), snd: 'tone' });
+      // the phone: Friday morning (an hour after sunrise), a reminder to read Al-Kahf; a tap opens it for reading
+      if (!TV && S.alerts.kahf && T.friday && T.at.sunrise + HR > t) ev.push({ at: T.at.sunrise + HR, title: tr('يوم الجمعة: سورة الكهف'),
+        sub: tr('اضغط لتقرأها الآن'), snd: 'tone', screen: 'kahfread' });
     }
     // the phone: a daily reminder of the reading at the chosen time (the place of the mark is in its text)
     if (!TV && S.qRemind.on) {
@@ -1647,10 +1650,20 @@
     else kPlay(kahf.i);
   }
   // the list of the 114 surahs, and «continue» from the last verse heard
+  // the 114 surahs as buttons; on Friday Al-Kahf comes first as well, in gold, and is gold in its own place
+  function suraList(fri, attrs) {
+    var one = function (k, cls, note) {
+      var q = QURAN[k - 1];
+      return '<button class="sura f' + cls + '" ' + attrs(k) + '><span class="sura-n">' + k + '</span><b class="quran">' + q[0] + '</b><span class="muted">' +
+        (note || countWord(q[1].length, tr('آية'), tr('آيتان'), tr('آيات'), tr('آية'))) + '</span></button>';
+    };
+    return (fri ? one(18, ' sura-fri', tr('يوم الجمعة')) : '') + QURAN.map(function (q, k) { return one(k + 1, fri && k === 17 ? ' sura-fri' : ''); }).join('');
+  }
   // the Quran tab: two main choices, «القراءة» (the page, with its mark) and «الصوت» (the recitation)
   function quranRender() {
     // the TV only recites (no reading there); the phone has both
     var mode = TV ? 'listen' : S.qMode || 'listen', read = mode === 'read', L = S.qLast;
+    var now = P.ymd(Date.now()), fri = !!P.dayTimes(now.y, now.m, now.d, S.offsets).friday;
     $('q-m-read').classList.toggle('on', read); $('q-m-listen').classList.toggle('on', !read);
     $('q-reciters').classList.toggle('hidden', read);
     $('q-list').classList.toggle('hidden', read);
@@ -1659,9 +1672,7 @@
       var M = S.qMark;
       $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + tr('">أكمل من سورة ') + QURAN[M.s - 1][0] + tr(' · الآية ') + M.i + '</button>' : '';
       $('q-sub').textContent = tr('اختر سورة واقرأ بهدوء، وعلّم موضعك');
-      if (!$('q-readlist').firstChild) $('q-readlist').innerHTML = QURAN.map(function (q, k) {
-        return '<button class="sura f" data-rsura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, tr('آية'), tr('آيتان'), tr('آيات'), tr('آية')) + '</span></button>';
-      }).join('');
+      if ($('q-readlist').dataset.fri !== String(fri)) { $('q-readlist').dataset.fri = fri; $('q-readlist').innerHTML = suraList(fri, function (k) { return 'data-rsura="' + k + '"'; }); }
       return;
     }
     $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
@@ -1670,9 +1681,7 @@
     $('q-reciters').innerHTML = RECITERS.map(function (r) {
       return '<button class="sbtn f' + (r.id === reciter().id ? ' on' : '') + '" data-rec="' + r.id + '">' + r.name + '</button>';
     }).join('');
-    if (!$('q-list').firstChild) $('q-list').innerHTML = QURAN.map(function (q, k) {
-      return '<button class="sura f" data-go="kahf" data-sura="' + (k + 1) + '"><span class="sura-n">' + (k + 1) + '</span><b class="quran">' + q[0] + '</b><span class="muted">' + countWord(q[1].length, tr('آية'), tr('آيتان'), tr('آيات'), tr('آية')) + '</span></button>';
-    }).join('');
+    if ($('q-list').dataset.fri !== String(fri)) { $('q-list').dataset.fri = fri; $('q-list').innerHTML = suraList(fri, function (k) { return 'data-go="kahf" data-sura="' + k + '"'; }); }
   }
   function kStop() { audio.pause(); kahf.playing = false; }
 
@@ -1716,7 +1725,7 @@
       same && sAt ? tr('التلفزيون مثل الجوال ✓ <span class="muted">(آخر إرسال ') + P.full(sAt) + ')</span>' : tr('لم يُرسل بعد')) + '</span>' +
       tr('<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>');
     $('sum-sync').textContent = same && sAt ? '✓' : '';
-    $('set-more-al').innerHTML = (TV ? [] : [['friday', tr('تذكير قبل الجمعة بساعة')], ['weather', tr('تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)')]])
+    $('set-more-al').innerHTML = (TV ? [] : [['friday', tr('تذكير قبل الجمعة بساعة')], ['kahf', tr('تذكير قراءة سورة الكهف صباح الجمعة')], ['weather', tr('تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)')]])
       .concat(TV ? [] : [['travel', tr('وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ') + S.home.name]])
       .concat([['kaaba', tr('تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة')]]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? tr('يعمل') : tr('متوقف')) + '</button></div>';
@@ -3063,6 +3072,8 @@
     // a widget or a notification asks for a screen; true once it is shown
     open: function (name) {
       if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return true; }
+      // the Friday notification: Al-Kahf, for reading (the TV only recites)
+      if (name === 'kahfread') { if (iqOpen()) iqDismiss(); if (TV) { kahf.s = 18; kahf.from = 0; go('kahf'); } else rdOpen({ s: 18, i: 0 }); return true; }
       if (/^(convert|calendar|timers|weather)$/.test(name)) { if (iqOpen()) iqDismiss(); if (screen !== name) go(name); return true; }
       return false;
     },
@@ -3089,5 +3100,5 @@
   loadWeather();
   setInterval(loadWeather, 15 * MIN);
   focusFirst();
-  if (/^#(convert|calendar|timers|weather|reader)$/.test(location.hash)) window.App.open(location.hash.slice(1));
+  if (/^#(convert|calendar|timers|weather|reader|kahfread)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

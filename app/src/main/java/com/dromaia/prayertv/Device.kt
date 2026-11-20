@@ -36,7 +36,8 @@ object Device {
     }
 
     // Phone alert: a notification with the chosen sound (each sound has its own channel, as Android requires)
-    fun notify(ctx: Context, title: String, sub: String, snd: String = "tone") {
+    // screen: the app's screen a tap opens (empty: the home screen); such a reminder keeps its own place in the list
+    fun notify(ctx: Context, title: String, sub: String, snd: String = "tone", screen: String = "") {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val res = soundRes(snd)
         val sound = if (res != 0) Uri.parse("android.resource://" + ctx.packageName + "/" + res) else null
@@ -58,16 +59,21 @@ object Device {
             @Suppress("DEPRECATION")
             Notification.Builder(ctx).setSound(sound).setPriority(Notification.PRIORITY_HIGH)
         }
-        val open = PendingIntent.getActivity(ctx, 0,
+        val open = if (screen.isEmpty()) PendingIntent.getActivity(ctx, 0,
             Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE)
+        else PendingIntent.getActivity(ctx, 16,
+            Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_SCREEN, screen)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = b.setSmallIcon(R.drawable.ic_moon)
             .setContentTitle(title)
             .setContentText(sub)
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()
-        try { nm.notify(2, n) } catch (_: SecurityException) {}
+        // the next prayer's notification replaces the last one; a reminder with its own screen stays until it is read
+        try { nm.notify(if (screen.isEmpty()) 2 else 5, n) } catch (_: SecurityException) {}
     }
 
     // the alert list has run out: a quiet reminder to open the app once

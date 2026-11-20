@@ -11,12 +11,13 @@ class AlertReceiver : BroadcastReceiver() {
             val title = intent.getStringExtra("title") ?: return
             val sub = intent.getStringExtra("sub") ?: ""
             val snd = intent.getStringExtra("snd") ?: "tone"
+            val screen = (intent.getStringExtra("screen") ?: "").filter { it.isLetter() }
             // a late alarm (the clock was wrong and has just been corrected) is dropped
             val at = intent.getLongExtra("at", 0L)
             if (at > 0 && System.currentTimeMillis() - at > 3 * 60_000L) return
             if (!Device.isTv(ctx)) {
                 // phone: an ordinary notification with the chosen sound
-                Device.notify(ctx, title, sub, snd)
+                Device.notify(ctx, title, sub, snd, screen)
                 return
             }
             val s = Intent(ctx, AlertService::class.java).putExtra("title", title).putExtra("sub", sub).putExtra("snd", snd)

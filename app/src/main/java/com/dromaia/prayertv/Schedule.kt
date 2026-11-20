@@ -48,6 +48,8 @@ object Schedule {
             intent.putExtra("sub", best.optString("sub"))
             intent.putExtra("at", best.optLong("at"))
             intent.putExtra("snd", best.optString("snd", "tone"))
+            // the screen the notification opens when tapped (e.g. Al-Kahf for reading on Friday); empty: the home screen
+            intent.putExtra("screen", best.optString("screen"))
         }
         val pi = PendingIntent.getBroadcast(ctx, 1, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
