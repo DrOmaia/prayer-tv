@@ -1672,7 +1672,8 @@
       var M = S.qMark;
       $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + tr('">أكمل من سورة ') + QURAN[M.s - 1][0] + tr(' · الآية ') + M.i + '</button>' : '';
       $('q-sub').textContent = tr('اختر سورة واقرأ بهدوء، وعلّم موضعك');
-      if ($('q-readlist').dataset.fri !== String(fri)) { $('q-readlist').dataset.fri = fri; $('q-readlist').innerHTML = suraList(fri, function (k) { return 'data-rsura="' + k + '"'; }); }
+      if ($('q-readlist').dataset.fri !== String(fri)) { $('q-readlist').dataset.fri = fri; $('q-readlist').innerHTML = suraList(fri, function (k) { return 'data-rsura="' + k + '"'; }) +
+        '<button class="sura f sura-khatm" data-rkhatm="1"><span class="sura-n">✦</span><b>' + tr('دعاء ختم القرآن') + '</b><span class="muted">' + tr('بعد سورة الناس') + '</span></button>'; }
       return;
     }
     $('q-resume').innerHTML = L && QURAN[L.s - 1] ? '<button class="gold-btn f" data-go="kahf" data-sura="' + L.s + '" data-from="' + L.i + '">' +
@@ -2420,7 +2421,7 @@
       }
       h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + vHtml(s, a) + ' ﴿' + arNum(a) + '﴾</span> ';
     });
-    return '<div class="m-page">' + h + '</div><div class="m-num">' + arNum(p) + '</div>';
+    return '<div class="m-page">' + h + '</div><div class="m-num">' + arNum(p) + '</div>' + (p === 604 ? khatmHtml() : '');
   }
   function rdPagesRender() {
     var p = rdPageNo();
@@ -2445,7 +2446,7 @@
       if (pg && pg !== lastP) { h += '<div class="r-pno">' + arNum(pg) + '</div>'; lastP = pg; }
       h += '<span class="rv" data-i="' + (k + 1) + '">' + vHtml(s, k + 1) + ' ﴿' + arNum(k + 1) + '﴾</span> ';
     }
-    return h;
+    return h + (s === 114 ? khatmHtml() : '');
   }
   function rdRender() {
     tjButtons();
@@ -2504,6 +2505,25 @@
   }
   function el0(e) { return e.target.closest && e.target.closest('button'); }
   function rdOpen(m) { rdSet(m); if (screen === 'reader') rdRender(); else go('reader'); }
+  // the supplication on completing the Qur'an (khatm.js): after Surah An-Nas in both reading views
+  function khatmHtml() {
+    var K = window.KHATM, one = function (o) {
+      return '<p class="kh-d' + (o.q ? ' quran' : '') + '">' + (o.q ? quranText(o.q) : '«' + o.x + '»') + '<span class="kh-s">' + o.s + '</span></p>';
+    };
+    return '<div class="khatm"><div class="kh-t">' + tr(K.title) + '</div>' +
+      '<p class="kh-n">' + K.note + '<span class="kh-s">' + K.noteSrc + '</span></p>' +
+      '<p class="kh-n">' + K.open + '<span class="kh-s">' + K.openSrc + '</span></p>' +
+      K.items.map(one).join('') +
+      '<div class="kh-t kh-t2">' + K.famousTitle + '</div>' + one({ x: K.famous, s: K.famousSrc }) + '</div>';
+  }
+  // from the list of surahs: the end of the Qur'an, at the supplication
+  function khatmOpen() {
+    rdOpen({ s: 114, i: 6 });
+    setTimeout(function () {
+      var k = document.querySelector('#r-pages:not(.hidden) .khatm, #r-text:not(.hidden) .khatm');
+      if (k) k.scrollIntoView({ block: 'start' });
+    }, 200);
+  }
 
   // ---------- guest mode on the TV: a big welcome instead of the occasions; no private family messages ----------
   function guestApply() {
@@ -2943,6 +2963,7 @@
     if (el.dataset.ken) { enToggle(); return; }
     if (el.dataset.kword) { S.qFill = !S.qFill; save(); wNow = -1; kRender(); return; }
     if (el.dataset.rnav) { rdNav(+el.dataset.rnav); return; }
+    if (el.dataset.rkhatm) { khatmOpen(); return; }
     if (el.dataset.rsura) { rdOpen({ s: +el.dataset.rsura, i: +(el.dataset.rfrom || 0) }); return; }
     if (el.dataset.qmode) { S.qMode = el.dataset.qmode; save(); quranRender(); focusFirst(document.querySelector('#quran .f')); return; }
     if (el.dataset.rmark) { rdMark(); return; }

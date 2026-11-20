@@ -1079,3 +1079,18 @@ b.wq { font-size: 1.15em; }
 .sura.sura-fri .muted { color: var(--on-gold); opacity: .85; }
 .fr-btns { display: flex; gap: 14px; justify-content: center; }
 .fr-btns .gold-btn { flex: 1; justify-content: center; }
+/* the supplication on completing the Qur'an, after Surah An-Nas in the reading */
+.khatm { margin: 30px 0 10px; padding: 26px 0 10px; border-top: 2px solid var(--gold); font-family: 'Tajawal', sans-serif; font-size: calc(44px * var(--qz, 1)); line-height: 1.8; text-align: start; cursor: default; }
+.kh-t { text-align: center; font-size: 1.15em; font-weight: 700; color: var(--gold); margin-bottom: 14px; }
+.kh-t2 { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 1em; }
+.khatm p { margin: 0 0 22px; }
+.kh-n { font-size: .78em; color: var(--muted); }
+.kh-d.quran { font-family: 'AmiriQuran', 'Tajawal', serif; font-size: 1.12em; line-height: 2; }
+.kh-s { display: block; font-family: 'Tajawal', sans-serif; font-size: .6em; line-height: 1.6; color: var(--muted); margin-top: 2px; }
+.kh-n .kh-s { font-size: .82em; }
+.r-text .khatm { border-top-color: #8E5A12; }
+.r-text .kh-t { color: #8E5A12; }
+.r-text .kh-n, .r-text .kh-s { color: #6B5B40; }
+.r-text .kh-t2 { border-top-color: #D8C9A8; }
+.sura.sura-khatm { grid-column: 1 / -1; border-color: var(--gold); }
+.sura.sura-khatm .sura-n { font-size: 26px; }
