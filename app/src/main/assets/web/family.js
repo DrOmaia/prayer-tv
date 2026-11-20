@@ -6,7 +6,7 @@ window.FAMILY = {
     parent: 'father', // who writes the messages: 'father' or 'mother'
     members: [
       { id: 'rund', name: 'رند', kind: 'wife', y: 1988, m: 5, d: 11 },
-      { id: 'hassan', name: 'حسان', kind: 'son', y: 2010, m: 7, d: 26 },
+      { id: 'hassan', name: 'حسان', kind: 'son', y: 2011, m: 7, d: 26 },
       { id: 'salma', name: 'سلمى', kind: 'daughter', y: 2014, m: 3, d: 20 },
       { id: 'abdulmalik', name: 'عبد الملك', kind: 'son', y: 2016, m: 2, d: 2, likes: 'football' },
       { id: 'omaia', name: 'أمية', kind: 'self', y: 1984, m: 3, d: 6 } // the writer: a birthday countdown and greeting only

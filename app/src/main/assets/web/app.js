@@ -84,7 +84,8 @@
       qFill: !!s.qFill, // Qur'an player: the words already read stay lit (false = only the word being read)
       gpsAsked: !!s.gpsAsked, // the phone's location permission was asked once
       // timers since / until a date: {id, name, y, m, d, h, mi (-1 = no time), unit, color, showDate}
-      timers: (s.timers && s.timers.map(function (x) { return x.rip === undefined ? Object.assign({ rip: x.id === 't1' ? 'm' : '' }, x) : x; })) || [
+      // (the defaults take the same shape as saved ones, so the first start and the later ones hold the same data)
+      timers: (s.timers || [
         { id: 't1', name: 'وفاة الوالد أبي أسامة', y: 2023, m: 4, d: 18, h: -1, mi: 0, unit: 'months', color: 'white', showDate: false, rip: 'm' },
         { id: 't2', name: 'أمية', y: 1984, m: 3, d: 6, h: 12, mi: 0, unit: 'timer', color: 'navy', showDate: true },
         { id: 't3', name: 'الزواج', y: 2010, m: 6, d: 11, h: -1, mi: 0, unit: 'timer', color: 'white', showDate: true },
@@ -94,7 +95,7 @@
         { id: 't7', name: 'سلمى', y: 2014, m: 3, d: 20, h: 14, mi: 0, unit: 'timer', color: 'pink', showDate: true },
         { id: 't8', name: 'عبود', y: 2016, m: 2, d: 2, h: 11, mi: 0, unit: 'minutes', color: 'navy', showDate: true },
         { id: 't9', name: 'إجازة الصيف', y: 2027, m: 5, d: 18, h: 14, mi: 0, unit: 'timer', color: 'white', showDate: true }
-      ],
+      ]).map(function (x) { return x.rip === undefined ? Object.assign({ rip: x.id === 't1' ? 'm' : '' }, x) : x; }),
       // phone home-screen widgets: background ('time' colour of the time of day · 'dark'), transparency 0–100,
       // text size, accent colour and the parts shown on «مواقيت اليوم»
       widget: Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold', city: true, prog: true, line: true, date: true }, s.widget),
@@ -137,6 +138,12 @@
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   }
   iqMigrate();
+  // the default family had Hassan's birth year as 2010; it is 2011 (a family saved with the old default is corrected)
+  (function () {
+    var ms = S.family && S.family.members, fixed = false;
+    (ms || []).forEach(function (x) { if (x.id === 'hassan' && x.y === 2010 && x.m === 7 && x.d === 26) { x.y = 2011; fixed = true; } });
+    if (fixed && !DREAM) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  })();
   if (!S.wstyle) { S.wstyle = {}; ['prayer', 'ring', 'strip', 'month', 'convert'].forEach(function (k) { S.wstyle[k] = Object.assign({}, S.widget); }); }
   // «مواقيت اليوم»: the place of each part (right / centre / left) and the size of each
   (function (W) {
@@ -2391,7 +2398,7 @@
     if (k[0] === 'q') tvSend(TV_QUICK[+k.slice(1)]);
   }
   // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
-  var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'iqMin', 'iqV', 'sound', 'hijriAdj'];
+  var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'ishaMin', 'iqMin', 'iqV', 'sound', 'hijriAdj'];
   var syncTimer = null, syncSending = '', syncState = '', syncAgain = false, syncAt = 0;
   function syncData() { var o = {}; SYNC_KEYS.forEach(function (k) { o[k] = S[k]; }); return JSON.stringify(o); }
   function syncLast() { try { return localStorage.getItem('prayertv-synced') || ''; } catch (e) { return ''; } }
@@ -2432,7 +2439,8 @@
     if (o.iqMin && !(o.iqV >= 2)) { S.iqV = 1; iqMigrate(); }
     if (o.guest) { S.guest = o.guest; guestApply(); }
     save();
-    P.setIqamah(S.iqMin); P.setHijriAdj(S.hijriAdj);
+    S.ishaMin = Object.assign({ normal: 90, ramadan: 120 }, S.ishaMin);
+    P.setIsha(S.ishaMin); P.setIqamah(S.iqMin); P.setHijriAdj(S.hijriAdj);
     autoCache.key = ''; lastQ = ''; lastDay = '';
     tick();
     if (screen === 'settings') setRender();
@@ -3157,8 +3165,18 @@
   // one failure must not stop the clock for good: every tick runs on its own
   function safeTick() { try { tick(); } catch (e) { if (window.console) console.error(e); } }
   if (TV) { try { guestApply(); syncTake(); } catch (e) {} }
-  // a phone's first start: what it has now is its starting point (see syncNow), fixed before anything is changed
-  else if (A && A.tvSend && !syncLast()) { try { localStorage.setItem('prayertv-synced', syncData()); } catch (e) {} }
+  // a phone's first start: what it has now is its starting point (see syncNow), fixed before anything is changed;
+  // and a phone that has never sent stays quiet when an update adds a setting to the list (its point takes the new one in)
+  else if (A && A.tvSend) {
+    try {
+      if (!syncLast()) localStorage.setItem('prayertv-synced', syncData());
+      else if (!localStorage.getItem('prayertv-synced-at')) {
+        var sb = JSON.parse(syncLast()), sn = {};
+        SYNC_KEYS.forEach(function (k) { sn[k] = sb[k] !== undefined ? sb[k] : S[k]; });
+        localStorage.setItem('prayertv-synced', JSON.stringify(sn));
+      }
+    } catch (e) {}
+  }
   showCity();
   if (S.loc.mode === 'auto') locateAuto();
   renderShortcuts();
