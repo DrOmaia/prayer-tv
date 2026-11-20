@@ -15,26 +15,28 @@ Edit only this file, then run the script.
 ## 2. What the app is
 "شاشة مواقيت الصلاة": a prayer-times screen for his **TCL Google TV** and **Android phones**; city automatic or searched
 (`S.loc`, default Riyadh), method by country (`METHODS` in `prayer.js`, Saudi Arabia = Umm al-Qura). Installed from the short link **dromaia.github.io/tv** (redirects to the latest GitHub release APK).
-Arabic only, right-to-left, 24-hour clock, Tajawal font. Light design by day; dark mode (`.night`) is an Islamic design: navy/purple, geometric pattern, mosque drawing, next prayer in a glowing circle, prayer times as one strip. Features: prayer times + iqamah countdown, Imsak,
-Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, verses on screen; Al-Kahf button on Friday), occasion countdowns
+Arabic (default, right-to-left) with an English interface as a setting (`S.lang`; religious texts stay Arabic), 24-hour clock, Tajawal font. Light design by day; dark mode (`.night`) is an Islamic design: navy/purple, geometric pattern, mosque drawing, next prayer in a glowing circle, prayer times as one strip. Features: prayer times + iqamah countdown, Imsak,
+Ramadan iftar/suhoor cards and full-screen pre-Maghrib countdown, Qur'an player (any surah, nine reciters, the word being read lit, tajweed colours, English meaning; Al-Kahf on Friday; the TV only recites), Qur'an reader on the phone (Mushaf pages, a mark, the khatm supplication), occasion countdowns
 (own dates, Ramadan, Eids, birthdays, anniversary), family messages, reminders (verse / hadith / wisdom every
-3 min), «هل تعلم؟» (every 3 min, 350 items incl. «تصحيح خطأ شائع» and Shafi'i fiqh), weather of the city + Irbid (Open-Meteo), calendar, TV app shortcuts, alert banner
-over other apps, open on boot, screensaver, phone notifications and home-screen widgets (prayer times, ring, strip, Hijri month, date-converter icon, occasion; look set in the phone settings), Gregorian ↔ Hijri date converter (Umm al-Qura), update from settings.
+3 min), «هل تعلم؟» (every 3 min, 350 items incl. «تصحيح خطأ شائع» and Shafi'i fiqh), weather of the city + Irbid (Open-Meteo, 14 days, phone alerts), calendar, timers (since / until), the phone changes the TV over the home network (settings, messages, guest mode), «is the TV on?» from anywhere (ntfy.sh), TV app shortcuts, alert banner
+over other apps, open on boot, screensaver, phone notifications and home-screen widgets (prayer times, ring, strip, Hijri month, date-converter icon, occasion, timer, reading mark, supplication of the day, TV on/off; look set in the app's widget screen), Gregorian ↔ Hijri date converter (Umm al-Qura), update from settings.
 User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md`.
 
 ## 3. Files
 | Path | What |
 | --- | --- |
-| `app/src/main/assets/web/index.html` | Page shell: home, calendar, weather, Kahf, settings screens; tab bar; iqamah overlay. |
-| `app/src/main/assets/web/app.js` | All UI logic: settings `S` (localStorage key `prayertv-settings`), render, D-pad navigation, events, family, weather, calendar, Kahf, settings screen, alerts list sent to Android. |
+| `app/src/main/assets/web/index.html` | Page shell: every screen (home, calendar, month, imsakiya, date converter, weather, Qur'an list, player `#kahf`, reader, timers, widgets, apps, settings); phone tab bar; iqamah overlay; popups. |
+| `app/src/main/assets/web/app.js` | All UI logic: settings `S` (localStorage key `prayertv-settings`), `tr()` (English interface), render, D-pad navigation, events, family, weather, calendar, Qur'an player and reader, timers, widgets screen, phone → TV sync, settings screen, alerts list sent to Android. |
+| `app/src/main/assets/web/i18n.js`, `facts-en.js`, `family-en.js` | English: the interface dictionary `I18N_EN` (Arabic text → English), «هل تعلم؟» and the family messages. |
 | `app/src/main/assets/web/prayer.js` | Prayer-time maths for any city (`setLocation`: lat/lon, IANA time zone, method by country), iqamah minutes, time formatting in the city's time zone. |
 | `app/src/main/assets/web/style.css` | All styles. Day / night themes (`.day` / `.night` CSS variables), `.tv` / `.phone` / `.portrait` / `.dream`. Design is a 1920×1080 stage scaled to any screen. |
 | `adhkar.js` | Adhkar at their times (after prayers, morning, evening, sleep), season texts (Friday, Dhul-Hijjah, Arafah, Eid) and the names of Allah (`ASMA`), all with sources. |
-| `reminders.js`, `facts.js`, `family.js`, `quran.js`, `mushaf.js` | Content: reminders, «هل تعلم؟», default family (members, `departed` for prayers of mercy) + message templates, daily verses, the whole Qur'an text (`QURAN[n-1] = [name, verses]`, used by the Qur'an player). Religious text must have a correct source. |
+| `reminders.js`, `facts.js`, `family.js`, `quran.js`, `mushaf.js`, `mushaf-pages.js`, `khatm.js`, `tajweed-rules.js` | Content: reminders, «هل تعلم؟», default family (members, `departed` for prayers of mercy) + message templates, the Basmala, the whole Qur'an text (`QURAN[n-1] = [name, verses]`), where each Mushaf page starts, the khatm supplication, the tajweed rules and their colours. Religious text must have a correct source. |
+| `app/src/main/assets/web/words/`, `tajweed/`, `en/`, `wbw/` | Data loaded when needed, one file per surah: word timings of the reciters named in `RECITERS` (`words:`), tajweed marks, Saheeh International meaning, word-by-word meanings. Made by `tools/word-timings.py`, `tajweed.py`, `translation.py`, `wbw.py` (sources and licences in each script). |
 | `app/src/main/res/raw/` | Alert sounds: `chime.wav` (soft tone), `adhan.mp3` / `adhan_short.mp3` (Masjid an-Nabawi, from the open Al-Azan project). |
-| `app/src/main/java/com/dromaia/prayertv/` | Kotlin: `MainActivity` (WebView + JS bridge `Android`), `Schedule` (one exact alarm at a time), `AlertReceiver` / `AlertService` (chime + banner on TV, notification on phone), `BootReceiver`, `Widgets`, `PrayerDream` (screensaver), `Device`. |
+| `app/src/main/java/com/dromaia/prayertv/` | Kotlin: `MainActivity` (WebView + JS bridge `Android`), `Schedule` (one exact alarm at a time), `AlertReceiver` / `AlertService` (chime + banner on TV, notification on phone), `BootReceiver`, `Widgets` (+ `TimerPickActivity`), `PrayerDream` (screensaver), `TvLink` (phone ↔ TV on the home network), `TvStatus` (TV on/off through ntfy.sh), `Weather` (phone weather alerts), `Device`. |
 | `app/src/main/AndroidManifest.xml`, `app/src/main/res/` | Permissions, receivers, widgets layouts, icons, chime. |
-| `.github/workflows/build.yml` | Builds, signs and publishes every push to `main` as release `vN`; also "mark stable" and "restore stable" (section 5). |
+| `.github/workflows/build.yml` | Builds, signs and publishes every push to `main` as release `vN`; also "mark stable" and "restore stable" (section 5). `word-timings.yml` and `reciter-check.yml` are run by hand (data for a reciter). |
 | `app/release.keystore` | The signing key. **Never change, delete or replace it**: a different key stops installed apps from updating. |
 
 ## 4. Hard rules (do not break the app)
@@ -45,6 +47,8 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
    `app/build.gradle.kts` (version = build number, automatic).
 4. **Arabic text** is correct Modern Standard Arabic, masculine when addressing him, with correct number agreement
    (`daysText`, `minutesWord`, `countWord` in `app.js`). Religious content: authentic, with its source.
+   Every interface text goes through `tr()` in `app.js` (`Device.en` in Kotlin) and has its English in `I18N_EN`
+   (`i18n.js`); religious texts stay Arabic.
    **Fiqh follows the Shafi'i school** (the owner's choice): state the Shafi'i ruling plainly, without «عند الشافعية»;
    references: Matn Abi Shuja', an-Nawawi's Minhaj. «تصحيح خطأ شائع» must not contradict the Shafi'i school.
 5. **Both TV and phone** share the code: check a change in both (`.tv` / `.phone`, landscape and portrait).
@@ -71,17 +75,6 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
   number over a newer one, so never just point him to an old APK.)
 - Before a big change, tell him which version is the current `stable`.
 
-## 7. Design changes (look and layout)
-- Before a design change, read `.claude/skills/taste-skill/SKILL.md` (and `references/app-screens.md` for
-  settings, calendar, weather and other working screens): craft guidance on type, spacing, colour and checking
-  your own work with screenshots. Copied from github.com/Leonxlnx/taste-skill (MIT).
-- **The app's identity wins over that skill wherever they disagree.** Keep: the Islamic night design (navy /
-  purple, gold, star pattern, mosque drawing, next prayer in a glowing circle, one strip of times with gold
-  diamonds), the same layout by day in calm sand and gold (no white), Arabic RTL with the Tajawal font, and text
-  readable from a sofa 3–4 m from the TV (about 24px or more on the 1920×1080 stage).
-- Take from it what fits: fewer sizes, less clutter, no needless boxes or labels, one accent colour,
-  screenshots of TV (light and dark) and phone after every change.
-
 ## 6. Checklist for every change
 1. Read the relevant code first; find how the feature works today. Ask if unclear (section 1).
 2. Make the minimal change.
@@ -92,6 +85,17 @@ User-facing description: `README.md` (Arabic). History of changes: `CHANGELOG.md
    API level checks for minSdk 24).
 5. Commit with a clear message (what changed for the user), push to `main`.
 6. Wait for GitHub Actions *Build APK* to finish green. If red: read the log, fix, push again. Never leave it red.
-7. Add a line to `CHANGELOG.md` (version number = the build's `vN`) and update `README.md` if behaviour changed.
+7. Add a numbered line to `CHANGELOG.md` (the next number) and update `README.md` if behaviour changed.
 8. Tell him in Arabic: what changed, that it is on dromaia.github.io/tv, and to say «اعتمد» after testing so it
    becomes the stable version.
+
+## 7. Design changes (look and layout)
+- Before a design change, read `.claude/skills/taste-skill/SKILL.md` (and `references/app-screens.md` for
+  settings, calendar, weather and other working screens): craft guidance on type, spacing, colour and checking
+  your own work with screenshots. Copied from github.com/Leonxlnx/taste-skill (MIT).
+- **The app's identity wins over that skill wherever they disagree.** Keep: the Islamic night design (navy /
+  purple, gold, star pattern, mosque drawing, next prayer in a glowing circle, one strip of times with gold
+  diamonds), the same layout by day in calm sand and gold (no white), Arabic RTL with the Tajawal font, and text
+  readable from a sofa 3–4 m from the TV (about 24px or more on the 1920×1080 stage).
+- Take from it what fits: fewer sizes, less clutter, no needless boxes or labels, one accent colour,
+  screenshots of TV (light and dark) and phone after every change.

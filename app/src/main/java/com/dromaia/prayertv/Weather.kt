@@ -116,8 +116,9 @@ object Weather {
             @Suppress("DEPRECATION")
             Notification.Builder(ctx)
         }
-        val open = PendingIntent.getActivity(ctx, 12, Intent(ctx, MainActivity::class.java)
-            .putExtra(MainActivity.EXTRA_SCREEN, "weather").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        // the alert opens the weather of its own city (a request code for each, so the two do not share one intent)
+        val open = PendingIntent.getActivity(ctx, if (city == 1) 17 else 12, Intent(ctx, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_SCREEN, if (city == 1) "weatherb" else "weather").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = b.setSmallIcon(R.drawable.ic_moon).setContentTitle(title).setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text)).setContentIntent(open).setAutoCancel(true).build()

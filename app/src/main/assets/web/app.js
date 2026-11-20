@@ -13,7 +13,7 @@
     if (D[x] !== undefined) return D[x];
     var tm = x.trim(), lead = x.slice(0, x.length - x.replace(/^\s+/, '').length), tail = x.slice(x.replace(/\s+$/, '').length);
     if (D[tm] !== undefined) return lead + D[tm] + tail;
-    if (x.indexOf('<') >= 0) return x.replace(/>([^<]*[\u0600-\u06FF][^<]*)</g, function (m, p) { return '>' + tr(p) + '<'; })
+    if (/[<>]/.test(x)) return x.replace(/(^|>)([^<>]*[\u0600-\u06FF][^<>]*)(?=<|$)/g, function (m, a, p) { return a + tr(p); })
       .replace(/(placeholder|aria-label|title)="([^"]*[\u0600-\u06FF][^"]*)"/g, function (m, a, p) { return a + '="' + tr(p) + '"'; });
     return x;
   }
@@ -48,6 +48,8 @@
 
   // ---------- settings (kept on the TV) ----------
   var KEY = 'prayertv-settings';
+  // shown as the TV screensaver: the main screen only, nothing to press, and nothing written (the app owns the settings)
+  var DREAM = location.search.indexOf('dream') >= 0;
   var S = (function () {
     var s = {};
     try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
@@ -75,7 +77,7 @@
       fontSize: s.fontSize || 'normal', // phone text size
       zoom: s.zoom || 0, // phone: the size set by pinching (0 = from fontSize)
       // the timer widgets: text size and the lines they show
-      timerWg: Object.assign({ font: 'm', name: true, hijri: false, anniv: true, ms: false, dua: true }, s.timerWg),
+      timerWg: Object.assign({ font: 'm', name: true, dua: true }, s.timerWg),
       reciter: s.reciter || 'alafasy',
       tajweed: !!s.tajweed, // Qur'an: tajweed colours on the text
       qEn: !!s.qEn, // Qur'an player: the English meaning under each verse (Saheeh International)
@@ -107,6 +109,7 @@
       qLast: s.qLast || null, // the last verse heard: {s: surah, i: verse}
       lang: s.lang || 'ar', // interface language: 'ar' or 'en' (religious texts stay Arabic)
       qView: s.qView || 'page', // the reader: 'page' (Mushaf pages) or 'text' (continuous)
+      qSize: s.qSize || 1, // the size of the Qur'an text (the slider, or two fingers)
       qMode: s.qMode || 'listen', // the Quran tab: 'read' or 'listen'
       qMark: s.qMark || null, // the reader's mark: where the reading stopped {s, i, at}
       qRemind: Object.assign({ on: false, time: '21:00' }, s.qRemind), // a daily reminder of the reading (phone)
@@ -119,7 +122,7 @@
       })(s.sound)
     };
   })();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
+  function save() { if (DREAM) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} syncSoon(); }
   // once: the iqamah minutes still at the old defaults (10, Fajr 20; Ramadan all 10) move to Riyadh's;
   // a prayer whose minutes the owner changed himself keeps them
   function iqMigrate() {
@@ -165,8 +168,6 @@
   // TV: remote control, app shortcuts, alert over other apps. Phone: touch, notification.
   var TV = A ? A.isTv() : !(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   stage.classList.add(TV ? 'tv' : 'phone');
-  // shown as the TV screensaver: the main screen only, nothing to press
-  var DREAM = location.search.indexOf('dream') >= 0;
   if (DREAM) stage.classList.add('dream');
 
   // ---------- fit any screen: landscape is 1080 units high, portrait 1080 units wide ----------
@@ -230,7 +231,7 @@
     if (idx >= 0) (box.children[idx] || box.lastElementChild).focus();
   }
 
-  // ---------- weather (Open-Meteo, every 30 minutes): now, today, next hours, next days ----------
+  // ---------- weather (Open-Meteo, every 15 minutes): now, today, next hours, next 14 days ----------
   // the first city follows the prayer-times city; Irbid stays
   var CITIES = [{ name: tr(S.loc.name), lat: S.loc.lat, lon: S.loc.lon }, { name: tr('إربد'), lat: 32.5556, lon: 35.85 }];
   var DAY_NAMES = EN ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] : ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -248,8 +249,7 @@
     // small icons for the details
     hum: svg('<path d="M12 3.5s-6 6.5-6 10.5a6 6 0 0 0 12 0c0-4-6-10.5-6-10.5z"/>'),
     umb: svg('<path d="M3 12a9 9 0 0 1 18 0zM12 12v6a2 2 0 0 0 4 0"/>'),
-    wind: svg('<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>'),
-    feel: svg('<path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/>')
+    wind: svg('<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/>')
   };
   // the hour on the weather strip: 18:00 in Arabic, 6 PM in English
   function hourLabel(hm) { if (!EN) return hm; var h = +hm.slice(0, 2); return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
@@ -332,9 +332,23 @@
       wind: Math.round(c.wind_speed_10m), code: c.weather_code, day: c.is_day, rain: hours.length ? hours[0].p : 0,
       hi: days[0].max, lo: days[0].min, hours: hours, days: days, at: Date.now() };
   }
+  // no figures for a city: the dash the page starts with (never an old temperature shown as now)
+  function wxDrop(i) {
+    WX[i] = null;
+    $('w' + i + '-temp').textContent = '—'; $('w' + i + '-icon').innerHTML = ''; $('w' + i + '-hl').innerHTML = '';
+    $('w' + i + '-btn').classList.remove('w-alert');
+    if (i === 0) { $('wbig-temp').textContent = '—'; $('wbig-icon').innerHTML = ''; $('wb-c0').innerHTML = ''; $('wbig').classList.remove('w-alert'); }
+    else $('wb-c1').innerHTML = '';
+    if (screen === 'weather') weatherRender();
+  }
+  var wxRetry = null;
   function loadWeather() {
     wxAt = Date.now();
+    clearTimeout(wxRetry);
+    // nothing to show for a city (no internet): tried again every minute until it comes, then the usual quarter of an hour
+    wxRetry = setTimeout(function () { if (!WX[0] || !WX[1]) loadWeather(); }, MIN);
     CITIES.forEach(function (c, i) {
+      if (WX[i] && Date.now() - WX[i].at > 2 * HR) wxDrop(i); // the internet has been away for two hours
       fetch('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
         '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
         '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
@@ -408,7 +422,7 @@
     } catch (e) {}
   });
 
-  // ---------- prayer alerts sent to Android (30 days ahead) ----------
+  // ---------- prayer alerts sent to Android (60 days ahead) ----------
   // Arabic number–noun agreement
   function minutesWord(n) { if (EN) return n + (n === 1 ? ' minute' : ' minutes'); return n === 1 ? tr('دقيقة واحدة') : n === 2 ? tr('دقيقتين') : n >= 3 && n <= 10 ? n + tr(' دقائق') : n + tr(' دقيقة'); }
   // Arabic number agreement; in English: n + the plural word (the dictionary maps the Arabic plural to the English word)
@@ -429,7 +443,7 @@
     return S.loc.name + ' | ' + what + (k === 'maghrib' && T.ramadan ? tr(' · موعد الإفطار') : '') + (T.iqamah[k] ? tr(' · الإقامة ') + P.full(T.iqamah[k]) : '');
   }
   function sendSchedule() {
-    if (!A) return;
+    if (!A || DREAM) return;
     var t = Date.now(), r = P.ymd(t), ev = [];
     for (var i = 0; i < 60; i++) {
       var dd = P.addDays(r.y, r.m, r.d, i), T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets);
@@ -463,6 +477,8 @@
       });
     });
     ev.sort(function (a, b) { return a.at - b.at; });
+    // two alerts at the same instant: only one alarm is armed at a time, so the second comes a minute later
+    for (var q = 1; q < ev.length; q++) if (ev[q].at <= ev[q - 1].at) ev[q].at = ev[q - 1].at + MIN;
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
     // the phone checks the weather of both cities in the background and notifies of dust, rain, heat or cold
     try { if (!TV && A.weatherWatch) A.weatherWatch(JSON.stringify(S.alerts.weather ? CITIES : [])); } catch (e) {}
@@ -593,10 +609,8 @@
       return /\d/.test(ch) ? '<span class="dg">' + ch + '</span>' : ch === ':' ? '<span class="cl">:</span>' : ch;
     }).join('');
   }
-  // «هل تعلم؟»: a new one every 10 minutes (can be hidden in the settings)
-  var lastFact = -1;
   // the «هل تعلم؟» box: adhkar at their times; on Friday, in the ten days of Dhul-Hijjah and on Eid
-  // the season's texts in turn with «هل تعلم؟»; otherwise «هل تعلم؟» (a new one every 10 minutes)
+  // the season's texts in turn with «هل تعلم؟»; otherwise «هل تعلم؟» (a new one every 3 minutes; can be hidden in the settings)
   var ADHKAR_HEAD = { after: tr('أذكار بعد الصلاة'), morning: tr('أذكار الصباح'), evening: tr('أذكار المساء'), sleep: tr('أذكار النوم') };
   function adhkarNow(t, today, yest) {
     var w = null;
@@ -670,15 +684,10 @@
     if (first) put(); else { box.classList.add('fade'); setTimeout(put, 600); }
   }
   function setAll(c, sel, text) { Array.prototype.forEach.call(c.querySelectorAll(sel), function (e) { if (e.textContent !== text) e.textContent = text; }); }
-  function nextRamadan(t, days, field) {
-    for (var i = 0; i < days.length; i++) if (days[i].ramadan && days[i][field] > t) return days[i][field];
-    return null;
-  }
 
   function renderHome(t, today, tom, yest) {
-    var cur = null, iq = null, nextK = null;
+    var iq = null, nextK = null;
     ORDER.forEach(function (k) {
-      if (today.at[k] <= t) cur = k;
       if (today.iqamah[k] && today.at[k] <= t && t < today.iqamah[k]) iq = k;
       if (!nextK && today.at[k] > t) nextK = k;
     });
@@ -686,21 +695,21 @@
     if (!nextK) nextK = 'fajr';
     var nd = tomorrow ? tom : today, nextTs = nd.at[nextK];
 
-    var label, name, cd, cdMs, detail;
+    var label, name, cdMs, detail;
     if (iq) {
       label = tr('متبقٍّ على الإقامة');
       name = tr('صلاة ') + P.name(iq, today.friday);
-      cd = P.left(today.iqamah[iq] - t); cdMs = today.iqamah[iq] - t;
+      cdMs = today.iqamah[iq] - t;
       detail = tr('الأذان ') + P.full(today.at[iq]) + tr(' · الإقامة ') + P.full(today.iqamah[iq]);
     } else if (nextK === 'sunrise') {
       label = tr('متبقٍّ على الشروق');
       name = tr('الشروق');
-      cd = P.left(nextTs - t); cdMs = nextTs - t;
+      cdMs = nextTs - t;
       detail = tr('الشروق ') + P.full(nextTs);
     } else {
       label = nd.ramadan && nextK === 'maghrib' ? tr('متبقٍّ على الإفطار') : tr('الصلاة القادمة');
       name = P.name(nextK, nd.friday);
-      cd = P.left(nextTs - t); cdMs = nextTs - t;
+      cdMs = nextTs - t;
       detail = tr('الأذان ') + P.full(nextTs) + (nd.iqamah[nextK] ? tr(' · الإقامة ') + P.full(nd.iqamah[nextK]) : '');
     }
     $('next-label').textContent = label;
@@ -756,7 +765,7 @@
 
   // a second city (Irbid): its five prayer times in a small line under the cards, its own method and time zone
   var CITY2 = { name: tr('إربد'), lat: 32.5556, lon: 35.85, tz: 'Asia/Amman', cc: 'JO' };
-  function renderCity2(r) {
+  function renderCity2() {
     var line = P.withLocation(CITY2, function () {
       var n = P.ymd(Date.now()), T = P.dayTimes(n.y, n.m, n.d);
       return FIVE.map(function (k) { return '<span><b>' + P.name(k, T.friday) + '</b> ' + P.full(T.at[k]) + '</span>'; }).join('');
@@ -764,7 +773,7 @@
     $('city2').innerHTML = '<span class="gold">' + CITY2.name + '</span>' + line;
   }
   function renderDay(t, r, today) {
-    renderCity2(r);
+    renderCity2();
     $('g-date').textContent = fGFull.format(new Date(t));
     $('h-date').textContent = fHFull.format(new Date(t));
     $('friday-box').classList.toggle('hidden', !today.friday);
@@ -774,7 +783,7 @@
     $('moon').innerHTML = moonSvg(h.day);
     season = { ramadan: h.month === 9, hajj: h.month === 12 && h.day <= 9, arafah: h.month === 12 && (h.day === 8 || h.day === 9),
       eid: (h.month === 10 && h.day <= 3) || (h.month === 12 && h.day >= 10 && h.day <= 13), friday: today.friday };
-    ['ramadan', 'hajj', 'eid', 'friday'].forEach(function (k) { stage.classList.toggle('s-' + k, !!season[k]); });
+    ['ramadan', 'hajj', 'eid'].forEach(function (k) { stage.classList.toggle('s-' + k, !!season[k]); });
     var sp = special(r);
     stage.classList.toggle('s-bday', !!sp && !season.ramadan && !season.eid && !season.hajj);
     $('bday').textContent = sp ? '✦ ' + sp.type + ' ✦' : '';
@@ -821,9 +830,12 @@
     var r = P.ymd(Date.now()), start = null;
     // the first Ramadan that has not ended yet (this year's while it lasts, then the next one)
     for (var i = -30; i < 400 && !start; i++) {
-      var d = P.addDays(r.y, r.m, r.d, i), e = P.addDays(d.y, d.m, d.d, 29);
-      if (P.isRamadan(d.y, d.m, d.d) && (i >= 0 || P.isRamadan(e.y, e.m, e.d) || Date.UTC(e.y, e.m - 1, e.d) >= Date.UTC(r.y, r.m - 1, r.d))) start = d;
-      if (start && i < 0) { var e2 = P.addDays(start.y, start.m, start.d, 30); if (Date.UTC(e2.y, e2.m - 1, e2.d) <= Date.UTC(r.y, r.m - 1, r.d)) start = null; }
+      var d = P.addDays(r.y, r.m, r.d, i);
+      // a past day only while today is still in that Ramadan; the start is the day whose eve is not Ramadan
+      if (P.isRamadan(d.y, d.m, d.d) && (i >= 0 || P.isRamadan(r.y, r.m, r.d))) {
+        var pv = P.addDays(d.y, d.m, d.d, -1);
+        if (!P.isRamadan(pv.y, pv.m, pv.d)) start = d;
+      }
     }
     return start;
   }
@@ -840,6 +852,7 @@
       w.addEventListener('scroll', function () {
         imMark(); clearTimeout(imTimer);
         imTimer = setTimeout(function () {
+          if (!w.offsetParent) return; // the screen was left meanwhile
           var y = CV_H[0] + Math.round(w.scrollTop / imH());
           y = Math.max(CV_H[0], Math.min(CV_H[1], y));
           if (y !== (imYear || imDefaultYear())) { imYear = y === imDefaultYear() ? null : y; imsakRender(true); }
@@ -868,7 +881,7 @@
     }
     if (!days.length) { $('imsak-body').innerHTML = ''; return; }
     $('imsak-title').textContent = tr('إمساكية ') + fHMY.format(new Date(P.noonOf(days[0].y, days[0].m, days[0].d)));
-    $('imsak-sub').textContent = S.loc.name + ' · ' + P.method().name;
+    $('imsak-sub').textContent = tr(S.loc.name) + ' · ' + tr(P.method().name);
     var head = tr('<div class="im-tr im-th"><span>رمضان</span><span>اليوم</span><span>الإمساك</span><span>الفجر</span><span>المغرب</span><span>مدة الصيام</span></div>');
     var rows = days.map(function (dd, k) {
       var T = P.dayTimes(dd.y, dd.m, dd.d, S.offsets), wd = DAY_NAMES[new Date(Date.UTC(dd.y, dd.m - 1, dd.d)).getUTCDay()];
@@ -887,7 +900,7 @@
   function monthRender() {
     var r = P.ymd(Date.now()), y = cal.vy || r.y, m = cal.vm || r.m, n = new Date(Date.UTC(y, m, 0)).getUTCDate(), rows = [];
     $('month-title').textContent = tr('مواقيت ') + fGMY.format(new Date(P.noonOf(y, m, 1)));
-    $('month-sub').textContent = S.loc.name + ' · ' + P.method().name;
+    $('month-sub').textContent = tr(S.loc.name) + ' · ' + tr(P.method().name);
     var head = tr('<div class="mt-tr mt-th"><span>اليوم</span><span>هجري</span>') + ORDER.map(function (k) { return '<span>' + P.name(k) + '</span>'; }).join('') + '</div>';
     for (var d = 1; d <= n; d++) {
       var T = P.dayTimes(y, m, d, S.offsets), dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(), today = y === r.y && m === r.m && d === r.d;
@@ -955,14 +968,16 @@
     var round = Math.floor(n / CYCLE.length), kind = CYCLE[n % CYCLE.length];
     var before = CYCLE.slice(0, n % CYCLE.length).filter(function (x) { return x === kind; }).length;
     var per = CYCLE.filter(function (x) { return x === kind; }).length;
+    // the city's day number (the same rule as the widget's supplication of the day)
+    var dayNo = function () { var rr = P.ymd(Date.now()); return Math.floor(P.noonOf(rr.y, rr.m, rr.d) / 86400000); };
     // a name of Allah: one each day
     if (kind === 'asma') {
-      var day = Math.floor((n * 3 * MIN) / 86400000), nm = ASMA[day % ASMA.length];
+      var nm = ASMA[dayNo() % ASMA.length];
       return { type: tr('من أسماء الله الحسنى'), text: nm[0] + ': ' + nm[1], src: tr('﴿وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَا﴾ الأعراف 180') };
     }
     // a supplication: one each day
     if (kind === 'dua') {
-      var dd = ADHKAR.dua[Math.floor((n * 3 * MIN) / 86400000) % ADHKAR.dua.length];
+      var dd = ADHKAR.dua[dayNo() % ADHKAR.dua.length];
       return { type: tr('دعاء اليوم'), text: dd.q ? quranText(dd.q) : '«' + dd.x + '»', src: dd.s, quran: !!dd.q };
     }
     var list = REMINDERS[kind];
@@ -1024,7 +1039,7 @@
     lastQ = key;
     var q = sp || (n % 2 && !S.guest.on ? famMessage(Math.floor(n / 2)) : reminder(Math.floor(n / 2))), box = $('quote-box');
     function put() {
-      $('quote-type').textContent = q.type;
+      $('quote-type').textContent = tr(q.type);
       $('quote').textContent = q.quran ? '﴿' + q.text + '﴾' : q.text;
       $('quote').className = 'q-text' + (q.quran ? ' quran' : '') + (q.fam ? ' fam' : '');
       $('quote').style.fontSize = q.text.length > 150 ? (q.quran ? '27px' : '24px') : q.text.length > 80 ? (q.quran ? '32px' : '26px') : q.text.length > 50 ? (q.quran ? '36px' : '30px') : '';
@@ -1038,18 +1053,18 @@
 
   // ---------- every second ----------
   var lastDay = '', night = null, skyKey = null, tripMin = -1;
-  function dayOf(y, m, d) {
-    var T = P.dayTimes(y, m, d, S.offsets);
-    T.maghribAt = T.at.maghrib;
-    return T;
-  }
+  function dayOf(y, m, d) { return P.dayTimes(y, m, d, S.offsets); }
   function tick() {
     var t = Date.now(), r = P.ymd(t);
     tTick();
     var today = dayOf(r.y, r.m, r.d), tm = P.addDays(r.y, r.m, r.d, 1), tom = dayOf(tm.y, tm.m, tm.d);
     var ym = P.addDays(r.y, r.m, r.d, -1), yest = dayOf(ym.y, ym.m, ym.d);
     var key = r.y + '-' + r.m + '-' + r.d;
-    if (key !== lastDay) { lastDay = key; renderDay(t, r, today); sendSchedule(); renderEvents(r); }
+    if (key !== lastDay) {
+      lastDay = key;
+      // each on its own: a failure in one must not skip the alerts or the occasions for the whole day
+      [function () { renderDay(t, r, today); }, sendSchedule, function () { renderEvents(r); }].forEach(function (f) { try { f(); } catch (e) {} });
+    }
     // dark from two hours after Isha until Fajr
     var n = S.theme === 'dark' || (S.theme === 'auto' && (t >= today.at.isha + 2 * HR || t < today.at.fajr));
     if (n !== night) { night = n; stage.classList.toggle('night', n); stage.classList.toggle('day', !n); tempPaint(); }
@@ -1270,7 +1285,7 @@
     calRender();
   }
 
-  // ---------- the Qur'an: any surah, verse by verse (Mishary Alafasy from everyayah.com), the verses on screen ----------
+  // ---------- the Qur'an: any surah, verse by verse (the reciters below, from everyayah.com), the verses on screen ----------
   var kahf = { s: 18, i: 0, playing: false, read: false };
   var audio = new Audio(), pre = new Audio();
   pre.preload = 'auto';
@@ -1361,6 +1376,7 @@
   function tjShow(rule) {
     var r = TAJWEED.rules[rule];
     if (!r) return;
+    if ($('tj-pop').classList.contains('hidden')) tjFrom = document.activeElement;
     var ex = r.e.match(/^(.*?)(?: \((.+)\))?$/);
     $('tj-pop').innerHTML = '<div class="tj-card"><div class="tj-h">' + (r.m ? '<span class="tj-m quran tj-' + r.c + '">' + r.m + '</span>' : '<span class="tj-dot tj-' + r.c + '"></span>') + (EN ? r.en : r.ar) + '</div>' +
       '<p>' + (EN ? r.xe : r.x) + '</p><p class="tj-ex quran">' + tjMarks(ex[1]) + '</p>' + (ex[2] ? '<p class="tj-ref muted">' + ex[2] + '</p>' : '') +
@@ -1369,6 +1385,7 @@
     focusFirst($('tj-pop').querySelector('.f'));
   }
   function tjLegend() {
+    if ($('tj-pop').classList.contains('hidden')) tjFrom = document.activeElement;
     var h = '<div class="tj-card tj-all"><div class="tj-h">' + tr('ألوان التجويد') + '</div><div class="tj-list">';
     TAJWEED.groups.forEach(function (g) {
       h += '<div class="tj-g"><div class="tj-gh"><span class="tj-dot tj-' + g.c + '"></span>' + (EN ? g.en : g.ar) + '</div>';
@@ -1383,7 +1400,8 @@
     $('tj-pop').classList.remove('hidden');
     focusFirst($('tj-pop').querySelector('.f'));
   }
-  function tjClose() { $('tj-pop').classList.add('hidden'); }
+  var tjFrom = null;
+  function tjClose() { $('tj-pop').classList.add('hidden'); if (TV && tjFrom && document.body.contains(tjFrom)) tjFrom.focus(); tjFrom = null; }
   function tjToggle() {
     S.tajweed = !S.tajweed; save();
     tjButtons();
@@ -1449,7 +1467,8 @@
   }
   function wSegs() {
     var j = kahf.i === 0 ? wLoad(1) : wLoad(kahf.s);
-    return j ? j[String(kahf.i === 0 ? 1 : kahf.i)] : null;
+    var sg = j ? j[String(kahf.i === 0 ? 1 : kahf.i)] : null;
+    return sg && sg.length ? sg : null;
   }
   // while playing: light the word being read (the last word whose time has started); the others go back to normal
   var wNow = -1, wBox = null, wRun = false;
@@ -1489,11 +1508,11 @@
   document.getElementById('r-slider').addEventListener('change', function () { save(); });
   function kReadRender(i) {
     var rd = $('k-read');
-    var key = tjKey(kahf.s) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') + (GL[kahf.s] ? 'G' : 'g') : '');
+    var key = tjKey(kahf.s) + tjKey(1) + (S.qEn ? (EN_Q[kahf.s] ? 'E' : 'e') + (GL[kahf.s] ? 'G' : 'g') + (EN_Q[1] ? 'E' : 'e') + (GL[1] ? 'G' : 'g') : '');
     if (rd.dataset.s !== key) {
       rd.dataset.s = key;
       var en = function (v) { var t = enText(v); return t ? '<span class="kv-en">' + esc(t) + '</span>' : ''; };
-      var h = '<button class="kv" data-i="0">' + kWords(0) + en(0) + '</button>';
+      var h = kFirst() ? '' : '<button class="kv" data-i="0">' + kWords(0) + en(0) + '</button>';
       for (var v = 1; v <= kCount(); v++) h += ' <button class="kv" data-i="' + v + '">' + kWords(v) + en(v) + '</button>';
       rd.innerHTML = h;
     }
@@ -1514,6 +1533,7 @@
     };
     var fits = function () { return box.scrollHeight <= box.clientHeight + 1; };
     kPages = [];
+    box.classList.remove('over');
     set(max);
     if (!kahf.read && box.clientHeight && !fits()) {
       var lo = TV ? (cur.querySelector('.g') ? 76 : 88) : 26, hi = max;
@@ -1533,7 +1553,7 @@
           kPages.push([lines[k], lines[k + L]]);
           k += L;
         }
-      }
+      } else box.classList.add('over'); // the phone: too long even at the smallest size, so it is scrolled
     }
     kShowPage(0);
     box.scrollTop = 0;
@@ -1638,7 +1658,7 @@
     else { kahf.playing = false; $('k-msg').textContent = tr('انتهت السورة'); kRender(); }
   });
   audio.addEventListener('error', function () {
-    if (!audio.src) return;
+    if (!audio.src || !kahf.playing) return;
     if (dirTry < reciter().dirs.length - 1) { dirTry++; kPlay(kahf.i); return; }
     kahf.playing = false;
     $('k-msg').textContent = tr('تعذّر التشغيل، تأكد من اتصال الإنترنت');
@@ -1646,7 +1666,7 @@
   });
   function kToggle() {
     if (kahf.playing) { audio.pause(); kahf.playing = false; kRender(); }
-    else if (audio.src && !audio.ended && audio.currentTime > 0) { audio.play().catch(function () {}); kahf.playing = true; kRender(); wStart(); }
+    else if (audio.src && !audio.error && !audio.ended && audio.currentTime > 0) { audio.play().catch(function () {}); kahf.playing = true; kRender(); wStart(); }
     else kPlay(kahf.i);
   }
   // the list of the 114 surahs, and «continue» from the last verse heard
@@ -1699,10 +1719,11 @@
   // ---------- settings ----------
   function setRender() {
     var keep = document.activeElement && document.activeElement.dataset.k;
+    var q0 = $('loc-q'), qF = q0 && document.activeElement === q0; if (q0) locQ = q0.value;
     var r = P.ymd(Date.now()), T = P.dayTimes(r.y, r.m, r.d, S.offsets);
     $('set-loc').innerHTML =
       '<div class="srow"><span class="sname">' + esc(S.loc.name) + (S.loc.country ? ' <span class="muted">· ' + esc(S.loc.country) + '</span>' : '') +
-        tr('<br><span class="muted set-note">طريقة الحساب: ') + P.method().name + (S.loc.mode === 'auto' ? ' · ' + (S.loc.gps ? tr('من موقع الجوال') : tr('من اتصال الإنترنت')) : '') + '</span></span>' +
+        tr('<br><span class="muted set-note">طريقة الحساب: ') + tr(P.method().name) + (S.loc.mode === 'auto' ? ' · ' + (S.loc.gps ? tr('من موقع الجوال') : tr('من اتصال الإنترنت')) : '') + '</span></span>' +
         '<button class="sbtn al f' + (S.loc.mode === 'auto' ? ' on' : '') + '" data-k="loc-auto">' + (S.loc.mode === 'auto' ? tr('تلقائي') : tr('تحديد تلقائي')) + '</button></div>' +
       tr('<div class="srow"><input id="loc-q" class="inp f" placeholder="ابحث عن مدينة، مثل: جدة أو عمّان" value="') + esc(locQ) + tr('"><button id="loc-find" class="sbtn f">بحث</button></div>') +
       (locMsg ? '<div class="muted set-note">' + locMsg + '</div>' : '') +
@@ -1727,7 +1748,7 @@
       tr('<button class="sbtn al f" data-k="syncnow">أرسل الآن</button></div>');
     $('sum-sync').textContent = same && sAt ? '✓' : '';
     $('set-more-al').innerHTML = (TV ? [] : [['friday', tr('تذكير قبل الجمعة بساعة')], ['kahf', tr('تذكير قراءة سورة الكهف صباح الجمعة')], ['weather', tr('تنبيهات الطقس: غبار، مطر، حرارة شديدة، برد شديد (مدينتك وإربد)')]])
-      .concat(TV ? [] : [['travel', tr('وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ') + S.home.name]])
+      .concat(TV ? [] : [['travel', tr('وضع المسافر: القصر والجمع إذا ابتعدت 81 كم فأكثر عن ') + esc(S.home.name)]])
       .concat([['kaaba', tr('تعامد الشمس على الكعبة (مرتين في السنة): تعرف به اتجاه القبلة')]]).map(function (o) {
       return '<div class="srow"><span class="sname">' + o[1] + '</span><button class="sbtn al f' + (S.alerts[o[0]] ? ' on' : '') + '" data-k="a-' + o[0] + '">' + (S.alerts[o[0]] ? tr('يعمل') : tr('متوقف')) + '</button></div>';
     }).join('') +
@@ -1799,7 +1820,7 @@
       }).join('') + '</span></div>' + tr('<div class="srow"><span class="sname">«هل تعلم؟» في بطاقة الصلاة القادمة</span><button class="sbtn al f') +
       (S.showFact ? ' on' : '') + '" data-k="fact">' + (S.showFact ? tr('يظهر') : tr('مخفي')) + '</button></div>';
     $('set-fam').innerHTML = S.famMsgs.map(function (m, i) {
-      return '<div class="srow"><span class="sname">' + member(m.to).name + ': <span class="muted">' + esc(m.text) + '</span></span>' +
+      return '<div class="srow"><span class="sname">' + esc(member(m.to).name) + ': <span class="muted">' + esc(m.text) + '</span></span>' +
         '<button class="sbtn al f" data-k="fx-' + i + tr('">حذف</button></div>');
     }).join('');
     var F = fam();
@@ -1812,20 +1833,20 @@
     $('set-family').innerHTML =
       tr('<div class="srow"><span class="sname">كاتب الرسائل</span><button class="sbtn al f on" data-k="fpar">') + (F.parent === 'mother' ? tr('الأم') : tr('الأب')) + '</button></div>' +
       F.members.map(function (x, i) {
-        return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FAMILY.KINDS[x.kind] + ' · ' + fd(x.d, x.m, x.y) + '</span></span>' +
+        return '<div class="srow"><span class="sname">' + esc(x.name) + ' <span class="muted">· ' + FM().KINDS[x.kind] + ' · ' + fd(x.d, x.m, x.y) + '</span></span>' +
           '<button class="sbtn al f" data-k="fmx-' + i + tr('">حذف</button></div>');
       }).join('') +
       tr('<div class="srow"><span class="sname">ذكرى الزواج</span>') +
       (F.anniversary ? '<span class="ev-date">' + steps('fan', F.anniversary, [['d', tr('اليوم')], ['m', tr('الشهر')]]) + '</span>' : '') +
       '<button class="sbtn f' + (F.anniversary ? ' on' : '') + '" data-k="fan-on">' + (F.anniversary ? tr('تظهر') : tr('مخفية')) + '</button></div>';
-    $('fm-kind').textContent = tr('الصلة: ') + FAMILY.KINDS[fmDraft.kind];
+    $('fm-kind').textContent = tr('الصلة: ') + FM().KINDS[fmDraft.kind];
     $('fm-date').innerHTML = steps('fmd', fmDraft, [['d', tr('اليوم')], ['m', tr('الشهر')], ['y', tr('السنة')]]);
     if (famOrder().indexOf(famTo) < 0) famTo = famOrder()[0];
     $('fam-to').textContent = tr('إلى: ') + member(famTo).name;
     function cardBtn(k, e) { var g = cardOf(e); return '<button class="sbtn f' + (g ? ' on' : '') + '" data-k="' + k + tr('">البطاقة: ') + CARD_NAMES[g] + '</button>'; }
     $('set-events').innerHTML = autoEvents(r).map(function (e, i) {
       var on = S.autoEv[e.auto] !== false, n = daysTo(e, r);
-      return '<div class="srow"><span class="sname">' + e.name + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
+      return '<div class="srow"><span class="sname">' + esc(e.name) + ' <span class="muted">· ' + dmy(e) + ' · ' + daysText(n) + '</span></span>' +
         cardBtn('evca-' + i, e) + '<button class="sbtn al f' + (on ? ' on' : '') + '" data-k="eva-' + e.auto + '">' + (on ? tr('يظهر') : tr('مخفي')) + '</button></div>';
     }).join('') + S.events.map(function (e, i) {
       var n = daysTo(e, r);
@@ -1839,14 +1860,16 @@
     var wErr = '';
     try { wErr = A && A.widgetError ? A.widgetError() : ''; } catch (e) {}
     $('set-version').textContent = (A ? tr('الإصدار ') + A.version() : '') + (wErr ? tr(' · آخر خطأ في الويدجت: ') + wErr : '');
-    $('sum-loc').textContent = S.loc.name + ' · ' + P.method().name;
+    $('sum-loc').textContent = tr(S.loc.name) + ' · ' + tr(P.method().name);
     $('sum-hijri').textContent = fHFull.format(Date.now());
     $('sum-update').textContent = myVersion();
     $('sum-events').textContent = allEvents(r).length ? daysText(allEvents(r)[0].left) + ': ' + allEvents(r)[0].name : '';
     updMsg();
     updLatest();
+    if (qF) $('loc-q').focus();
     if (keep) {
-      var el = document.querySelector('#settings [data-k="' + keep + '"]');
+      var el = document.querySelector('#settings [data-k="' + keep + '"]'), km = keep.match(/^(.*-)(\d+)$/);
+      if (!el && km && +km[2] > 0) el = document.querySelector('#settings [data-k="' + km[1] + (+km[2] - 1) + '"]');
       if (el) el.focus();
     }
   }
@@ -1913,6 +1936,7 @@
     Array.prototype.forEach.call(w.querySelectorAll('.cv-it'), function (it, k) { it.classList.toggle('sel', k === i); });
   }
   function cvSettle(w) {
+    if (!w.offsetParent) return;
     var vals = cvValues(w.dataset.wf), i = Math.max(0, Math.min(vals.length - 1, Math.round(w.scrollTop / cvItemH(w))));
     if (cv[w.dataset.wf] === vals[i]) return;
     cv[w.dataset.wf] = vals[i];
@@ -2017,10 +2041,6 @@
     var d = x.m === 2 && x.d === 29 && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? 1 : x.d, m = d === 1 && x.d === 29 ? 3 : x.m;
     return { t: tr('تكتمل ') + tYears(n), at: P.noonOf(y, m, d), date: d + ' ' + G_MONTHS[m - 1] + ' ' + y, left: daysTo({ y: y, m: m, d: d }, r) };
   }
-  function tAnniv(x) {
-    var o = tAnnivObj(x);
-    return !o ? '' : o.left === 0 ? tr('اليوم ') + o.t : o.t + ' ' + tIn(o.left) + ' · ' + o.date;
-  }
   function tCount(x, now) { return tParts(x, now).map(function (p) { return '<b>' + (p[0] >= 10000 ? tNum(p[0]) : p[0]) + '</b><small>' + p[1] + '</small>'; }).join(' '); }
   // the timers tab: each card shows the count and one line; a tap opens its editor (with the Hijri date and the
   // next anniversary at the top); the editor and the widget settings open as full-screen sheets
@@ -2073,8 +2093,8 @@
     sh.classList.remove('hidden');
     if (tEdit) tEditRender(sh); else tPinRender(sh);
   }
-  function tSeg(key, opts, cur, cls) {
-    return '<div class="tm-seg' + (cls ? ' ' + cls : '') + '">' + opts.map(function (o) {
+  function tSeg(key, opts, cur) {
+    return '<div class="tm-seg">' + opts.map(function (o) {
       return '<button class="f' + (cur === o[0] ? ' on' : '') + '" data-tk="' + key + '-' + o[0] + '"' + (o[2] ? ' aria-label="' + o[2] + '"' : '') + '>' + o[1] + '</button>';
     }).join('') + '</div>';
   }
@@ -2245,7 +2265,7 @@
         [tr('أحد'), tr('اثنين'), tr('ثلاثاء'), tr('أربعاء'), tr('خميس'), tr('جمعة'), tr('سبت')].map(function (x) { return '<em>' + x + '</em>'; }).join('') + cells + '</div>');
     }
     if (k === 'event') {
-      return '<div class="wgp wgp-event">' + (n.ev ? '<div><b class="wgp-c">' + (n.ev.left || tr('اليوم')) + '</b> <span>' + (n.ev.left ? n.ev.left >= 3 && n.ev.left <= 10 ? tr('أيام') : tr('يوم') : '') + '</span></div><span>' + esc(n.ev.name) + '</span>' : tr('<span>لا توجد مناسبة</span>')) + '</div>';
+      return '<div class="wgp wgp-event">' + (n.ev ? '<div><b class="wgp-c">' + (n.ev.left || tr('اليوم')) + '</b> <span>' + (n.ev.left ? EN ? (n.ev.left === 1 ? 'day' : 'days') : n.ev.left >= 3 && n.ev.left <= 10 ? 'أيام' : 'يوم' : '') + '</span></div><span>' + esc(n.ev.name) + '</span>' : tr('<span>لا توجد مناسبة</span>')) + '</div>';
     }
     // timer: the first timer chosen for a widget on the screen, or the first timer
     var x = S.timers[0], tw = S.timerWg, kk = { s: .8, m: 1, l: 1.25, xl: 1.5 }[tw.font] || 1;
@@ -2326,6 +2346,7 @@
     var sh = $('tv-sheet');
     if (!tvOpen) { sh.classList.add('hidden'); sh.innerHTML = ''; return; }
     sh.classList.remove('hidden');
+    var keepT = $('tv-text') ? $('tv-text').value : '', keepG = $('guest-in') ? $('guest-in').value : '';
     var msg = { send: tr('جارٍ الإرسال…'), ok: tr('وصلت إلى التلفزيون ✓'), none: tr('لم أجد التلفزيون: تأكد أن الجوال والتلفزيون على نفس شبكة الواي فاي وأن «مواقيت الصلاة» مفتوح على التلفزيون مرة على الأقل.'), fail: tr('التلفزيون لم يرد، حاول مرة أخرى.') }[tvState] || '';
     sh.innerHTML = tr('<div class="tm-bar"><button class="f" data-tv="close">إغلاق</button><b>رسالة إلى التلفزيون</b><span></span></div>') +
       '<div class="tm-sheet-body"><div class="tv-quick">' + TV_QUICK.map(function (q, i) { return '<button class="pill f" data-tv="q' + i + '">' + q + '</button>'; }).join('') + '</div>' +
@@ -2334,6 +2355,7 @@
       tr('<div class="tm-lbl tv-guest-h">وضع الضيوف</div><input id="guest-in" class="inp f" maxlength="30" placeholder="ضيوفنا الكرام">') +
       tr('<div class="tv-quick"><button class="pill f" data-tv="gon">تشغيل وضع الضيوف</button><button class="pill f" data-tv="goff">إنهاء وضع الضيوف</button></div>') +
       (msg ? '<p class="tm-note' + (tvState === 'none' || tvState === 'fail' ? ' tm-warn' : '') + '">' + msg + '</p>' : '') + tvStatusHtml() + '</div>';
+    $('tv-text').value = keepT; $('guest-in').value = keepG;
   }
   // «is the TV on?» from anywhere: turned on once at home; then a widget and a notification follow each TV
   var tvPair = '';
@@ -2370,7 +2392,7 @@
   }
   // ---------- the phone keeps the TV the same: occasions, family and its messages, timers, prayer settings ----------
   var SYNC_KEYS = ['events', 'autoEv', 'evCard', 'family', 'famMsgs', 'timers', 'offsets', 'iqMin', 'iqV', 'sound', 'hijriAdj'];
-  var syncTimer = null, syncSending = '', syncState = '';
+  var syncTimer = null, syncSending = '', syncState = '', syncAgain = false, syncAt = 0;
   function syncData() { var o = {}; SYNC_KEYS.forEach(function (k) { o[k] = S[k]; }); return JSON.stringify(o); }
   function syncLast() { try { return localStorage.getItem('prayertv-synced') || ''; } catch (e) { return ''; } }
   // a change on the phone: sent two seconds later (several changes go together); not sent again when nothing changed
@@ -2378,14 +2400,26 @@
   function syncNow(force) {
     if (TV || !A || !A.tvSend) return;
     var d = syncData();
+    // a phone that has never sent (new, or installed again) does not replace the TV's settings by itself:
+    // what it has now becomes its starting point; it sends after a change here, or with «أرسل الآن»
+    if (!force && !syncLast()) { try { localStorage.setItem('prayertv-synced', d); } catch (e) {} return; }
     if (!force && d === syncLast()) return;
-    syncSending = d; syncState = 'send';
+    if (syncState === 'send' && Date.now() - syncAt < 30000) { syncAgain = true; return; } // one at a time; the newest goes next
+    syncSending = d; syncState = 'send'; syncAt = Date.now();
     try { A.tvSend(JSON.stringify({ k: 'sync', s: JSON.parse(d) }), 'sync'); } catch (e) { syncState = 'fail'; }
   }
   function syncDone(r) {
     syncState = r;
     if (r === 'ok') { try { localStorage.setItem('prayertv-synced', syncSending); localStorage.setItem('prayertv-synced-at', String(Date.now())); } catch (e) {} }
+    if (syncAgain) { syncAgain = false; syncNow(false); }
     if (screen === 'settings') setRender();
+  }
+  // text that arrives over the home network is shown as text: no angle brackets in any string of it
+  function noTags(v) {
+    if (typeof v === 'string') return v.replace(/[<>]/g, '');
+    if (Array.isArray(v)) return v.map(noTags);
+    if (v && typeof v === 'object') { var o = {}; Object.keys(v).forEach(function (k) { o[k] = noTags(v[k]); }); return o; }
+    return v;
   }
   // the TV: what a phone sent replaces the same settings here
   function syncTake() {
@@ -2393,7 +2427,7 @@
     try { j = A && A.takeSync ? A.takeSync() : ''; } catch (e) {}
     if (!j) return;
     var o; try { o = JSON.parse(j); } catch (e) { return; }
-    SYNC_KEYS.forEach(function (k) { if (o[k] !== undefined) S[k] = o[k]; });
+    SYNC_KEYS.forEach(function (k) { if (o[k] !== undefined) S[k] = noTags(o[k]); });
     // a phone still on an older version sends the old iqamah minutes: bring them to Riyadh's as well
     if (o.iqMin && !(o.iqV >= 2)) { S.iqV = 1; iqMigrate(); }
     if (o.guest) { S.guest = o.guest; guestApply(); }
@@ -2440,7 +2474,7 @@
   function rdSet(m) { rd = { s: m.s, i: m.i || 0 }; }
   // the text view: the verses of the surah, with a line for each page's number where a new page begins
   function rdText(s) {
-    var v = QURAN[s - 1][1], h = '<span class="rv bism" data-i="0">' + vHtml(s, 0) + '</span> ', lastP = 0;
+    var v = QURAN[s - 1][1], h = s === 1 || s === 9 ? '' : '<span class="rv bism" data-i="0">' + vHtml(s, 0) + '</span> ', lastP = 0;
     for (var k = 0; k < v.length; k++) {
       var pg = PAGE_OF[s + ':' + (k + 1)];
       if (pg && pg !== lastP) { h += '<div class="r-pno">' + arNum(pg) + '</div>'; lastP = pg; }
@@ -2450,6 +2484,7 @@
   }
   function rdRender() {
     tjButtons();
+    kApplySize(); // the saved size, in both views
     Array.prototype.forEach.call(document.querySelectorAll('[data-rview]'), function (b) { b.classList.toggle('on', b.dataset.rview === (S.qView || 'page')); });
     var pageView = (S.qView || 'page') === 'page';
     $('r-text').classList.toggle('hidden', pageView);
@@ -2465,10 +2500,11 @@
     var box = $('r-text');
     $('r-prev').textContent = tr('السورة السابقة'); $('r-next').textContent = tr('السورة التالية');
     $('r-title').textContent = tr('سورة ') + QURAN[rd.s - 1][0];
-    if (box.dataset.s !== tjKey(rd.s)) { box.dataset.s = tjKey(rd.s); box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
+    var rk = tjKey(rd.s) + '|' + tjKey(1);
+    if (box.dataset.s !== rk) { box.dataset.s = rk; box.innerHTML = rdText(rd.s); box.scrollTop = 0; }
     var m = S.qMark;
     $('r-mark').innerHTML = m ? tr('<span>توقفت عند سورة ') + QURAN[m.s - 1][0] + tr(' · الآية ') + m.i + tr('</span> <button class="pill f" data-rgo="1">افتح موضعي</button> <button class="pill f" data-rclear="1">إزالة</button>') : '<span class="muted">' + tr('اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية') + '</span>';
-    kApplySize(); rdHl();
+    rdHl();
   }
   function rdHl() {
     var m = S.qMark;
@@ -2478,24 +2514,25 @@
       v.classList.toggle('mk', !!m && m.s === rd.s && m.i === i);
     });
     var cur = $('r-text').querySelector('.rv.cur');
-    if (cur && !rdScrolling) cur.scrollIntoView({ block: 'center' });
+    if (cur && !rdScrolling) { rdAuto = Date.now(); cur.scrollIntoView({ block: 'center' }); }
   }
-  var rdScrolling = false, rdT = 0;
+  var rdScrolling = false, rdT = 0, rdAuto = 0;
   // the verse at the middle of the page is the one being read (scrolling moves the highlight)
   function rdNear() {
-    var box = $('r-text'), mid = box.getBoundingClientRect().top + box.clientHeight * .4, best = null, bd = 1e9;
+    var box = $('r-text'), br = box.getBoundingClientRect(), mid = br.top + br.height * .4, best = null, bd = 1e9;
     Array.prototype.forEach.call(box.querySelectorAll('.rv'), function (v) {
       var d = Math.abs(v.getBoundingClientRect().top - mid); if (d < bd) { bd = d; best = v; }
     });
     if (best && +best.dataset.i !== rd.i) { rd.i = +best.dataset.i; rdHl(); }
   }
   $('r-text').addEventListener('scroll', function () {
+    if (Date.now() - rdAuto < 300) return;
     rdScrolling = true; clearTimeout(rdT);
     requestAnimationFrame(rdNear);
     rdT = setTimeout(function () { rdScrolling = false; }, 300);
   }, { passive: true });
   function rdMark() {
-    S.qMark = { s: rd.s, i: rd.i, at: Date.now() }; save(); sendWidget(); sendSchedule(); rdRender();
+    S.qMark = { s: rd.s, i: Math.max(1, rd.i), at: Date.now() }; save(); sendWidget(); sendSchedule(); rdRender();
   }
   function rdClear() { S.qMark = null; save(); sendWidget(); sendSchedule(); rdRender(); }
   function rdNav(d) {
@@ -2546,7 +2583,8 @@
   }
   function tripCheck(today) {
     if (TV) return;
-    var d = Math.round(km(S.home, S.loc)), away = S.alerts.travel && d >= 81;
+    // a city guessed from the internet connection (no position from the phone yet) is not proof of travel
+    var d = Math.round(km(S.home, S.loc)), away = S.alerts.travel && d >= 81 && (S.loc.mode !== 'auto' || !!S.loc.gps);
     $('trip').classList.toggle('hidden', !away);
     if (away) {
       var T = today.at;
@@ -2623,17 +2661,18 @@
   function showCity() {
     $('w0-city').textContent = tr(S.loc.name);
     $('w0-btn').setAttribute('aria-label', tr('الطقس في ') + tr(S.loc.name));
-    $('set-sub').textContent = tr(S.loc.name) + ' · ' + P.method().name;
+    $('set-sub').textContent = tr(S.loc.name) + ' · ' + tr(P.method().name);
   }
   function applyLoc(loc) {
     var moved = Math.abs(loc.lat - S.loc.lat) + Math.abs(loc.lon - S.loc.lon) > 0.05 || loc.tz !== S.loc.tz;
+    try { new Intl.DateTimeFormat('en', { timeZone: loc.tz }); } catch (e) { return; } // a zone this WebView does not know: keep the city we have
     S.loc = loc; save();
     P.setLocation(loc); makeFormats();
     CITIES[0] = { name: loc.name, lat: loc.lat, lon: loc.lon };
     showCity();
     if (moved) {
       try { localStorage.removeItem('prayertv-w0'); } catch (e) {}
-      WX[0] = null; loadWeather();
+      wxDrop(0); loadWeather();
       autoCache.key = ''; lastDay = ''; tick();
     }
     if (screen === 'settings') setRender();
@@ -2654,8 +2693,8 @@
       locResults = list.filter(function (g) { return g.timezone; });
       locMsg = locResults.length ? '' : tr('لم أجد مدينة بهذا الاسم');
       setRender();
-      var f = document.querySelector('[data-k="loc-0"]'); if (f) f.focus();
-    }).catch(function () { locMsg = tr('تعذّر البحث، تأكد من اتصال الإنترنت'); setRender(); });
+      var f = document.querySelector('[data-k="loc-0"]') || $('loc-find'); if (f) f.focus();
+    }).catch(function () { locMsg = tr('تعذّر البحث، تأكد من اتصال الإنترنت'); setRender(); $('loc-find').focus(); });
   }
   // automatic on the phone: the phone's own location (asks once for permission); its Arabic city name and
   // time zone from the internet. If there is no position yet, the city of the internet connection meanwhile.
@@ -2675,8 +2714,10 @@
           fetch('https://api.open-meteo.com/v1/forecast?latitude=' + j.lat + '&longitude=' + j.lon + '&timezone=auto&current=temperature_2m').then(function (r) { return r.json(); })
         ]).then(function (res) {
           var g = res[0] || {}, tz = res[1] && res[1].timezone;
-          if (!tz) throw 0;
-          var loc = { mode: 'auto', gps: true, name: g.city || g.locality || g.principalSubdivision || S.loc.name, country: g.countryName || '', lat: +j.lat, lon: +j.lon, tz: tz, cc: (g.countryCode || '').toUpperCase() };
+          // the country chooses the calculation method: when its lookup failed, keep the known one if the phone has not really moved
+          var near = Math.abs(j.lat - S.loc.lat) + Math.abs(j.lon - S.loc.lon) < 1, cc = (g.countryCode || (near ? S.loc.cc : '') || '').toUpperCase();
+          if (!tz || !cc) throw 0;
+          var loc = { mode: 'auto', gps: true, name: g.city || g.locality || g.principalSubdivision || S.loc.name, country: g.countryName || '', lat: +j.lat, lon: +j.lon, tz: tz, cc: cc };
           if (S.loc.mode === 'auto') { locMsg = ''; applyLoc(loc); sendSchedule(); }
         }).catch(function () { locateIp(); });
         return;
@@ -2688,7 +2729,9 @@
   }
   // automatic: the city of the internet connection, its Arabic name from the geocoding service
   function locateIp() {
-    if (S.loc.gps && S.loc.mode === 'auto') return; // keep the last position of the phone
+    // keep the last position of the phone (while it may still be read: not after the permission was taken away)
+    var perm = false; try { perm = !!(A && A.locOk && A.locOk()); } catch (e) {}
+    if (S.loc.gps && S.loc.mode === 'auto' && perm) return;
     fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) { return r.json(); }).then(function (j) {
       var lat = +j.latitude, lon = +j.longitude;
       if (!j.timezone || isNaN(lat)) throw 0;
@@ -2712,11 +2755,6 @@
     }
     if (a === 'lang') { if (S.lang !== v) { S.lang = v; save(); location.reload(); } return; }
     if (a === 'fsz') { S.fontSize = v; S.zoom = 0; save(); fit(); setRender(); return; }
-    if (a === 'wg') {
-      var W = S.widget, f = v, val = p[2];
-      if (val === 't') W[f] = !W[f]; else W[f] = f === 'clear' ? +val : val;
-      save(); sendWidget(); setRender(); return;
-    }
     if (a === 'hadj') {
       S.hijriAdj = Math.max(-2, Math.min(2, S.hijriAdj + (v === 'p' ? 1 : -1))); save();
       P.setHijriAdj(S.hijriAdj); autoCache.key = ''; lastDay = ''; tick(); sendSchedule(); setRender(); return;
@@ -2736,9 +2774,9 @@
     if (a === 'm' || a === 'p') { S.offsets[v] = Math.max(-30, Math.min(30, S.offsets[v] + (a === 'p' ? 1 : -1))); }
     else if (a === 'a') S.alerts[v] = !S.alerts[v];
     else if (a === 'u' || a === 'd') {
-      var i = +v, j = a === 'u' ? i - 1 : i + 1, arr = S.shortcuts;
-      if (j >= 0 && j < arr.length) { var x = arr[i]; arr[i] = arr[j]; arr[j] = x; }
-    } else if (a === 'x') S.shortcuts.splice(+v, 1);
+      var sc = shortcutApps(), arr = S.shortcuts, o = sc[a === 'u' ? +v - 1 : +v + 1], i = sc[+v] ? arr.indexOf(sc[+v].pkg) : -1, j = o ? arr.indexOf(o.pkg) : -1;
+      if (i >= 0 && j >= 0) { var x = arr[i]; arr[i] = arr[j]; arr[j] = x; }
+    } else if (a === 'x') { var gone = shortcutApps()[+v]; if (gone) S.shortcuts.splice(S.shortcuts.indexOf(gone.pkg), 1); }
     else if (a === 'boot') { S.openOnBoot = !S.openOnBoot; if (A) A.setOpenOnBoot(S.openOnBoot); }
     else if (a === 'overlay') { if (A) A.openOverlaySettings(); return; }
     else if (a === 'dream') { if (A) A.setDream(!A.dreamOn()); }
@@ -2850,7 +2888,7 @@
     if (name === 'month') { monthRender(); focusFirst(document.querySelector('#month .f')); return; }
     if (name === 'imsak') { imYear = null; imsakRender(); focusFirst(document.querySelector('#imsak .f')); return; }
     if (name === 'quran') { quranRender(); focusFirst(document.querySelector('#q-resume .f') || document.querySelector('#q-list .f')); return; }
-    if (name === 'kahf') { kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
+    if (name === 'kahf') { dirTry = 0; kPlay(kahf.from || kFirst()); kahf.from = 0; $('kahf-clock').textContent = P.full(Date.now()); focusFirst($('k-play')); return; }
     if (name === 'reader') { rdRender(); focusFirst(document.querySelector('#reader .f')); return; }
     if (name === 'weather') { weatherRender(); focusFirst(document.querySelector('#weather .f')); return; }
     if (name === 'apps') { appsRender(); focusFirst(document.querySelector('#apps-grid .f')); return; }
@@ -2882,7 +2920,8 @@
 
   // ---------- remote control: arrows move between the nearest items ----------
   function focusables() {
-    return Array.prototype.filter.call(document.querySelectorAll(iqOpen() ? '#iqamah .f' : '#' + screen + ' .f'), function (e) { return e.offsetParent !== null; });
+    var root = iqOpen() ? '#iqamah' : !$('tj-pop').classList.contains('hidden') ? '#tj-pop' : '#' + screen;
+    return Array.prototype.filter.call(document.querySelectorAll(root + ' .f'), function (e) { return e.offsetParent !== null; });
   }
   function move(dir) {
     var cur = document.activeElement, list = focusables();
@@ -2912,6 +2951,7 @@
     var k = e.key;
     lastKeyAt = Date.now();
     if ($('dim').classList.contains('on')) { $('dim').classList.remove('on'); e.preventDefault(); return; } // the first press only wakes the screen
+    if ((k === 'Enter' || k === ' ') && !$('msg-pop').classList.contains('hidden')) { $('msg-pop').classList.add('hidden'); e.preventDefault(); return; }
     // typing in a text box: keep the keys for the text, only up/down move between items
     var typing = document.activeElement && document.activeElement.tagName === 'INPUT';
     if (k === 'Enter' && document.activeElement && document.activeElement.id === 'loc-q') { e.preventDefault(); locSearch(); return; }
@@ -2982,7 +3022,6 @@
     if (el.hasAttribute('data-go')) {
       if (el.dataset.go === 'apps') appsMode = 'launch';
       if (el.dataset.go === 'weather') wxCity = +(el.dataset.city || 0); // the card pressed: its city first
-      if (el.dataset.go === 'reader') rdSet(S.qMark || { s: 1, i: 0 });
       if (el.dataset.go === 'kahf') { kahf.s = +(el.dataset.sura || 18); kahf.from = +(el.dataset.from || 0); }
       go(el.dataset.go); return;
     }
@@ -3065,9 +3104,9 @@
   // swipe (phone): months in the calendar, verses in Surah Al-Kahf. Right-to-left layout: swipe right = next
   function onSwipe(el, next, prev) {
     var x0 = null, y0 = null;
-    el.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchstart', function (e) { if (e.touches.length > 1) { x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
     el.addEventListener('touchend', function (e) {
-      if (x0 === null) return;
+      if (x0 === null || e.touches.length) { x0 = null; return; }
       var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
       x0 = null;
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
@@ -3092,9 +3131,12 @@
     message: function (title, text) { showMessage(title, text); },
     // a widget or a notification asks for a screen; true once it is shown
     open: function (name) {
+      // over the player: the recitation stops, and coming back continues from the same verse
+      if (screen === 'kahf' && /^(reader|kahfread|convert|calendar|timers|weather|weatherb)$/.test(name)) { kStop(); kahf.from = kahf.i; }
       if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return true; }
       // the Friday notification: Al-Kahf, for reading (the TV only recites)
       if (name === 'kahfread') { if (iqOpen()) iqDismiss(); if (TV) { kahf.s = 18; kahf.from = 0; go('kahf'); } else rdOpen({ s: 18, i: 0 }); return true; }
+      if (name === 'weatherb') { name = 'weather'; wxCity = 1; if (screen === 'weather') weatherRender(); } // the alert of the second city
       if (/^(convert|calendar|timers|weather)$/.test(name)) { if (iqOpen()) iqDismiss(); if (screen !== name) go(name); return true; }
       return false;
     },
@@ -3112,14 +3154,18 @@
   };
 
   if (A && TV) { try { A.setOpenOnBoot(S.openOnBoot); } catch (e) {} }
-  if (TV) { guestApply(); syncTake(); }
+  // one failure must not stop the clock for good: every tick runs on its own
+  function safeTick() { try { tick(); } catch (e) { if (window.console) console.error(e); } }
+  if (TV) { try { guestApply(); syncTake(); } catch (e) {} }
+  // a phone's first start: what it has now is its starting point (see syncNow), fixed before anything is changed
+  else if (A && A.tvSend && !syncLast()) { try { localStorage.setItem('prayertv-synced', syncData()); } catch (e) {} }
   showCity();
   if (S.loc.mode === 'auto') locateAuto();
   renderShortcuts();
-  tick();
-  setTimeout(function () { tick(); setInterval(tick, 1000); }, 1000 - Date.now() % 1000);
+  safeTick();
+  setTimeout(function () { safeTick(); setInterval(safeTick, 1000); }, 1000 - Date.now() % 1000);
   loadWeather();
   setInterval(loadWeather, 15 * MIN);
   focusFirst();
-  if (/^#(convert|calendar|timers|weather|reader|kahfread)$/.test(location.hash)) window.App.open(location.hash.slice(1));
+  if (/^#(convert|calendar|timers|weather|weatherb|reader|kahfread)$/.test(location.hash)) window.App.open(location.hash.slice(1));
 })();

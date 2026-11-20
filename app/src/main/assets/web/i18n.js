@@ -1,7 +1,7 @@
-// English interface. Every Arabic interface text is a key here; t(text) returns the English when the language is
-// English, otherwise the text itself. Religious texts (Qur'an, adhkar, duas, «هل تعلم؟», family messages) are not
-// translated here: they stay in Arabic until a reviewed translation of their meanings is added.
-// Names of people (the family) are transliterated, not translated.
+// English interface. Every Arabic interface text is a key here; tr(text) in app.js returns the English when the
+// language is English, otherwise the text itself. Religious texts (Qur'an, adhkar, duas, reminders) stay in Arabic.
+// «هل تعلم؟» has its English in facts-en.js, the family messages in family-en.js.
+// The names of the default family have an English spelling here; a name the owner types stays as he wrote it.
 window.I18N_EN = {
   // ---- home
   'اليوم': 'Today', 'الآن': 'Now', 'غدًا': 'Tomorrow', 'بعد غد': 'Day after tomorrow', 'أمس': 'Yesterday', 'قبل يومين': 'Two days ago', 'قبل': 'ago',
@@ -16,11 +16,10 @@ window.I18N_EN = {
   'وقت صلاة': 'prayer time', 'موعد الإفطار ·': 'Iftar time ·', '· موعد الإفطار': '· iftar time', '(بعد': '(in',
   'بعد ساعة: صلاة الجمعة': 'In an hour: Jumu\'ah prayer', 'اغتسل وبكّر، واقرأ سورة الكهف، وأكثر من الصلاة على النبي ﷺ': 'Make ghusl, go early, read Surah Al-Kahf, and send many blessings on the Prophet ﷺ',
   'أذكار بعد الصلاة': 'Adhkar after prayer', 'أذكار الصباح': 'Morning adhkar', 'أذكار المساء': 'Evening adhkar', 'أذكار النوم': 'Sleep adhkar',
-  'وقت أذكار الصباح': 'Morning adhkar time', 'وقت أذكار المساء': 'Evening adhkar time',
   'هل تعلم؟': 'Did you know?', 'فضل هذه الأيام': 'The virtue of these days', 'تصحيح خطأ شائع': 'Correcting a common mistake',
   'من أسماء الله الحسنى': 'From the names of Allah', 'دعاء اليوم': 'Dua of the day',
   'عيدكم مبارك': 'Eid Mubarak', 'يوم عرفة': 'Day of Arafah', 'عشر ذي الحجة': 'Ten days of Dhul-Hijjah', 'رمضان كريم': 'Ramadan Kareem', 'جمعة مباركة': 'Blessed Friday',
-  'أيام التشريق': 'Days of Tashreeq', 'عاشوراء': 'Ashura', 'الأيام البيض': 'White days', 'الاثنين والخميس': 'Monday and Thursday',
+  'أيام التشريق': 'Days of Tashreeq', 'عاشوراء': 'Ashura',
   'دخول رمضان': 'Start of Ramadan', 'عيد الفطر': 'Eid al-Fitr', 'عيد الأضحى': 'Eid al-Adha', 'ميلاد': 'Birthday of', 'ذكرى الزواج': 'Wedding anniversary',
   'يوم ميلاد': 'Birthday of', 'ذكرى زواجنا': 'Our anniversary', 'رسالة إلى العائلة': 'A message to the family', 'رسالة إلى': 'A message to',
   'دعاء لوالدي رحمه الله': 'A prayer for my father, may Allah have mercy on him', 'دعاء ل': 'A prayer for', 'رحمها الله': 'may Allah have mercy on her',
@@ -47,7 +46,7 @@ window.I18N_EN = {
   'هـ': 'AH', 'م': 'CE', 'هجري': 'Hijri', 'الهجري': 'Hijri', '· بالهجري': '· in Hijri', 'هـ تسعة وعشرون يومًا': 'AH, 29 days',
   // ---- calendar, imsakiya, converter
   'التقويم': 'Calendar', 'مواقيت الشهر': 'Month times', 'مواقيت يوم': 'Times of', 'مواقيت': 'Times', 'العودة إلى اليوم': 'Back to today',
-  'إمساكية رمضان': 'Ramadan imsakiya', 'إمساكية': 'Imsakiya', 'هذه السنة': 'This year', 'الشهر': 'Month', 'السنة': 'Year', 'يوم': 'day',
+  'إمساكية رمضان': 'Ramadan imsakiya', 'إمساكية': 'Imsakiya', 'هذه السنة': 'This year', 'الشهر': 'Month', 'السنة': 'Year',
   'تحويل التاريخ': 'Date converter', 'من ميلادي إلى هجري': 'Gregorian to Hijri', 'من هجري إلى ميلادي': 'Hijri to Gregorian',
   'تقويم أم القرى · من 1356 إلى 1500 هـ': 'Umm al-Qura calendar · 1356 to 1500 AH', 'الشهر التالي': 'Next month', 'الشهر السابق': 'Previous month',
   // ---- quran
@@ -60,7 +59,7 @@ window.I18N_EN = {
   'أكمل من سورة': 'Continue from Surah', 'متابعة سورة': 'Continue Surah', 'اختر سورة واقرأ بهدوء، وعلّم موضعك': 'Choose a surah, read calmly, and mark your place',
   'الآية التالية': 'Next verse', 'الآية السابقة': 'Previous verse', 'تشغيل / إيقاف': 'Play / pause',
   'صفحات المصحف': 'Mushaf pages', 'نص متصل': 'Continuous text', 'علّمت هنا': 'Mark here', 'افتح موضعي': 'Open my place', 'إزالة': 'Remove',
-  'لم تحدّد موضعك بعد': 'No place marked yet', 'توقفت عند سورة': 'You stopped at Surah', '· صفحة': '· page',
+  'توقفت عند سورة': 'You stopped at Surah', '· صفحة': '· page',
   'الصفحة السابقة': 'Previous page', 'الصفحة التالية': 'Next page', 'السورة السابقة': 'Previous surah', 'السورة التالية': 'Next surah',
   'اضغط آية لتحديد موضعك، وحرّك الشاشة بحرية': 'Tap a verse to mark your place; scroll freely', 'حجم الخط': 'Text size',
   'ورد القراءة': 'Reading portion', '. هل تكمل الآن؟': '. Continue now?', 'ابدأ وردك اليوم من المصحف': 'Start today\'s portion from the Mushaf',
@@ -147,8 +146,16 @@ window.I18N_EN = {
   // ---- misc
   'الرئيسية': 'Home', 'مواقيت الصلاة': 'Prayer Times', 'شاهد': 'Shahid', 'الحرارة الآن': 'Temperature now', 'الطقس في إربد': 'Weather in Irbid', 'الطقس في الرياض': 'Weather in Riyadh',
   'وفاة الوالد أبي أسامة': 'the passing of father Abu Osama', 'أمية': 'Omaia', 'الزواج': 'the wedding', 'العودة للدوام': 'back to work', 'رند': 'Rand', 'حسان': 'Hassan', 'سلمى': 'Salma', 'عبود': 'Aboud', 'إجازة الصيف': 'summer holiday', 'عبد الملك': 'Abdulmalik',
-  'الأسبوع': 'Week', 'ثانية': 'seconds', 'ثانيتين': 'two seconds', 'ثوانٍ': 'seconds', 'ساعة': 'hours', 'ساعتين': 'two hours', 'دقيقة': 'minutes', 'دقيقة واحدة': 'one minute', 'دقيقتين': 'two minutes',
+  'ثانية': 'seconds', 'ثانيتين': 'two seconds', 'ثوانٍ': 'seconds', 'ساعة': 'hours', 'ساعتين': 'two hours', 'دقيقة': 'minutes', 'دقيقة واحدة': 'one minute', 'دقيقتين': 'two minutes',
   'يومًا': 'days', 'يوم': 'days', 'يومان': 'two days', 'يومين': 'two days', 'أسبوع': 'weeks', 'أسبوعان': 'two weeks', 'أسبوعًا': 'weeks', 'يوم عمل': 'workdays', 'يوما عمل': 'two workdays',
   'شهر': 'months', 'شهران': 'two months', 'شهرًا': 'months', 'سنة': 'years', 'سنتان': 'two years', 'سنوات': 'years', 'دقيقتان': 'two minutes', 'ساعتان': 'two hours',
-  'بعد': 'in', 'و': 'and', 'اللغة': 'Language', 'العربية': 'Arabic'
+  'بعد': 'in', 'و': 'and', 'اللغة': 'Language', 'العربية': 'Arabic',
+  // the kinds of the reminder card, small labels, and the calculation methods (prayer.js)
+  'حديث': 'Hadith', 'حكمة': 'Wisdom', 'فائدة': 'Benefit', 'الخط': 'Size', 'مثل: كل عام وأنتم بخير': 'e.g. Happy Eid to you all',
+  'يوم قبل': 'A day earlier', 'يوم بعد': 'A day later', 'بلا وقت': 'No time',
+  'أم القرى': 'Umm al-Qura', 'وزارة الأوقاف الأردنية': 'Jordan Ministry of Awqaf', 'الهيئة المصرية العامة للمساحة': 'Egyptian General Authority of Survey',
+  'وزارة الأوقاف الكويتية': 'Kuwait Ministry of Awqaf', 'وزارة الأوقاف القطرية': 'Qatar Ministry of Awqaf',
+  'الهيئة العامة للشؤون الإسلامية (الإمارات)': 'General Authority of Islamic Affairs (UAE)', 'جامعة العلوم الإسلامية بكراتشي': 'University of Islamic Sciences, Karachi',
+  'رئاسة الشؤون الدينية التركية': 'Diyanet (Turkey)', 'وزارة الأوقاف المغربية': 'Morocco Ministry of Awqaf',
+  'الجمعية الإسلامية لأمريكا الشمالية': 'Islamic Society of North America', 'رابطة العالم الإسلامي': 'Muslim World League'
 };

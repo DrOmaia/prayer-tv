@@ -18,7 +18,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // unsigned here: CI signs it with the private key from the repository secrets (see .github/workflows/build.yml)
+            // unsigned here: CI signs it with app/release.keystore (see .github/workflows/build.yml)
         }
     }
 

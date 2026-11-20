@@ -2,11 +2,14 @@
 """Turn the quran-align word timings (github.com/cpfair/quran-align, CC BY 4.0) into one small file per surah:
 app/src/main/assets/web/words/<reciter folder>/<sss>.json = {"<ayah>": [[first word, word after last, start ms, end ms], ...]}
 The reciter folder is the everyayah.com folder name of the recording the timings were made for.
+Only the folders the app uses are written: the ones named in `words:` in the RECITERS list of app.js.
 Usage: python3 tools/word-timings.py <folder with the release files (.json or .zip)>"""
-import json, os, sys, zipfile, io
+import json, os, re, sys, zipfile, io
 
 src = sys.argv[1]
-out = os.path.join(os.path.dirname(__file__), '..', 'app', 'src', 'main', 'assets', 'web', 'words')
+web = os.path.join(os.path.dirname(__file__), '..', 'app', 'src', 'main', 'assets', 'web')
+out = os.path.join(web, 'words')
+used = set(re.findall(r"words: '([^']+)'", open(os.path.join(web, 'app.js'), encoding='utf-8').read()))
 
 def blobs():
     for name in sorted(os.listdir(src)):
@@ -20,6 +23,9 @@ def blobs():
             yield name[:-5], open(p, 'rb').read()
 
 for reciter, raw in blobs():
+    if reciter not in used:
+        print('not used by the app:', reciter)
+        continue
     try:
         data = json.loads(raw)
     except ValueError as e:

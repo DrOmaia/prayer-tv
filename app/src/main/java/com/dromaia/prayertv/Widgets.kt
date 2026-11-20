@@ -91,7 +91,6 @@ object Widgets {
     }
     // the timer widgets on the home screen and the timer each shows (for the app's «الويدجت» screen)
     fun placedTimers(ctx: Context): String {
-        val prefs = ctx.getSharedPreferences(Schedule.PREFS, Context.MODE_PRIVATE)
         val out = JSONArray()
         AppWidgetManager.getInstance(ctx).getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             val keys = rotateKeys(ctx, id)

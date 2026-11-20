@@ -27,7 +27,6 @@ object TvLink {
     private const val TYPE = "_prayertv._tcp"
     private const val PORT = 47120
     @Volatile private var server: ServerSocket? = null
-    private var nsdReg: NsdManager.RegistrationListener? = null
 
     // ---- the TV
     fun listen(ctx: Context) {
@@ -55,7 +54,6 @@ object TvLink {
                 override fun onUnregistrationFailed(i: NsdServiceInfo, e: Int) {}
             }
             nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, reg)
-            nsdReg = reg
         } catch (_: Exception) {}
     }
 

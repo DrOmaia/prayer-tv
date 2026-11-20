@@ -26,6 +26,8 @@
   function setLocation(loc) {
     if (!loc) return;
     LAT = loc.lat; LNG = loc.lon; ZONE = loc.tz || 'Asia/Riyadh';
+    // a zone name this WebView does not know would throw at every use: fall back to Riyadh's
+    try { new Intl.DateTimeFormat('en', { timeZone: ZONE }); } catch (e) { ZONE = 'Asia/Riyadh'; }
     METHOD = METHODS[methodFor(loc.cc)];
     offCache = {};
     try { fHMonth = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: ZONE, month: 'numeric' }); } catch (e) {}
@@ -118,6 +120,7 @@
       return angleTime(-deg(Math.atan(1 / (1 + Math.tan(rad(Math.abs(LAT - dc)))))), t, false);
     }
     var TZ = offH(noonOf(y, m, d)), adj = TZ - LNG / 15;
+    adj -= 24 * Math.round(adj / 24); // near the date line the difference passes a whole day (Samoa, Kiritimati)
     var h = {
       fajr: angleTime(METHOD.fajr, 5 / 24, true) + adj,
       sunrise: angleTime(0.833, 6 / 24, true) + adj,
@@ -144,7 +147,7 @@
 
   function name(k, friday) { return k === 'dhuhr' && friday ? (NAMES.fajr === 'Fajr' ? "Jumu'ah" : 'الجمعة') : NAMES[k]; }
   // 24-hour clock: 04:37, 15:45
-  function full(ts) { var t = ymd(ts); return pad(t.h) + ':' + pad(t.mi); }
+  function full(ts) { if (!isFinite(ts)) return '--:--'; var t = ymd(ts); return pad(t.h) + ':' + pad(t.mi); } // no such time (far north)
   // time left without seconds: 2:05
   function leftHM(ms) {
     var m = Math.max(0, Math.ceil(ms / 60000));

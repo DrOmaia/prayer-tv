@@ -94,7 +94,8 @@ class MainActivity : Activity() {
         } catch (e: Exception) {
             // the system WebView is missing or being updated
             setContentView(TextView(this).apply {
-                text = "تعذّر فتح الشاشة الآن (مكوّن Android System WebView غير متاح). أعد المحاولة بعد قليل."
+                text = Device.en(this@MainActivity, "تعذّر فتح الشاشة الآن (مكوّن Android System WebView غير متاح). أعد المحاولة بعد قليل.",
+                    "The screen cannot be opened now (Android System WebView is not available). Try again in a moment.")
                 textSize = 22f
                 gravity = Gravity.CENTER
                 setPadding(48, 48, 48, 48)
