@@ -1596,7 +1596,19 @@
   // a new rule every half minute, so the listener keeps seeing the rules
   var tip = { rule: '', at: 0, seen: [] };
   function tipUpdate() {
-    var el = $('k-tip'), on = TV && S.tajweed && !!TJ[kahf.i === 0 ? 1 : kahf.s];
+    var el = $('k-tip'), on = TV && S.tajweed && !!TJ[kahf.i === 0 ? 1 : kahf.s], sj = TV ? sjOf(kahf.s, kahf.i) : 0;
+    // a verse of prostration: its note (and a supplication of the prostration) stays while the verse is on screen
+    if (sj) {
+      var sk = 'sj' + kahf.s + ':' + kahf.i;
+      if (tip.rule !== sk) {
+        tip.rule = sk; tip.at = Date.now();
+        el.innerHTML = '<span class="k-tip-w sj-w quran">\u06E9</span><p><b class="sj-b">' + sjText()[sj].t + ':</b> ' + sjText().tip + ' «' + window.SAJDA.duas[0].x + '»</p>';
+        el.classList.remove('hidden');
+        el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+      }
+      return;
+    }
+    if (tip.rule.indexOf('sj') === 0) tip.rule = '';
     if (!on) { el.classList.add('hidden'); tip.rule = ''; return; }
     if (tip.rule && Date.now() - tip.at < 30000) return;
     // the rules in the verse on screen, each with the first word that has it
@@ -1640,6 +1652,9 @@
     wNow = -1; wBox = null;
     $('k-next').textContent = kText(i + 1);
     kPosText = i === 0 ? tr('البسملة') : tr('الآية ') + i + tr(' من ') + n;
+    var sj = TV ? 0 : sjOf(kahf.s, i);
+    $('k-sj').classList.toggle('hidden', !sj);
+    if (sj) { $('k-sj').dataset.sj = kahf.s + ':' + i; $('k-sj').textContent = sjText()[sj].t; }
     tipUpdate();
     kFit(TV ? 140 : cur.length > 900 ? 28 : cur.length > 600 ? 34 : cur.length > 330 ? 42 : cur.length > 200 ? 52 : cur.length > 110 ? 60 : 70);
     $('k-fill').style.width = (i / n * 100) + '%';
@@ -1697,7 +1712,8 @@
     $('q-readlist').classList.toggle('hidden', !read);
     if (read) {
       var M = S.qMark;
-      $('q-resume').innerHTML = M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + tr('">أكمل من سورة ') + QURAN[M.s - 1][0] + tr(' · الآية ') + M.i + '</button>' : '';
+      $('q-resume').innerHTML = (M && QURAN[M.s - 1] ? '<button class="gold-btn f" data-rsura="' + M.s + '" data-rfrom="' + M.i + tr('">أكمل من سورة ') + QURAN[M.s - 1][0] + tr(' · الآية ') + M.i + '</button>' : '') +
+        '<button class="pill f" data-goto="1">' + tr('انتقال') + '</button>';
       $('q-sub').textContent = tr('اختر سورة واقرأ بهدوء، وعلّم موضعك');
       if ($('q-readlist').dataset.fri !== String(fri)) { $('q-readlist').dataset.fri = fri; $('q-readlist').innerHTML = suraList(fri, function (k) { return 'data-rsura="' + k + '"'; }) +
         '<button class="sura f sura-khatm" data-rkhatm="1"><span class="sura-n">✦</span><b>' + tr('دعاء ختم القرآن') + '</b><span class="muted">' + tr('بعد سورة الناس') + '</span></button>'; }
@@ -2451,6 +2467,50 @@
   var PAGE_OF = {};
   Object.keys(window.MUSHAF_PAGES).forEach(function (p) { window.MUSHAF_PAGES[p].forEach(function (x) { PAGE_OF[x[0] + ':' + x[1]] = +p; }); });
   function rdPageNo() { return PAGE_OF[rd.s + ':' + Math.max(1, rd.i)] || 1; }
+  // the thirty parts (أجزاء) as the Madinah Mushaf marks them: [surah, ayah] where each begins
+  var JUZ = [[1, 1], [2, 142], [2, 253], [3, 93], [4, 24], [4, 148], [5, 82], [6, 111], [7, 88], [8, 41], [9, 93], [11, 6], [12, 53], [15, 1], [17, 1],
+    [18, 75], [21, 1], [23, 1], [25, 21], [27, 56], [29, 46], [33, 31], [36, 28], [39, 32], [41, 47], [46, 1], [51, 31], [58, 1], [67, 1], [78, 1]];
+  function juzOf(s, a) {
+    for (var j = JUZ.length - 1; j > 0; j--) if (s > JUZ[j][0] || (s === JUZ[j][0] && a >= JUZ[j][1])) return j + 1;
+    return 1;
+  }
+  // «انتقال»: a part (1–30) or a page of the Mushaf by its number; opened from the list of surahs and from the reading
+  function goShow() {
+    var at = screen === 'reader' ? rd : S.qMark, a = at ? Math.max(1, at.i) : 0, pg = at ? PAGE_OF[at.s + ':' + a] || 1 : 0, jz = at ? juzOf(at.s, a) : 0;
+    if ($('tj-pop').classList.contains('hidden')) tjFrom = document.activeElement;
+    var h = '<div class="tj-card go-card"><div class="tj-h">' + tr('انتقال') + '</div><div class="go-lbl">' + tr('الجزء') + '</div><div class="go-juz">';
+    for (var j = 1; j <= 30; j++) h += '<button class="pill f' + (j === jz ? ' on' : '') + '" data-gojuz="' + j + '">' + j + '</button>';
+    h += '</div><div class="go-lbl">' + tr('الصفحة') + ' <span class="muted ltr">1 – 604</span></div>' +
+      '<div class="go-page"><input id="go-n" class="inp f" type="number" inputmode="numeric" min="1" max="604" value="' + (pg || '') + '" aria-label="' + tr('رقم الصفحة') + '">' +
+      '<button class="gold-btn f" data-gopage="1">' + tr('اذهب') + '</button></div><p id="go-msg" class="go-msg"></p>' +
+      '<div class="tj-btns"><button class="pill f" data-tjclose="1">' + tr('إغلاق') + '</button></div></div>';
+    $('tj-pop').innerHTML = h;
+    $('tj-pop').classList.remove('hidden');
+  }
+  function goJuz(n) { var j = JUZ[n - 1]; if (!j) return; tjClose(); rdOpen({ s: j[0], i: j[1] }); }
+  function goPage() {
+    var v = $('go-n') ? $('go-n').value.trim() : '', n = /^\d+$/.test(v) ? +v : 0, first = window.MUSHAF_PAGES[n];
+    if (!first) { $('go-msg').textContent = tr('اكتب رقم صفحة من 1 إلى 604'); return; }
+    tjClose(); rdOpen({ s: first[0][0], i: first[0][1] });
+  }
+  $('tj-pop').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.id === 'go-n') { e.preventDefault(); goPage(); } });
+  // a verse of prostration (۩): 1 of recitation, 2 the prostration of thanks of Surah Sad (sajda.js); 0 otherwise
+  function sjOf(s, a) { return window.SAJDA.at[s + ':' + a] || 0; }
+  function sjText() { return EN ? window.SAJDA.en : window.SAJDA.ar; }
+  // the word «سجدة» after such a verse in the reading; a tap opens its card
+  function sjChip(s, a) { return sjOf(s, a) ? ' <b class="sj" data-sj="' + s + ':' + a + '">' + tr('سجدة') + '</b>' : ''; }
+  // the card: what the prostration is, how it is done, and what is said in it, with the sources
+  function sjShow(key) {
+    var k = window.SAJDA.at[key], L = sjText();
+    if (!k) return;
+    if ($('tj-pop').classList.contains('hidden')) tjFrom = document.activeElement;
+    $('tj-pop').innerHTML = '<div class="tj-card sj-card"><div class="tj-h"><span class="sj-m quran">\u06E9</span>' + L[k].t + '</div>' +
+      '<p>' + L[k].x + '</p><p>' + L.how + '</p><p class="sj-l">' + L.say + '</p>' +
+      window.SAJDA.duas.map(function (d) { return '<p class="sj-d">«' + d.x + '»<span class="kh-s">' + (EN ? d.se : d.s) + '</span></p>'; }).join('') +
+      '<p class="muted tj-src">' + L.ref + '</p><div class="tj-btns"><button class="gold-btn f" data-tjclose="1">' + tr('حسنًا') + '</button></div></div>';
+    $('tj-pop').classList.remove('hidden');
+    focusFirst($('tj-pop').querySelector('.f'));
+  }
   // one Mushaf page: its surahs (with their names and Basmala) and its ayat, each tappable
   function rdPageHtml(p) {
     var list = window.MUSHAF_PAGES[p], h = '', lastS = 0;
@@ -2461,7 +2521,7 @@
         if (a === 1 && s !== 1 && s !== 9) h += '<div class="m-bism">' + vHtml(s, 0) + '</div>';
         lastS = s;
       }
-      h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + vHtml(s, a) + ' ﴿' + arNum(a) + '﴾</span> ';
+      h += '<span class="rv' + (s === rd.s && a === rd.i ? ' cur' : '') + (S.qMark && S.qMark.s === s && S.qMark.i === a ? ' mk' : '') + '" data-s="' + s + '" data-i="' + a + '">' + vHtml(s, a) + ' ﴿' + arNum(a) + '﴾' + sjChip(s, a) + '</span> ';
     });
     return '<div class="m-page">' + h + '</div><div class="m-num">' + arNum(p) + '</div>' + (p === 604 ? khatmHtml() : '');
   }
@@ -2486,7 +2546,7 @@
     for (var k = 0; k < v.length; k++) {
       var pg = PAGE_OF[s + ':' + (k + 1)];
       if (pg && pg !== lastP) { h += '<div class="r-pno">' + arNum(pg) + '</div>'; lastP = pg; }
-      h += '<span class="rv" data-i="' + (k + 1) + '">' + vHtml(s, k + 1) + ' ﴿' + arNum(k + 1) + '﴾</span> ';
+      h += '<span class="rv" data-i="' + (k + 1) + '">' + vHtml(s, k + 1) + ' ﴿' + arNum(k + 1) + '﴾' + sjChip(s, k + 1) + '</span> ';
     }
     return h + (s === 114 ? khatmHtml() : '');
   }
@@ -3372,7 +3432,13 @@
     // tajweed: a tap on a coloured letter explains its rule (instead of choosing the verse)
     var tjb = e.target.closest && e.target.closest('.tj[data-tj]');
     if (tjb && S.tajweed && !tjb.closest('#tj-pop')) { e.preventDefault(); tjShow(tjb.dataset.tj); return; }
+    // a verse of prostration: a tap on «سجدة» opens its card (instead of choosing the verse)
+    var sjb = e.target.closest && e.target.closest('[data-sj]');
+    if (sjb && sjb.dataset.sj) { e.preventDefault(); sjShow(sjb.dataset.sj); return; }
     var bt = e.target.closest && e.target.closest('button');
+    if (bt && bt.dataset.goto) { goShow(); return; }
+    if (bt && bt.dataset.gojuz) { goJuz(+bt.dataset.gojuz); return; }
+    if (bt && bt.dataset.gopage) { goPage(); return; }
     if (bt && bt.dataset.tjrule) { tjShow(bt.dataset.tjrule); return; }
     if (bt && bt.dataset.tjall) { tjLegend(); return; }
     if (bt && bt.dataset.tjon) { tjToggle(); return; }

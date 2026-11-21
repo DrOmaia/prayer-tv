@@ -1104,3 +1104,26 @@ b.wq { font-size: 1.15em; }
 .fl-warn { font-size: 26px; font-weight: 600; margin-top: 8px; }
 .fl-btns { display: flex; justify-content: flex-end; gap: 18px; margin-top: 18px; }
 .fl-btns .pill { height: 72px; padding: 0 46px; font-size: 28px; }
+
+/* the reading: «سجدة» after a verse of prostration (a tap opens its card), and the card */
+.sj { display: inline-block; vertical-align: middle; font-family: 'Tajawal', sans-serif; font-size: .46em; font-weight: 700; line-height: 1.9; padding: 0 .7em; border: 1px solid var(--gold); border-radius: 999px; color: var(--gold); background: none; cursor: pointer; white-space: nowrap; }
+.sj-m { color: var(--gold); font-size: 1.3em; line-height: 1; }
+.sj-card { text-align: start; }
+.sj-card .sj-l { font-weight: 700; }
+.sj-card .sj-d { line-height: 1.9; }
+.sj-card .kh-s { font-size: .68em; }
+/* the player on the phone: the same word beside the verse's number */
+.k-info .sj { font-size: 1em; margin: 0 auto 0 0; }
+.k-tip .sj-b { color: #E2B969; }
+.k-tip .sj-w { font-size: 46px; line-height: 1; color: #E2B969; transform: translateY(-12px); }
+/* «انتقال»: the thirty parts and a page number */
+.go-card { width: 900px; font-size: 30px; }
+.portrait .tj-card.go-card { width: calc(100% - 80px); font-size: 36px; }
+.go-lbl { font-weight: 700; color: var(--muted); }
+.go-juz { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.go-juz .pill { height: 76px; padding: 0; font-size: 1em; justify-content: center; }
+.portrait .go-juz .pill { height: 104px; padding: 0; font-size: 1em; }
+.go-juz .pill.on { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+.go-page { display: flex; gap: 16px; align-items: center; }
+.go-page .inp { flex: 1; min-width: 0; text-align: center; direction: ltr; }
+.go-msg { min-height: 1.4em; color: #B4532A; }

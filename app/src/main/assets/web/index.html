@@ -140,7 +140,7 @@
     <!-- TV: a tajweed rule of the verse, explained; changes every half minute -->
     <div id="k-tip" class="k-tip hidden"></div>
     <div class="kahf-bar">
-      <div class="k-info muted"><span id="k-pos"></span><span id="k-msg"></span></div>
+      <div class="k-info muted"><span id="k-pos"></span><button id="k-sj" class="sj hidden" data-sj=""></button><span id="k-msg"></span></div>
       <div class="k-track"><div id="k-fill" class="k-fill"></div></div>
       <div class="k-ctrl">
         <button id="k-prev-btn" class="round big f" aria-label="الآية السابقة"><svg viewBox="0 0 24 24" class="ic fill"><path d="M18 5h-2v14h2zM14.5 12L5 5v14z"/></svg></button>
@@ -163,6 +163,7 @@
       <div class="r-views"><button class="pill f" data-rview="page">صفحات المصحف</button><button class="pill f" data-rview="text">نص متصل</button></div>
       <button class="pill f tj-btn" data-tjon="1">التجويد</button>
       <button class="round f k-tjhelp hidden" data-tjlegend="1" aria-label="ألوان التجويد">؟</button>
+      <button class="pill f r-goto" data-goto="1">انتقال</button>
       <div class="r-size"><span class="muted">الخط</span><input id="r-slider" type="range" min="70" max="240" step="5" aria-label="حجم الخط"><span id="r-size-v" class="muted"></span></div>
     </div>
     <div id="r-mark" class="r-mark"></div>
@@ -483,6 +484,7 @@
 <script src="family-en.js"></script>
 <script src="tajweed-rules.js"></script>
 <script src="khatm.js"></script>
+<script src="sajda.js"></script>
 <script src="facts.js"></script>
 <script src="facts-en.js"></script>
 <script src="prayer.js"></script>

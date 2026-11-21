@@ -158,6 +158,9 @@ window.I18N_EN = {
   'الهيئة العامة للشؤون الإسلامية (الإمارات)': 'General Authority of Islamic Affairs (UAE)', 'جامعة العلوم الإسلامية بكراتشي': 'University of Islamic Sciences, Karachi',
   'رئاسة الشؤون الدينية التركية': 'Diyanet (Turkey)', 'وزارة الأوقاف المغربية': 'Morocco Ministry of Awqaf',
   'الجمعية الإسلامية لأمريكا الشمالية': 'Islamic Society of North America', 'رابطة العالم الإسلامي': 'Muslim World League',
+  // ---- the reading: «انتقال» (a part or a page by its number) and the verses of prostration
+  'انتقال': 'Go to', 'الجزء': 'Part (juz)', 'الصفحة': 'Page', 'رقم الصفحة': 'Page number', 'اذهب': 'Go',
+  'اكتب رقم صفحة من 1 إلى 604': 'Type a page number from 1 to 604', 'سجدة': 'Sajdah',
   // ---- the device's files (TV)
   'ملفات الجهاز': 'Device files', 'المجلدات': 'Folders', 'ملفات التثبيت (APK)': 'Install files (APK)',
   'التخزين الداخلي': 'Internal storage', 'فلاشة USB': 'USB drive', 'الأكبر أولًا': 'biggest first',
