@@ -311,6 +311,10 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun weatherWatch(json: String) = Weather.watch(this@MainActivity, json)
 
+        // the two cities of the weather widgets ([{name, lat, lon}, …]), sent whether the alerts are on or off
+        @JavascriptInterface
+        fun weatherPlaces(json: String) = Weather.places(this@MainActivity, json)
+
         // the phone: a notification now (traveller mode)
         @JavascriptInterface
         fun notifyNow(title: String, sub: String) = Device.notify(this@MainActivity, title, sub, "tone")
@@ -330,7 +334,8 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun placedWidgets(): String = Widgets.placedCounts(this@MainActivity)
 
-        // put a widget on the home screen from the app (kind: prayer, ring, strip, month, convert, event, timer)
+        // put a widget on the home screen from the app (kind: prayer, ring, strip, month, convert, event, timer,
+        // wx, wxdays, wxmini)
         @JavascriptInterface
         fun pinWidget(kind: String, keys: String): String = Widgets.pin(this@MainActivity, kind, keys)
 

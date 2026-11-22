@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The weather of one city (4x2): its name, the weather now with its temperature, then the next five days
+     (short name, the day's weather, highest over lowest); a tap opens its weather in the app -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_night" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layoutDirection="rtl"
+        android:orientation="vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <!-- the city on one side, the weather now on the other -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp">
+
+            <TextView
+                android:id="@+id/wx_name0"
+                style="@style/WidgetText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/wx_icon0"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/wx_temp0"
+                style="@style/WxTemp"
+                android:layout_marginStart="6dp"
+                android:text="—"
+                android:textSize="26sp" />
+        </LinearLayout>
+
+        <!-- the next five days, from tomorrow -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:gravity="center_vertical"
+            android:layoutDirection="rtl"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <LinearLayout android:id="@+id/wx_d0" style="@style/WxDay" android:visibility="invisible">
+                <TextView android:id="@+id/wx_dn0" style="@style/WxDayName" />
+                <ImageView android:id="@+id/wx_di0" style="@style/WxDayIcon" />
+                <TextView android:id="@+id/wx_dh0" style="@style/WxDayHi" />
+                <TextView android:id="@+id/wx_dl0" style="@style/WxDayLo" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_d1" style="@style/WxDay" android:visibility="invisible">
+                <TextView android:id="@+id/wx_dn1" style="@style/WxDayName" />
+                <ImageView android:id="@+id/wx_di1" style="@style/WxDayIcon" />
+                <TextView android:id="@+id/wx_dh1" style="@style/WxDayHi" />
+                <TextView android:id="@+id/wx_dl1" style="@style/WxDayLo" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_d2" style="@style/WxDay" android:visibility="invisible">
+                <TextView android:id="@+id/wx_dn2" style="@style/WxDayName" />
+                <ImageView android:id="@+id/wx_di2" style="@style/WxDayIcon" />
+                <TextView android:id="@+id/wx_dh2" style="@style/WxDayHi" />
+                <TextView android:id="@+id/wx_dl2" style="@style/WxDayLo" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_d3" style="@style/WxDay" android:visibility="invisible">
+                <TextView android:id="@+id/wx_dn3" style="@style/WxDayName" />
+                <ImageView android:id="@+id/wx_di3" style="@style/WxDayIcon" />
+                <TextView android:id="@+id/wx_dh3" style="@style/WxDayHi" />
+                <TextView android:id="@+id/wx_dl3" style="@style/WxDayLo" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_d4" style="@style/WxDay" android:visibility="invisible">
+                <TextView android:id="@+id/wx_dn4" style="@style/WxDayName" />
+                <ImageView android:id="@+id/wx_di4" style="@style/WxDayIcon" />
+                <TextView android:id="@+id/wx_dh4" style="@style/WxDayHi" />
+                <TextView android:id="@+id/wx_dl4" style="@style/WxDayLo" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

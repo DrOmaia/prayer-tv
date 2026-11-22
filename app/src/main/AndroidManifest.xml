@@ -159,6 +159,29 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_tv_info" />
         </receiver>
 
+        <!-- the weather widgets: the two cities, one city with the next five days, and one city small.
+             Their figures are fetched by WeatherReceiver (the same two-hourly alarm as the weather alerts) -->
+        <receiver android:name=".WxWidget" android:exported="false" android:label="@string/widget_wx">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wx_info" />
+        </receiver>
+
+        <receiver android:name=".WxDaysWidget" android:exported="false" android:label="@string/widget_wxdays">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wxdays_info" />
+        </receiver>
+
+        <receiver android:name=".WxMiniWidget" android:exported="false" android:label="@string/widget_wxmini">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wxmini_info" />
+        </receiver>
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

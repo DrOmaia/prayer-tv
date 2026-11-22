@@ -130,6 +130,7 @@ window.I18N_EN = {
   'يمين': 'Right', 'وسط': 'Centre', 'يسار': 'Left', 'الخلفية': 'Background', 'لون حسب الوقت': 'Colour by time of day', 'الشفافية': 'Transparency', 'المكان': 'Position',
   'المناسبات': 'Occasions', 'المتبقي': 'Remaining', 'السطر المتبدّل': 'Changing line', 'الصلاة والمواقيت والتاريخ': 'Prayer, times and date', 'غير ذلك': 'Other',
   'لون التمييز': 'Accent colour', 'يظهر فيه': 'Shows', 'المدينة': 'City', 'شريط التقدّم': 'Progress bar', 'لا توجد مناسبة': 'No occasion', 'بعد يومين': 'In two days',
+  'طقس المدينتين': 'Weather of the two cities', 'الطقس والأيام القادمة': 'Weather and next days', 'الطقس (صغير)': 'Weather (small)',
   // ---- TV message
   'رسالة إلى التلفزيون': 'Message to the TV', 'الأكل جاهز': 'Food is ready', 'تعالوا للصلاة': 'Come to prayer', 'حان وقت النوم': 'Bedtime', 'أطفئوا التلفزيون': 'Turn off the TV',
   'أنا في الطريق، وصلت قريبًا': 'On my way, arriving soon', 'رسالة من': 'Message from', 'وصلت إلى التلفزيون ✓': 'Delivered to the TV ✓',

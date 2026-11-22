@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- weather widgets: clear by day (the page's «sun» icon; the widget tints it) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M12,8A4,4 0,1 0,12 16A4,4 0,1 0,12 8z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M12,2V4M12,20V22M4.9,4.9L6.3,6.3M17.7,17.7L19.1,19.1M2,12H4M20,12H22M4.9,19.1L6.3,17.7M17.7,6.3L19.1,4.9" />
+</vector>

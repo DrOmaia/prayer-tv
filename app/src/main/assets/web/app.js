@@ -150,6 +150,10 @@
     var f = W.font || 'm';
     S.wstyle.prayer = Object.assign({ posNext: 'r', posEv: 'c', posLeft: 'l', posLine: 'c', fMain: f, fLeft: f, fEv: f, fLine: f }, W);
   })(S.wstyle.prayer);
+  // the weather widgets: the same look options; the two that show one city also keep which city (0: the city of the times, 1: the second)
+  ['wx', 'wxdays', 'wxmini'].forEach(function (k) {
+    S.wstyle[k] = Object.assign({ bg: 'time', clear: 0, font: 'm', accent: 'gold' }, k === 'wx' ? null : { city: 0 }, S.wstyle[k]);
+  });
   // a family saved before these were added (the default family): add the writer, interests and the departed
   (function () {
     var F = S.family, D = FAMILY.DEFAULT;
@@ -320,6 +324,7 @@
     $('w' + i + '-hl').innerHTML = (al ? '<span class="w-al">⚠ ' + al + '</span>' : '') + (w.hi != null ? hiLo(w) : '') +
       (w.hum != null ? stat('hum', w.hum + '%') + stat('umb', w.rain + '%') : '');
     if (screen === 'weather') weatherRender();
+    if (screen === 'widgets') wgWeather();
   }
   function parseWeather(j) {
     var c = j.current, h = j.hourly, d = j.daily;
@@ -333,7 +338,8 @@
       var p = x.split('-'), ni = h.time.indexOf(x + 'T23:00');
       return { name: k === 0 ? tr('اليوم') : k === 1 ? tr('غدًا') : DAY_NAMES[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()], date: +p[2] + '/' + +p[1],
         max: Math.round(d.temperature_2m_max[k]), min: Math.round(d.temperature_2m_min[k]), code: d.weather_code[k],
-        ncode: ni >= 0 ? h.weather_code[ni] : d.weather_code[k], p: d.precipitation_probability_max[k] || 0 };
+        ncode: ni >= 0 ? h.weather_code[ni] : d.weather_code[k], p: d.precipitation_probability_max[k] || 0,
+        wd: new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay() }; // the day of the week (0 Sunday), for the weather widgets' short names
     });
     return { t: Math.round(c.temperature_2m), feels: Math.round(c.apparent_temperature), hum: Math.round(c.relative_humidity_2m),
       wind: Math.round(c.wind_speed_10m), code: c.weather_code, day: c.is_day, rain: hours.length ? hours[0].p : 0,
@@ -347,6 +353,7 @@
     if (i === 0) { $('wbig-temp').textContent = '—'; $('wbig-icon').innerHTML = ''; $('wb-c0').innerHTML = ''; $('wbig').classList.remove('w-alert'); }
     else $('wb-c1').innerHTML = '';
     if (screen === 'weather') weatherRender();
+    if (screen === 'widgets') wgWeather();
   }
   var wxRetry = null;
   function loadWeather() {
@@ -489,6 +496,10 @@
     try { A.schedule(JSON.stringify(ev)); } catch (e) {}
     // the phone checks the weather of both cities in the background and notifies of dust, rain, heat or cold
     try { if (!TV && A.weatherWatch) A.weatherWatch(JSON.stringify(S.alerts.weather ? CITIES : [])); } catch (e) {}
+    // the weather widgets fetch their own figures on the phone: the two places, whether the alerts are on or off
+    try {
+      if (!TV && A.weatherPlaces) A.weatherPlaces(JSON.stringify(CITIES.map(function (c) { return { name: tr(c.name), lat: c.lat, lon: c.lon }; })));
+    } catch (e) {}
     sendWidget();
   }
 
@@ -2220,7 +2231,8 @@
   // ---------- the «الويدجت» screen (phone): each home-screen widget with a live preview, a button to put it there,
   // and its own look; the timer widget's choices too ----------
   var WG_KINDS = [['prayer', tr('مواقيت اليوم'), '4×2'], ['ring', tr('الصلاة القادمة (دائرة)'), '2×2'], ['strip', tr('شريط الصلاة القادمة'), '4×1'],
-    ['timer', tr('عدّاد'), '4×1'], ['event', tr('عدّاد المناسبة'), '2×2'], ['month', tr('الشهر الهجري'), '4×4'], ['convert', tr('تحويل التاريخ'), '1×1']];
+    ['timer', tr('عدّاد'), '4×1'], ['event', tr('عدّاد المناسبة'), '2×2'], ['month', tr('الشهر الهجري'), '4×4'], ['convert', tr('تحويل التاريخ'), '1×1'],
+    ['wx', tr('طقس المدينتين'), '4×2'], ['wxdays', tr('الطقس والأيام القادمة'), '4×2'], ['wxmini', tr('الطقس (صغير)'), '2×2']];
   var WG_BG = [['#2E2A6B', '#B0688F'], ['#1A5DAE', '#4AA6DC'], ['#7E3F14', '#CF8A2E'], ['#43195A', '#C9544A'], ['#0A1030', '#2B3070']];
   var WG_ACC = { gold: '#F2CF8A', white: '#FFFFFF', green: '#8FE3A8', sky: '#8FD3FF' }, WG_SC = { s: .88, m: 1, l: 1.15 };
   var wgEdit = '', wgMsg = {};
@@ -2246,8 +2258,37 @@
       (L.bg || 'linear-gradient(135deg,' + WG_BG[n.per][0] + ',' + WG_BG[n.per][1] + ')') + ';opacity:' + L.o + '"></i>' + inner + '</div>';
   }
   function wgInDays(n) { return n === 0 ? tr('اليوم') : n === 1 ? tr('غدًا') : n === 2 ? tr('بعد يومين') : n <= 10 ? tr('بعد ') + n + tr(' أيام') : tr('بعد ') + n + tr(' يومًا'); }
+  // the weather widgets' previews: the weather the page has for the two cities (on the home screen Android fetches its own).
+  // A dash stands for a temperature there is none of; today's highest / lowest under it; the short day names of the month widget
+  var WG_DAYS = [tr('أحد'), tr('اثنين'), tr('ثلاثاء'), tr('أربعاء'), tr('خميس'), tr('جمعة'), tr('سبت')];
+  function wgWi(code, day) { return '<span class="wgp-wi">' + W_ICONS[weatherInfo(code, day)[0]] + '</span>'; }
+  function wgDeg(w) { return w ? '<b class="ltr">' + w.t + '°</b>' : '<b class="wgp-no">—</b>'; }
+  function wgHiLo(w) { return '<span class="ltr">' + (w && w.hi != null ? w.hi + '° / ' + w.lo + '°' : '') + '</span>'; }
+  function wgCity(i) { return esc(tr(CITIES[i].name)); }
+  // the weather came, or went, while the screen is open: only these three previews are drawn again
+  function wgWeather() {
+    ['wx', 'wxdays', 'wxmini'].forEach(function (k) { var s = document.querySelector('#wg-' + k + ' .wg-stage'); if (s) s.innerHTML = wgPreview(k, Date.now()); });
+  }
   function wgPreview(k, t) {
     var n = wgNow(t);
+    if (k === 'wx') {
+      return wgBox(k, wgLook(k), n, [0, 1].map(function (i) {
+        var w = WX[i], d = w && w.days && w.days[0];
+        return '<div class="wgp-wxc"><small>' + wgCity(i) + '</small><div class="wgp-wxn">' + (w ? wgWi(w.code, w.day) : '') + wgDeg(w) + '</div>' +
+          wgHiLo(w) + '<span class="wgp-wxr">' + (d ? W_ICONS.umb + '<span class="ltr">' + d.p + '%</span>' : '') + '</span></div>';
+      }).join(''));
+    }
+    if (k === 'wxdays') {
+      var Ld = wgLook(k), cd = +Ld.W.city === 1 ? 1 : 0, wd = WX[cd];
+      return wgBox(k, Ld, n, '<div class="wgp-wxt"><b>' + wgCity(cd) + '</b>' + (wd ? wgWi(wd.code, wd.day) : '') + wgDeg(wd) + '</div><div class="wgp-wxd">' +
+        (wd && wd.days ? wd.days.slice(1, 6) : []).map(function (x) {
+          return '<div><small>' + (WG_DAYS[x.wd] || '') + '</small>' + wgWi(x.code, 1) + '<b class="ltr">' + x.max + '°</b><span class="ltr">' + x.min + '°</span></div>';
+        }).join('') + '</div>');
+    }
+    if (k === 'wxmini') {
+      var Lm = wgLook(k), cm = +Lm.W.city === 1 ? 1 : 0, wm = WX[cm];
+      return wgBox(k, Lm, n, (wm ? wgWi(wm.code, wm.day) : '<small>' + wgCity(cm) + '</small>') + wgDeg(wm) + wgHiLo(wm));
+    }
     if (k === 'prayer') {
       var L = wgLook(k), W = L.W, SZ = { s: .85, m: 1, l: 1.2, xl: 1.45 }, AL = { r: 'right', c: 'center', l: 'left' };
       var fz = function (key) { return 'font-size:' + (34 * (SZ[W[key]] || 1)).toFixed(1) + 'px;'; };
@@ -2321,7 +2362,9 @@
         }).join('') + tr('<p class="muted set-note">لون كل عدّاد يُختار من تاب «العدّادات». لتغيير عدّادات ويدجت يتقلّب: اضغط عليه مطولًا ← الإعدادات.</p>');
     }
     var POS = [['r', tr('يمين')], ['c', tr('وسط')], ['l', tr('يسار')]], SIZES = [['s', tr('صغير')], ['m', tr('عادي')], ['l', tr('كبير')], ['xl', tr('كبير جدًا')]];
-    return wgRow(k, tr('الخلفية'), 'bg', [['time', tr('لون حسب الوقت')], ['dark', tr('داكن')]]) +
+    // the weather widgets of one city: which of the two cities, by name
+    return (k === 'wxdays' || k === 'wxmini' ? wgRow(k, tr('المدينة'), 'city', [[0, wgCity(0)], [1, wgCity(1)]]) : '') +
+      wgRow(k, tr('الخلفية'), 'bg', [['time', tr('لون حسب الوقت')], ['dark', tr('داكن')]]) +
       wgRow(k, tr('الشفافية'), 'clear', [[0, '0%'], [25, '25%'], [50, '50%'], [75, '75%'], [100, '100%']]) +
       (k === 'prayer' ? tr('<div class="tm-lbl wg-sub">المكان</div>') + wgRow(k, tr('الصلاة القادمة'), 'posNext', POS) + wgRow(k, tr('المناسبات'), 'posEv', POS) +
         wgRow(k, tr('المتبقي'), 'posLeft', POS) + wgRow(k, tr('السطر المتبدّل'), 'posLine', POS) +
@@ -2350,7 +2393,7 @@
   function wgSet(v) {
     var p = v.split('-'), k = p[0], key = p[1], val = p[2], W = k === 'timer' ? S.timerWg : S.wstyle[k];
     if (/^pos(Next|Ev|Left)$/.test(key)) ['posNext', 'posEv', 'posLeft'].forEach(function (o) { if (o !== key && W[o] === val) W[o] = W[key]; });
-    if (val === 't') W[key] = !W[key]; else W[key] = key === 'clear' ? +val : val;
+    if (val === 't') W[key] = !W[key]; else W[key] = key === 'clear' || key === 'city' ? +val : val;
     save(); sendWidget(); wgRender(); wgFocus(v, 'wgs');
   }
   function wgPin(k) {
@@ -3597,7 +3640,8 @@
       if (name === 'reader') { if (iqOpen()) iqDismiss(); rdOpen(S.qMark || { s: 1, i: 0 }); return true; }
       // the Friday notification: Al-Kahf, for reading (the TV only recites)
       if (name === 'kahfread') { if (iqOpen()) iqDismiss(); if (TV) { kahf.s = 18; kahf.from = 0; go('kahf'); } else rdOpen({ s: 18, i: 0 }); return true; }
-      if (name === 'weatherb') { name = 'weather'; wxCity = 1; if (screen === 'weather') weatherRender(); } // the alert of the second city
+      // the weather alert or the weather widget of a city opens that city: 'weather' the first, 'weatherb' the second
+      if (name === 'weather' || name === 'weatherb') { wxCity = name === 'weatherb' ? 1 : 0; name = 'weather'; if (screen === 'weather') weatherRender(); }
       if (/^(convert|calendar|timers|weather)$/.test(name)) { if (iqOpen()) iqDismiss(); if (screen !== name) go(name); return true; }
       return false;
     },

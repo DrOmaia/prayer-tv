@@ -12,4 +12,7 @@
     <string name="widget_reader">ورد القراءة</string>
     <string name="widget_dua">دعاء اليوم</string>
     <string name="widget_tv">حالة التلفزيون</string>
+    <string name="widget_wx">طقس المدينتين</string>
+    <string name="widget_wxdays">الطقس والأيام القادمة</string>
+    <string name="widget_wxmini">الطقس (صغير)</string>
 </resources>

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The weather of the two cities side by side (4x2): for each its name, the weather now with its temperature,
+     today's highest / lowest and the chance of rain; a tap on a city opens its weather in the app -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_night" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:baselineAligned="false"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <!-- the first city (the city of the prayer times) -->
+        <LinearLayout
+            android:id="@+id/wx_c0"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/wx_name0"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.85"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/wx_icon0"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/wx_temp0"
+                    style="@style/WxTemp"
+                    android:text="—"
+                    android:textSize="30sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/wx_hl0"
+                style="@style/WxTemp"
+                android:textSize="13sp"
+                android:textStyle="normal" />
+
+            <LinearLayout
+                android:id="@+id/wx_rainrow0"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="invisible">
+
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:alpha="0.85"
+                    android:src="@drawable/wx_umb" />
+
+                <TextView
+                    android:id="@+id/wx_rain0"
+                    style="@style/WxTemp"
+                    android:layout_marginStart="4dp"
+                    android:alpha="0.85"
+                    android:textSize="12sp"
+                    android:textStyle="normal" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- the second city -->
+        <LinearLayout
+            android:id="@+id/wx_c1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="6dp"
+            android:paddingEnd="12dp">
+
+            <TextView
+                android:id="@+id/wx_name1"
+                style="@style/WidgetText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.85"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/wx_icon1"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/wx_temp1"
+                    style="@style/WxTemp"
+                    android:text="—"
+                    android:textSize="30sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/wx_hl1"
+                style="@style/WxTemp"
+                android:textSize="13sp"
+                android:textStyle="normal" />
+
+            <LinearLayout
+                android:id="@+id/wx_rainrow1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="invisible">
+
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:alpha="0.85"
+                    android:src="@drawable/wx_umb" />
+
+                <TextView
+                    android:id="@+id/wx_rain1"
+                    style="@style/WxTemp"
+                    android:layout_marginStart="4dp"
+                    android:alpha="0.85"
+                    android:textSize="12sp"
+                    android:textStyle="normal" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

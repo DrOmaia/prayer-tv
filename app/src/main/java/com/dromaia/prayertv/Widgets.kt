@@ -71,9 +71,17 @@ object Widgets {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
+    // the weather widgets: the two cities, one city with the next five days, one city small
+    private val WEATHER = listOf(WxWidget::class.java, WxDaysWidget::class.java, WxMiniWidget::class.java)
     private val PROVIDERS = listOf(PrayerWidget::class.java, RingWidget::class.java, StripWidget::class.java,
         EventWidget::class.java, MonthWidget::class.java, ConvertWidget::class.java, TimerWidget::class.java, ReaderWidget::class.java,
-        DuaWidget::class.java)
+        DuaWidget::class.java) + WEATHER
+
+    // is a weather widget on the home screen? (Weather fetches their figures only then)
+    fun weatherPlaced(ctx: Context): Boolean = try {
+        val am = AppWidgetManager.getInstance(ctx)
+        WEATHER.any { am.getAppWidgetIds(ComponentName(ctx, it)).isNotEmpty() }
+    } catch (_: Exception) { false }
 
     // ---- timers (since / until a date): the page sends them; each timer widget remembers which one it shows
     fun timers(ctx: Context): List<Pair<String, String>> {
@@ -86,7 +94,8 @@ object Widgets {
         val out = JSONObject()
         mapOf("prayer" to PrayerWidget::class.java, "ring" to RingWidget::class.java, "strip" to StripWidget::class.java,
             "month" to MonthWidget::class.java, "convert" to ConvertWidget::class.java, "event" to EventWidget::class.java,
-            "timer" to TimerWidget::class.java).forEach { (k, c) -> out.put(k, am.getAppWidgetIds(ComponentName(ctx, c)).size) }
+            "timer" to TimerWidget::class.java, "wx" to WxWidget::class.java, "wxdays" to WxDaysWidget::class.java,
+            "wxmini" to WxMiniWidget::class.java).forEach { (k, c) -> out.put(k, am.getAppWidgetIds(ComponentName(ctx, c)).size) }
         return out.toString()
     }
     // the timer widgets on the home screen and the timer each shows (for the app's «الويدجت» screen)
@@ -107,7 +116,8 @@ object Widgets {
         val cls = when (kind) {
             "prayer" -> PrayerWidget::class.java; "ring" -> RingWidget::class.java; "strip" -> StripWidget::class.java
             "month" -> MonthWidget::class.java; "convert" -> ConvertWidget::class.java; "event" -> EventWidget::class.java
-            "timer" -> TimerWidget::class.java; "tv" -> TvWidget::class.java; else -> return "no"
+            "timer" -> TimerWidget::class.java; "tv" -> TvWidget::class.java
+            "wx" -> WxWidget::class.java; "wxdays" -> WxDaysWidget::class.java; "wxmini" -> WxMiniWidget::class.java; else -> return "no"
         }
         var done: PendingIntent? = null
         if (kind == "timer") {
@@ -289,6 +299,8 @@ object Widgets {
         val posLine = o?.optString("posLine").takeUnless { it.isNullOrEmpty() } ?: "c"
         private val k: (String) -> Float = { key -> when (o?.optString(key)) { "s" -> 0.85f; "m" -> 1f; "l" -> 1.2f; "xl" -> 1.45f; else -> scale } }
         val kMain = k("fMain"); val kLeft = k("fLeft"); val kEv = k("fEv"); val kLine = k("fLine")
+        // the weather widgets of one city: which of the two it shows (0 the city of the prayer times, 1 the second city)
+        val place = if (o?.optInt("city", 0) == 1) 1 else 0
     }
 
     private fun putBg(rv: RemoteViews, sty: Style, res: Int) {
@@ -338,6 +350,14 @@ object Widgets {
         am.getAppWidgetIds(ComponentName(ctx, TimerWidget::class.java)).forEach { id ->
             try { am.updateAppWidget(id, rotateViews(ctx, d, id, now)) } catch (e: Exception) { lastError(ctx, "TimerWidget: $e") }
             nextChange = minOf(nextChange, now - now % 60_000L + 60_000L)
+        }
+        // the weather widgets: drawn from the figures Weather keeps, and again when «now» runs out or a city's midnight comes
+        if (WEATHER.any { am.getAppWidgetIds(ComponentName(ctx, it)).isNotEmpty() }) {
+            val wx = Weather.shown(ctx, now)
+            each(WxWidget::class.java) { wxViews(ctx, styleOf("wx"), st, wx) }
+            each(WxDaysWidget::class.java) { wxDaysViews(ctx, styleOf("wxdays"), st, wx) }
+            each(WxMiniWidget::class.java) { wxMiniViews(ctx, styleOf("wxmini"), st, wx) }
+            nextChange = minOf(nextChange, wx.minOf { it.until })
         }
         // refresh again only while there is a widget on the home screen
         if (PROVIDERS.any { am.getAppWidgetIds(ComponentName(ctx, it)).isNotEmpty() }) arm(ctx, nextChange)
@@ -749,6 +769,117 @@ object Widgets {
         return rv
     }
 
+    // ---- the weather widgets: the two cities (4x2), one city with the next five days (4x2), one city small (2x2).
+    // Weather fetches and keeps the figures; a temperature is shown as «now» only while it is recent (a dash after that),
+    // and today's highest / lowest only while they are today's. A tap opens the city's weather in the app.
+    private val WX_NAME = intArrayOf(R.id.wx_name0, R.id.wx_name1)
+    private val WX_ICON = intArrayOf(R.id.wx_icon0, R.id.wx_icon1)
+    private val WX_TEMP = intArrayOf(R.id.wx_temp0, R.id.wx_temp1)
+    private val WX_HL = intArrayOf(R.id.wx_hl0, R.id.wx_hl1)
+    private val WX_RAINROW = intArrayOf(R.id.wx_rainrow0, R.id.wx_rainrow1)
+    private val WX_RAIN = intArrayOf(R.id.wx_rain0, R.id.wx_rain1)
+    private val WXD = intArrayOf(R.id.wx_d0, R.id.wx_d1, R.id.wx_d2, R.id.wx_d3, R.id.wx_d4)
+    private val WXD_NAME = intArrayOf(R.id.wx_dn0, R.id.wx_dn1, R.id.wx_dn2, R.id.wx_dn3, R.id.wx_dn4)
+    private val WXD_ICON = intArrayOf(R.id.wx_di0, R.id.wx_di1, R.id.wx_di2, R.id.wx_di3, R.id.wx_di4)
+    private val WXD_HI = intArrayOf(R.id.wx_dh0, R.id.wx_dh1, R.id.wx_dh2, R.id.wx_dh3, R.id.wx_dh4)
+    private val WXD_LO = intArrayOf(R.id.wx_dl0, R.id.wx_dl1, R.id.wx_dl2, R.id.wx_dl3, R.id.wx_dl4)
+    // the short day names of the Hijri-month widget
+    private val WD_AR = listOf("أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت")
+    private val WD_EN = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+    // the dash that stands for a temperature we do not have: fainter than a figure
+    private val FAINT = Color.argb(153, 255, 255, 255)
+
+    // the drawing of a weather code: the same rule as the page's weatherInfo
+    private fun wxIcon(code: Int, byDay: Boolean): Int = when {
+        code == 0 || code == 1 -> if (byDay) R.drawable.wx_sun else R.drawable.ic_moon
+        code == 2 -> R.drawable.wx_partly
+        code == 3 -> R.drawable.wx_cloud
+        code == 45 || code == 48 -> R.drawable.wx_fog
+        code in 51..57 || code in 61..67 || code in 80..82 -> R.drawable.wx_rain
+        code in 71..77 || code == 85 || code == 86 -> R.drawable.wx_snow
+        code >= 95 -> R.drawable.wx_storm
+        else -> R.drawable.wx_cloud
+    }
+
+    // the city's weather screen: a request code for each city, so the two intents stay apart
+    private fun openWeather(ctx: Context, city: Int): PendingIntent =
+        if (city == 1) openScreen(ctx, "weatherb", 19) else openScreen(ctx, "weather", 18)
+
+    // every size is set each time: the launcher keeps a size given earlier
+    private fun sized(rv: RemoteViews, sty: Style, vararg list: Pair<Int, Float>) =
+        list.forEach { (id, sp) -> rv.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * sty.scale) }
+
+    // a city in place k: its name, and the weather now with its temperature (no drawing and a dash when there is none)
+    private fun putPlace(rv: RemoteViews, sty: Style, p: Weather.Place, k: Int, nameSp: Float, tempSp: Float) {
+        val t = p.now
+        rv.setTextViewText(WX_NAME[k], p.name.ifEmpty { if (k == 0) en("افتح التطبيق مرة", "Open the app once") else "" })
+        rv.setTextViewText(WX_TEMP[k], if (t == null) "—" else "$t°")
+        rv.setTextColor(WX_TEMP[k], if (t == null) FAINT else Color.WHITE)
+        rv.setViewVisibility(WX_ICON[k], if (t == null) View.GONE else View.VISIBLE)
+        if (t != null) {
+            rv.setImageViewResource(WX_ICON[k], wxIcon(p.code, p.byDay))
+            rv.setInt(WX_ICON[k], "setColorFilter", sty.accent)
+        }
+        sized(rv, sty, WX_NAME[k] to nameSp, WX_TEMP[k] to tempSp)
+    }
+
+    // today's highest / lowest under it (empty once the day they were for has passed)
+    private fun putToday(rv: RemoteViews, sty: Style, p: Weather.Place, k: Int) {
+        rv.setTextViewText(WX_HL[k], p.today?.let { "${it.max}° / ${it.min}°" } ?: "")
+        sized(rv, sty, WX_HL[k] to 13f)
+    }
+
+    private fun wxViews(ctx: Context, sty: Style, st: State?, wx: List<Weather.Place>): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_wx)
+        rv.setOnClickPendingIntent(R.id.wx_c0, openWeather(ctx, 0))
+        rv.setOnClickPendingIntent(R.id.wx_c1, openWeather(ctx, 1))
+        putBg(rv, sty, bgOf(sty, st))
+        for (k in 0..1) {
+            val p = wx[k]
+            putPlace(rv, sty, p, k, 13f, 30f)
+            putToday(rv, sty, p, k)
+            // today's chance of rain beside the umbrella
+            val rain = p.today?.rain
+            rv.setViewVisibility(WX_RAINROW[k], if (rain == null) View.INVISIBLE else View.VISIBLE)
+            rv.setTextViewText(WX_RAIN[k], if (rain == null) "" else "$rain%")
+            sized(rv, sty, WX_RAIN[k] to 12f)
+        }
+        return rv
+    }
+
+    private fun wxDaysViews(ctx: Context, sty: Style, st: State?, wx: List<Weather.Place>): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_wxdays)
+        rv.setOnClickPendingIntent(R.id.root, openWeather(ctx, sty.place))
+        putBg(rv, sty, bgOf(sty, st))
+        val p = wx[sty.place]
+        putPlace(rv, sty, p, 0, 16f, 26f)
+        // the days after today, as many as the figures still hold (five when they are fresh)
+        for (k in 0 until 5) {
+            val d = p.next.getOrNull(k)
+            rv.setViewVisibility(WXD[k], if (d == null) View.INVISIBLE else View.VISIBLE)
+            if (d == null) continue
+            // day number 0 was a Thursday (1 Jan 1970); 0 here is Sunday
+            rv.setTextViewText(WXD_NAME[k], (if (EN) WD_EN else WD_AR)[Math.floorMod(d.n + 4, 7L).toInt()])
+            rv.setImageViewResource(WXD_ICON[k], wxIcon(d.code, true))
+            rv.setTextViewText(WXD_HI[k], "${d.max}°")
+            rv.setTextViewText(WXD_LO[k], "${d.min}°")
+            sized(rv, sty, WXD_NAME[k] to 12f, WXD_HI[k] to 14f, WXD_LO[k] to 13f)
+        }
+        return rv
+    }
+
+    private fun wxMiniViews(ctx: Context, sty: Style, st: State?, wx: List<Weather.Place>): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_wxmini)
+        rv.setOnClickPendingIntent(R.id.root, openWeather(ctx, sty.place))
+        putBg(rv, sty, bgOf(sty, st))
+        val p = wx[sty.place]
+        putPlace(rv, sty, p, 0, 13f, 32f)
+        putToday(rv, sty, p, 0)
+        // nothing but the figures: the city's name stands in the drawing's place only while there is no «now» to draw
+        rv.setViewVisibility(R.id.wx_name0, if (p.now == null) View.VISIBLE else View.GONE)
+        return rv
+    }
+
     // the time zone of the city chosen in the app (Riyadh until the page says otherwise)
     private var TZ: TimeZone = TimeZone.getTimeZone("Asia/Riyadh")
     private fun hm(t: Long): String {
@@ -817,3 +948,19 @@ class DuaWidget : AppWidgetProvider() {
 class EventWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) = Widgets.safeUpdate(ctx)
 }
+
+// The weather widgets. Placed, or refreshed by the system: drawn at once from the figures Weather keeps, then Weather
+// fetches them again if they are old and keeps its two-hourly alarm running. The last one removed lets that alarm stop.
+abstract class WeatherWidget : AppWidgetProvider() {
+    override fun onUpdate(ctx: Context, am: AppWidgetManager, ids: IntArray) {
+        Widgets.safeUpdate(ctx)
+        Weather.asked(ctx)
+    }
+    override fun onDisabled(ctx: Context) = Weather.arm(ctx)
+}
+
+class WxWidget : WeatherWidget()
+
+class WxDaysWidget : WeatherWidget()
+
+class WxMiniWidget : WeatherWidget()

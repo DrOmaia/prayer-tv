@@ -804,6 +804,36 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .wgp-timer .wgp-c { color: inherit; text-align: center; font-size: 1.6em; }
 .wgp-timer .wgp-c small { font-size: .5em; margin: 0 6px; }
 .wgp-timer span:not(.wgp-c) { font-weight: 700; font-size: .85em; }
+/* the weather widgets: the drawing of the weather now in the accent colour beside a large temperature, the rest small;
+   drawings keep their size when the text size changes (as on the home screen); a fainter dash where there is no temperature */
+.wgp-wi { display: inline-flex; flex: none; }
+.wgp-wi .ic { width: 100%; height: 100%; }
+.wgp-no { opacity: .6; }
+.wgp-wx { width: 940px; min-width: 0; height: 400px; display: flex; padding: 0 16px; }
+.wgp-wxc { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 16px; }
+/* a city's name: a long one is cut at its end, whichever way it is written */
+.wgp-wxc small { font-size: 1em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; }
+.wgp-wxn { display: flex; align-items: center; gap: 16px; }
+.wgp-wxn .wgp-wi { width: 83px; height: 83px; color: var(--a); }
+.wgp-wxn b { font-size: 2.3em; line-height: 1.1; }
+.wgp-wxr { display: flex; align-items: center; gap: 10px; min-height: 1.25em; margin-top: 5px; font-size: .92em; opacity: .85; }
+.wgp-wxr .ic { width: 34px; height: 34px; }
+.wgp-wxdays { width: 940px; min-width: 0; height: 400px; display: flex; flex-direction: column; padding: 21px 0; }
+.wgp-wxt { display: flex; align-items: center; gap: 16px; padding: 0 47px; }
+.wgp-wxt > b:first-child { flex: 1; min-width: 0; font-size: 1.23em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; text-align: right; }
+.wgp-wxt .wgp-wi { width: 73px; height: 73px; margin-inline-start: 5px; color: var(--a); }
+.wgp-wxt > b + b, .wgp-wxt > .wgp-wi + b { font-size: 2em; line-height: 1.1; }
+.wgp-wxd { flex: 1; display: flex; align-items: center; padding: 0 21px; }
+.wgp-wxd > div { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.wgp-wxd small { font-size: .92em; }
+.wgp-wxd .wgp-wi { width: 52px; height: 52px; margin: 3px 0; }
+.wgp-wxd b { font-size: 1.08em; }
+.wgp-wxd span.ltr { opacity: .75; }
+.wgp-wxmini { width: 440px; height: 440px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 16px; }
+.wgp-wxmini > .wgp-wi { width: 94px; height: 94px; color: var(--a); }
+.wgp-wxmini > small { font-size: 1em; max-width: 100%; text-align: center; }
+.wgp-wxmini > b { font-size: 2.46em; line-height: 1.15; margin-top: 5px; }
+.wgp-wxmini > span { margin-top: 5px; }
 .wg-sub { margin: 18px 0 2px; }
 /* the TV, guest mode: a big welcome where the occasions are; no birthdays or family lines */
 .guest { display: none; }

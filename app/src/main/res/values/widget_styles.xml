@@ -78,4 +78,42 @@
         <item name="android:alpha">0.75</item>
         <item name="android:textSize">10sp</item>
     </style>
+    <!-- weather widgets: a temperature is always written left to right (a minus sign stays before its number) -->
+    <style name="WxTemp" parent="WidgetText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- weather widgets: one of the coming days (its short name, the day's weather, highest over lowest) -->
+    <style name="WxDay">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+    <style name="WxDayName" parent="WidgetText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:alpha">0.85</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    <style name="WxDayIcon">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:layout_marginBottom">1dp</item>
+    </style>
+    <style name="WxDayHi" parent="WxTemp">
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="WxDayLo" parent="WxTemp">
+        <item name="android:alpha">0.75</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
 </resources>
